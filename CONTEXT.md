@@ -118,6 +118,44 @@ _Avoid_: Buku induk (in code), population list
 The month-by-month book of Population Events that are not voided (Permendagri 47/2016 book B.2).
 _Avoid_: Buku mutasi (in code), event log
 
+### Letters
+
+**Letter Type**:
+A Village-defined kind of Service Letter: its name, classification code, Layout, additional fields and statement text.
+_Avoid_: Template, form, jenis surat (in code)
+
+**Layout**:
+A printed letter design that Pranata itself ships, such as Standard or the marriage cover letter (N1), which a Letter Type is built on.
+_Avoid_: Template, theme, tata letak (in code)
+
+**Service Letter**:
+A letter Pranata renders for one Resident from a Letter Type, signed on paper by one Official.
+_Avoid_: Certificate, document, surat layanan (in code)
+
+**Recorded Letter**:
+A letter written outside Pranata that is only recorded so it takes a Letter Number from the same sequence.
+_Avoid_: Manual letter, external letter, surat tercatat (in code)
+
+**Letter Number**:
+The number a Service Letter or Recorded Letter receives from the Village's single yearly sequence when it is issued or recorded; never reused, even when the letter is Cancelled.
+_Avoid_: Reference number, nomor surat (in code)
+
+**Issued**:
+The state of a Service Letter that has its Letter Number and its frozen content; it is never edited, only Cancelled.
+_Avoid_: Published, final, terbit (in code)
+
+**Cancelled**:
+The state of a letter withdrawn with a reason; it keeps its Letter Number and stays in the Outgoing Letter Agenda.
+_Avoid_: Deleted, voided, revoked, dibatalkan (in code)
+
+**Verification Code**:
+The short code printed on an Issued Service Letter, with its QR code, that lets anyone check on the public site that the letter is genuine and not Cancelled.
+_Avoid_: Token, serial, kode verifikasi (in code)
+
+**Outgoing Letter Agenda**:
+The book of every Letter Number given in one year, in order, covering both Service Letters and Recorded Letters (the outgoing half of Permendagri 47/2016 book A.7).
+_Avoid_: Letter log, buku agenda (in code)
+
 ### Access
 
 **Permission**:
