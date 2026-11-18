@@ -118,6 +118,14 @@ _Avoid_: Buku induk (in code), population list
 The month-by-month book of Population Events that are not voided (Permendagri 47/2016 book B.2).
 _Avoid_: Buku mutasi (in code), event log
 
+**Temporary Stay**:
+One stay in the Village by a person who is not a Resident, from arrival to departure, recorded with their host; voided with a reason, never deleted, and never part of the population count (Permendagri 47/2016 book B.4).
+_Avoid_: Temporary Resident, visitor, guest, penduduk sementara (in code)
+
+**Temporary Stay Register**:
+The yearly book of Temporary Stays that are not voided, in order of arrival (Permendagri 47/2016 book B.4).
+_Avoid_: Buku penduduk sementara (in code), guest book
+
 ### Letters
 
 **Letter Type**:
