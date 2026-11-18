@@ -64,6 +64,60 @@ _Avoid_: Organisation, lembaga (in code)
 The ministry's score and status for the Village for one data-collection year, under either the Indeks Desa or the older IDM.
 _Avoid_: Ranking, IDM score (for current editions)
 
+### Population
+
+**Resident**:
+A person registered as living in the Village, identified by an NIK when one is known; never deleted, only made inactive by a Death or Departure.
+_Avoid_: Citizen, person, warga, penduduk (in code)
+
+**NIK**:
+A person's 16-digit national identity number, unique across every Resident record the Installation has ever held.
+_Avoid_: ID number, KTP number
+
+**Family**:
+One family card (Kartu Keluarga): its number (which may be not yet known), its head, and its address at one RT; every active Resident belongs to exactly one, and it is active while it has an active member.
+_Avoid_: Household, KK (in code), keluarga (in code)
+
+**Population Event**:
+A dated Birth, Death, Arrival, or Departure of one Resident: the only thing that changes the Village's population count. It is voided with a reason, never edited or deleted.
+_Avoid_: Mutation, change, peristiwa (in code)
+
+**Birth**:
+The Population Event that adds a newborn to a Family of the Village, wherever the birth took place.
+_Avoid_: Kelahiran, lahir (in code)
+
+**Death**:
+The Population Event that makes a Resident inactive because they died.
+_Avoid_: Kematian, meninggal (in code)
+
+**Arrival**:
+The Population Event that adds a person moving into the Village, reusing their earlier Resident record if they once lived here.
+_Avoid_: Kedatangan, datang (in code), move in
+
+**Departure**:
+The Population Event that makes a Resident inactive because they moved out of the Village.
+_Avoid_: Kepindahan, pindah (in code), move out, transfer
+
+**Baseline**:
+The population as it stood when the Village locked its initial import, which is the opening balance of the first Monthly Recap; after it, people join only through Births and Arrivals.
+_Avoid_: Initial data, go-live, opening import
+
+**Monthly Recap**:
+The per-Hamlet count of Residents and Families for one month, with that month's Births, Deaths, Arrivals and Departures (Permendagri 47/2016 book B.3).
+_Avoid_: Monthly report, rekap (in code)
+
+**Sent**:
+The state of a Monthly Recap that has been reported to the district; it is frozen, and later Population Events dated in that month are counted in the first month not yet Sent.
+_Avoid_: Final, locked, submitted, terkirim (in code)
+
+**Resident Register**:
+The book of all active Residents, Family by Family (Permendagri 47/2016 book B.1).
+_Avoid_: Buku induk (in code), population list
+
+**Mutation Register**:
+The month-by-month book of Population Events that are not voided (Permendagri 47/2016 book B.2).
+_Avoid_: Buku mutasi (in code), event log
+
 ### Access
 
 **Permission**:
