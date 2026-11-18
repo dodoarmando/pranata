@@ -164,6 +164,24 @@ _Avoid_: Tracking number, ticket number, kode permohonan (in code)
 The book of every Letter Number given in one year, in order, covering both Service Letters and Recorded Letters (the outgoing half of Permendagri 47/2016 book A.7).
 _Avoid_: Letter log, buku agenda (in code)
 
+### Complaints
+
+**Complaint**:
+A complaint or suggestion a resident sends through the public site, possibly anonymously, that staff answer with Complaint Responses and then close, or reject with a reason; never shown publicly.
+_Avoid_: Ticket, report, aspiration, feedback, pengaduan (in code)
+
+**Complaint Topic**:
+A Village-defined subject a Complaint is filed under, used to sort and count Complaints.
+_Avoid_: Category (reserved for News Posts and Events), topik (in code)
+
+**Complaint Response**:
+A message from staff on a Complaint, shown to the complainant on its status page and never edited once posted.
+_Avoid_: Reply, comment, follow-up, tanggapan (in code)
+
+**Complaint Code**:
+The random code a complainant receives when sending a Complaint, the only way to read its status and Complaint Responses on the public site.
+_Avoid_: Ticket number, Request Code (reserved for Letter Requests), kode pengaduan (in code)
+
 ### Access
 
 **Permission**:
