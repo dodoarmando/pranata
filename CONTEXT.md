@@ -152,6 +152,14 @@ _Avoid_: Deleted, voided, revoked, dibatalkan (in code)
 The short code printed on an Issued Service Letter, with its QR code, that lets anyone check on the public site that the letter is genuine and not Cancelled.
 _Avoid_: Token, serial, kode verifikasi (in code)
 
+**Letter Request**:
+A request for a Service Letter of one online-requestable Letter Type, submitted on the public site by a requester (the subject or someone acting for them) and reviewed by staff, who reject it with a reason or turn it into a Draft for the matched Resident; the letter is collected on paper at the village office.
+_Avoid_: Application, submission, ticket, permohonan (in code)
+
+**Request Code**:
+The random code a requester receives when submitting a Letter Request, the only way to follow its status on the public site.
+_Avoid_: Tracking number, ticket number, kode permohonan (in code)
+
 **Outgoing Letter Agenda**:
 The book of every Letter Number given in one year, in order, covering both Service Letters and Recorded Letters (the outgoing half of Permendagri 47/2016 book A.7).
 _Avoid_: Letter log, buku agenda (in code)
