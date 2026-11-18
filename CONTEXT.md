@@ -29,8 +29,12 @@ The built-in Role that always holds every Permission and alone manages Users and
 _Avoid_: Admin, superuser, root
 
 **User**:
-A person who signs in to the admin area on behalf of the Village, holding exactly one Role; never deleted, only deactivated. Residents are not Users.
+A person who signs in to the admin area on behalf of the Village with a username that is never changed or reused, holding exactly one Role; never deleted, only deactivated. Residents are not Users.
 _Avoid_: Account, staff, operator, pengguna (in code)
+
+**Access Link**:
+A single-use, short-lived link an Administrator (or the vendor, for the first Administrator) hands to a User so they can set their own password, used both for a new User and to reset a User's access.
+_Avoid_: Invite, reset link, magic link, temporary password
 
 **Audit Entry**:
 One immutable record of who did what to which object, when, and what changed.
