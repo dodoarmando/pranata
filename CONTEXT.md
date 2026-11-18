@@ -43,3 +43,53 @@ _Avoid_: Activity, history, event
 **Audit Log**:
 The complete, append-only collection of Audit Entries for an Installation.
 _Avoid_: Activity log, history
+
+### Website
+
+**Draft**:
+The state of a website item that is saved but not shown on the public site.
+_Avoid_: Unpublished, pending
+
+**Published**:
+The state of a website item that is shown on the public site.
+_Avoid_: Live, active, terbit (in code)
+
+**News Post**:
+A dated report on the public site, filed under one Category.
+_Avoid_: Post, article, berita (in code)
+
+**Announcement**:
+A notice with a start and end date, shown on the home page only while it is in effect.
+_Avoid_: Notice, pengumuman (in code)
+
+**Event**:
+A scheduled village activity with a start time, location and Category, which may be cancelled while staying listed.
+_Avoid_: Activity, agenda (in code)
+
+**Page**:
+Undated free-form content placed under one of the public site's fixed parent menus.
+_Avoid_: Static page, halaman (in code)
+
+**Album**:
+An ordered set of photos from one village occasion.
+_Avoid_: Gallery (for a single album), galeri (in code)
+
+**Important Contact**:
+A phone number residents may need, grouped by contact category.
+_Avoid_: Contact, kontak penting (in code)
+
+**Partner**:
+An organisation whose logo appears in the home page partner strip.
+_Avoid_: Sponsor, mitra (in code)
+
+**Transparency Document**:
+An official planning, budget or regulation file published for download, tagged with a document type and fiscal year.
+_Avoid_: Attachment, file, dokumen (in code)
+
+**APBDes Summary**:
+The public summary of one fiscal year's village budget and, optionally, its realisation.
+_Avoid_: Budget, anggaran (in code)
+
+**Category**:
+A Village-defined label shared by News Posts and Events.
+_Avoid_: Tag, topic, kategori (in code)
