@@ -1,2 +1,5 @@
 # Local design prototypes, not part of the product
 .prototype/
+
+# Claude Code agent worktrees, local only
+.claude/worktrees/
