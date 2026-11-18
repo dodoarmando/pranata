@@ -14,6 +14,56 @@ _Avoid_: Tenant, instance, site
 The single Indonesian village (desa) an Installation belongs to and publishes for.
 _Avoid_: Desa (in code), tenant, client, organization
 
+### Village
+
+**Village Code**:
+The Village's 10-digit government region code, which fixes its name, its district, regency and province, and its time zone.
+_Avoid_: Kode desa (in code), village ID
+
+**Vision and Mission**:
+The Village's current vision statement and ordered missions, together with the RPJMDes period they belong to.
+_Avoid_: Visi misi (in code), goals
+
+**Region Unit**:
+Any node of the Village's internal region tree: a Hamlet, an RW, or an RT. It is deactivated, never deleted, once in use.
+_Avoid_: Area, zone, wilayah (in code)
+
+**Hamlet**:
+The top-level Region Unit below the Village, called dusun by default and by a Village-chosen name elsewhere (banjar, jorong, lingkungan); the unit the monthly population recap is grouped by.
+_Avoid_: Dusun (in code), district, sub-village
+
+**RW**:
+The optional middle Region Unit, belonging to one Hamlet and numbered uniquely across the Village.
+_Avoid_: Rukun warga (in code), block
+
+**RT**:
+The lowest Region Unit, belonging to one RW (or to one Hamlet when the Village has no RW level) and numbered uniquely within it; every Family address points to one.
+_Avoid_: Rukun tetangga (in code), neighbourhood
+
+**Region Correction**:
+Moving Families from one RT to another because the region tree changed, not because anyone moved; it is not a population event.
+_Avoid_: Transfer, mutation, move
+
+**Position**:
+A post in the Village government that Officials hold, such as head of village, secretary, or the head of one Hamlet.
+_Avoid_: Jabatan (in code), role, title
+
+**Tenure**:
+One period during which an Official holds a Position, either permanently (definitif), as a temporary appointee (Pj.), or as an acting holder (Plt.); never deleted.
+_Avoid_: Term, assignment, masa jabatan (in code)
+
+**Official**:
+A person holding or having held a Tenure in the Village government (perangkat desa). An Official is not a Resident record and need not be a User.
+_Avoid_: Staff, officer, perangkat (in code)
+
+**Institution**:
+A body outside the Village government (BPD, LPM, PKK, BUMDes and the like) with an ordered list of members, none of whom sign letters.
+_Avoid_: Organisation, lembaga (in code)
+
+**Indeks Desa Edition**:
+The ministry's score and status for the Village for one data-collection year, under either the Indeks Desa or the older IDM.
+_Avoid_: Ranking, IDM score (for current editions)
+
 ### Access
 
 **Permission**:
