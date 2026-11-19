@@ -688,6 +688,49 @@
         }
       }
     },
+    "/media/{id}/{variant}": {
+      "get": {
+        "tags": [
+          "media"
+        ],
+        "summary": "An image's public rendition: `480`, `960` or `1600` (WebP) or `share` (JPEG). Cached\nforever, since a file never changes; only images that hold no personal data come here.",
+        "description": "# Errors\n`404` for an unknown file or variant.",
+        "operationId": "getMedia",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The file",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "variant",
+            "in": "path",
+            "description": "`480`, `960`, `1600` or `share`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The image",
+            "content": {
+              "image/webp": {},
+              "image/jpeg": {}
+            }
+          },
+          "404": {
+            "description": "There is no such file or variant"
+          }
+        }
+      }
+    },
     "/roles": {
       "get": {
         "tags": [
@@ -1098,6 +1141,58 @@
           },
           "404": {
             "description": "The Village Code is not set yet"
+          }
+        }
+      }
+    },
+    "/village/logo": {
+      "post": {
+        "tags": [
+          "village"
+        ],
+        "summary": "Stores a Village logo, a PNG or SVG of at most 2 MiB, for saving into the profile.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `413` over 2 MiB, `415`\nfor content that is not PNG or SVG, `422` over 40 megapixels or undecodable.",
+        "operationId": "uploadVillageLogo",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The stored logo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upload"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "413": {
+            "description": "The file is over 2 MiB"
+          },
+          "415": {
+            "description": "The file is not PNG or SVG"
+          },
+          "422": {
+            "description": "The image is too large or broken"
           }
         }
       }
@@ -1583,6 +1678,19 @@
           "WITA",
           "WIT"
         ]
+      },
+      "Upload": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The stored file, unreferenced until saved into its owner and swept after 24 h if not."
+          }
+        }
       },
       "UseAccessLink": {
         "type": "object",

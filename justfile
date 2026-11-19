@@ -2,6 +2,8 @@
 export DATABASE_URL := env('DATABASE_URL', 'postgres://postgres@127.0.0.1:55432/pranata')
 # Where the browser reaches the web app; `localhost`, not 127.0.0.1, for VS Code port forwarding.
 export PRANATA_PUBLIC_ORIGIN := env('PRANATA_PUBLIC_ORIGIN', 'http://localhost:3000')
+# Uploaded files in development, kept out of git.
+export PRANATA_FILES_DIR := env('PRANATA_FILES_DIR', 'target/files')
 
 db_container := 'pranata-db'
 

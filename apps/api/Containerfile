@@ -9,12 +9,16 @@ ENV SQLX_OFFLINE=true
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/src/target \
     cargo build --release --locked -p pranata && cp target/release/pranata /pranata
+# The files volume's mount point, owned by the nonroot user the API runs as.
+RUN mkdir /files
 
 FROM gcr.io/distroless/cc-debian13:nonroot
 LABEL org.opencontainers.image.source=https://github.com/dodoarmando/pranata \
       org.opencontainers.image.licenses=AGPL-3.0-only
 COPY --from=build /pranata /usr/local/bin/pranata
-ENV PRANATA_LISTEN=0.0.0.0:8080
+COPY --from=build --chown=nonroot:nonroot /files /var/lib/pranata/files
+ENV PRANATA_LISTEN=0.0.0.0:8080 \
+    PRANATA_FILES_DIR=/var/lib/pranata/files
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/pranata"]
 CMD ["serve"]

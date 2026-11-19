@@ -1,11 +1,21 @@
+use std::sync::Arc;
+
 use anyhow::Context;
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{Json, body::Body, extract::State, http::StatusCode};
 use serde::Serialize;
 use serde_json::json;
 use sqlx::PgPool;
 use utoipa::ToSchema;
+use uuid::Uuid;
 
-use crate::audit::{self, Actor};
+use crate::{
+    ApiError,
+    audit::{self, Actor},
+    auth::Session,
+    imaging::Kind,
+    role::Permission,
+    storage::Storage,
+};
 
 /// The national code list, one `dotted-code<TAB>name` row each; see `data/README.md`.
 const REGIONS: &str = include_str!("../data/regions.tsv");
@@ -165,6 +175,48 @@ pub async fn get_village(State(pool): State<PgPool>) -> Result<Json<Village>, St
         regency: row.regency,
         province: row.province,
     }))
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct Upload {
+    /// The stored file, unreferenced until saved into its owner and swept after 24 h if not.
+    id: Uuid,
+}
+
+/// Stores a Village logo, a PNG or SVG of at most 2 MiB, for saving into the profile.
+///
+/// # Errors
+/// `401` without a live session, `403` without `village.manage`, `413` over 2 MiB, `415`
+/// for content that is not PNG or SVG, `422` over 40 megapixels or undecodable.
+#[utoipa::path(
+    post,
+    path = "/village/logo",
+    operation_id = "uploadVillageLogo",
+    tag = "village",
+    request_body(content = Vec<u8>, content_type = "application/octet-stream"),
+    responses(
+        (status = CREATED, description = "The stored logo", body = Upload),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User may not manage the Village"),
+        (status = PAYLOAD_TOO_LARGE, description = "The file is over 2 MiB"),
+        (status = UNSUPPORTED_MEDIA_TYPE, description = "The file is not PNG or SVG"),
+        (status = UNPROCESSABLE_ENTITY, description = "The image is too large or broken"),
+    ),
+)]
+pub(crate) async fn upload_logo(
+    State(pool): State<PgPool>,
+    State(storage): State<Arc<Storage>>,
+    session: Session,
+    body: Body,
+) -> Result<(StatusCode, Json<Upload>), ApiError> {
+    if !session.holds(Permission::VillageManage) {
+        return Err(ApiError::Status(StatusCode::FORBIDDEN));
+    }
+    let upload = axum::body::to_bytes(body, Kind::Logo.max_bytes())
+        .await
+        .map_err(|_| ApiError::Status(StatusCode::PAYLOAD_TOO_LARGE))?;
+    let id = storage.save_image(&pool, Kind::Logo, upload.into()).await?;
+    Ok((StatusCode::CREATED, Json(Upload { id })))
 }
 
 #[cfg(test)]

@@ -21,6 +21,8 @@ pub const ORIGIN: &str = "https://desa.example";
 
 pub struct TestApp {
     router: Router,
+    /// The files volume, removed with the app.
+    pub files: tempfile::TempDir,
 }
 
 pub struct Reply {
@@ -37,8 +39,10 @@ impl Reply {
 
 impl TestApp {
     pub fn new(pool: PgPool) -> Self {
+        let files = tempfile::tempdir().unwrap();
         Self {
-            router: pranata::app(pool, ORIGIN.to_owned()).unwrap(),
+            router: pranata::app(pool, ORIGIN.to_owned(), files.path().to_owned()).unwrap(),
+            files,
         }
     }
 
@@ -89,6 +93,34 @@ impl TestApp {
             headers,
             body,
         }
+    }
+
+    /// Sends `bytes` as a same-origin upload; the reply of storing it.
+    pub async fn upload(&self, path: &str, bytes: Vec<u8>, cookie: &str) -> Reply {
+        let request = Request::post(path)
+            .header("sec-fetch-site", "same-origin")
+            .header(header::CONTENT_TYPE, "application/octet-stream")
+            .header(header::COOKIE, cookie)
+            .body(Body::from(bytes))
+            .unwrap();
+        let response = self.router.clone().oneshot(request).await.unwrap();
+        let status = response.status();
+        let headers = response.headers().clone();
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        Reply {
+            status,
+            headers,
+            body: serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+        }
+    }
+
+    /// A GET whose body is not JSON, such as an image: status, headers and bytes.
+    pub async fn get_raw(&self, path: &str) -> (StatusCode, HeaderMap, Vec<u8>) {
+        let request = Request::get(path).body(Body::empty()).unwrap();
+        let response = self.router.clone().oneshot(request).await.unwrap();
+        let (status, headers) = (response.status(), response.headers().clone());
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        (status, headers, bytes.to_vec())
     }
 
     pub async fn send(&self, request: Request<Body>) -> StatusCode {
