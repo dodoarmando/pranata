@@ -260,6 +260,24 @@
         }
       }
     },
+    "/auth/sign-out-others": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "\"Keluar dari perangkat lain\": ends every session of the User but the current one.",
+        "description": "# Errors\n`401` without a live session.",
+        "operationId": "signOutOthers",
+        "responses": {
+          "204": {
+            "description": "Every other session of the User is ended"
+          },
+          "401": {
+            "description": "There is no live session"
+          }
+        }
+      }
+    },
     "/dashboard": {
       "get": {
         "tags": [

@@ -533,6 +533,45 @@ pub async fn sessions(
     Ok(Json(sessions))
 }
 
+/// "Keluar dari perangkat lain": ends every session of the User but the current one.
+///
+/// # Errors
+/// `401` without a live session.
+#[utoipa::path(
+    post,
+    path = "/auth/sign-out-others",
+    operation_id = "signOutOthers",
+    tag = "auth",
+    responses(
+        (status = NO_CONTENT, description = "Every other session of the User is ended"),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+    ),
+)]
+pub async fn sign_out_others(
+    State(pool): State<PgPool>,
+    session: Session,
+) -> Result<StatusCode, ApiError> {
+    let mut tx = pool.begin().await?;
+    let revoked = sqlx::query!(
+        "DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2",
+        session.user_id,
+        session.token_hash,
+    )
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
+    audit::record(
+        &mut tx,
+        Actor::User(session.user_id),
+        "session.sign_out_others",
+        ("user", Some(&session.user_id.to_string())),
+        json!({ "sessionsRevoked": revoked }),
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// Deletes expired sessions and Access Links, which are already refused; run periodically.
 ///
 /// # Errors

@@ -577,6 +577,51 @@ export const signOut = async ( options?: Parameters<typeof apiFetch>[1]): Promis
 
 
 
+export type signOutOthersResponse204 = {
+  data: void
+  status: 204
+}
+
+export type signOutOthersResponse401 = {
+  data: void
+  status: 401
+}
+
+export type signOutOthersResponseSuccess = (signOutOthersResponse204) & {
+  headers: Headers;
+};
+export type signOutOthersResponseError = (signOutOthersResponse401) & {
+  headers: Headers;
+};
+
+export type signOutOthersResponse = (signOutOthersResponseSuccess | signOutOthersResponseError)
+
+export const getSignOutOthersUrl = () => {
+
+
+
+
+  return `/auth/sign-out-others`
+}
+
+/**
+ * # Errors
+ * `401` without a live session.
+ * @summary "Keluar dari perangkat lain": ends every session of the User but the current one.
+ */
+export const signOutOthers = async ( options?: Parameters<typeof apiFetch>[1]): Promise<signOutOthersResponse> => {
+
+  return apiFetch<signOutOthersResponse>(getSignOutOthersUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
 export type getDashboardResponse200 = {
   data: Dashboard
   status: 200
