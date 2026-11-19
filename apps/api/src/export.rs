@@ -1,7 +1,10 @@
 //! The one export mechanism: sudo mode, a required reason, an Audit Entry, and the file in an
 //! AES-256 ZIP under a one-time password that is shown once and never stored.
 
-use std::io::{Cursor, Write};
+use std::{
+    fmt::Write as _,
+    io::{Cursor, Write},
+};
 
 use axum::http::StatusCode;
 use base64::{Engine, prelude::BASE64_STANDARD};
@@ -98,4 +101,16 @@ fn one_time_password() -> anyhow::Result<String> {
         .map(|group| group.iter().collect::<String>())
         .collect::<Vec<_>>()
         .join("-"))
+}
+
+/// Appends one CSV row, every cell quoted; a cell that a spreadsheet would run as a formula
+/// starts with `'` instead.
+pub(crate) fn csv_row(out: &mut String, cells: &[&str]) {
+    for (i, cell) in cells.iter().enumerate() {
+        let formula = cell.starts_with(['=', '+', '-', '@', '\t', '\r']);
+        let separator = if i == 0 { "" } else { "," };
+        let quote = if formula { "'" } else { "" };
+        let _ = write!(out, "{separator}\"{quote}{}\"", cell.replace('"', "\"\""));
+    }
+    out.push_str("\r\n");
 }
