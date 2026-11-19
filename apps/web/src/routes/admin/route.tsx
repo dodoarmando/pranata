@@ -128,6 +128,7 @@ function AdminShell() {
         <p>
           <strong>{me.username}</strong> <small>{me.role}</small>
         </p>
+        <Link to="/admin/akun">Akun saya</Link>
         <button type="button" onClick={onSignOut}>
           Keluar
         </button>

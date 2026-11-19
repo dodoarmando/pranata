@@ -15,6 +15,7 @@ import { Route as AksesRouteImport } from './routes/akses'
 import { Route as MasukRouteImport } from './routes/masuk'
 import { Route as PublicIndexRouteImport } from './routes/_public/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminAkunRouteImport } from './routes/admin/akun'
 import { Route as AdminLogAuditRouteImport } from './routes/admin/log-audit'
 import { Route as AdminPenggunaRouteImport } from './routes/admin/pengguna'
 import { Route as AdminPeranRouteImport } from './routes/admin/peran'
@@ -48,6 +49,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminAkunRoute = AdminAkunRouteImport.update({
+  id: '/akun',
+  path: '/akun',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminLogAuditRoute = AdminLogAuditRouteImport.update({
   id: '/log-audit',
   path: '/log-audit',
@@ -69,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/': typeof PublicIndexRoute
   '/akses': typeof AksesRoute
   '/masuk': typeof MasukRoute
+  '/admin/akun': typeof AdminAkunRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
   '/admin/pengguna': typeof AdminPenggunaRoute
   '/admin/peran': typeof AdminPeranRoute
@@ -77,6 +84,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/akses': typeof AksesRoute
   '/masuk': typeof MasukRoute
+  '/admin/akun': typeof AdminAkunRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
   '/admin/pengguna': typeof AdminPenggunaRoute
   '/admin/peran': typeof AdminPeranRoute
@@ -89,6 +97,7 @@ export interface FileRoutesById {
   '/_public': typeof PublicRouteWithChildren
   '/akses': typeof AksesRoute
   '/masuk': typeof MasukRoute
+  '/admin/akun': typeof AdminAkunRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
   '/admin/pengguna': typeof AdminPenggunaRoute
   '/admin/peran': typeof AdminPeranRoute
@@ -102,6 +111,7 @@ export interface FileRouteTypes {
     | '/'
     | '/akses'
     | '/masuk'
+    | '/admin/akun'
     | '/admin/log-audit'
     | '/admin/pengguna'
     | '/admin/peran'
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
   to:
     | '/akses'
     | '/masuk'
+    | '/admin/akun'
     | '/admin/log-audit'
     | '/admin/pengguna'
     | '/admin/peran'
@@ -121,6 +132,7 @@ export interface FileRouteTypes {
     | '/_public'
     | '/akses'
     | '/masuk'
+    | '/admin/akun'
     | '/admin/log-audit'
     | '/admin/pengguna'
     | '/admin/peran'
@@ -179,6 +191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/akun': {
+      id: '/admin/akun'
+      path: '/akun'
+      fullPath: '/admin/akun'
+      preLoaderRoute: typeof AdminAkunRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/log-audit': {
       id: '/admin/log-audit'
       path: '/log-audit'
@@ -204,6 +223,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteRouteChildren {
+  AdminAkunRoute: typeof AdminAkunRoute
   AdminLogAuditRoute: typeof AdminLogAuditRoute
   AdminPenggunaRoute: typeof AdminPenggunaRoute
   AdminPeranRoute: typeof AdminPeranRoute
@@ -211,6 +231,7 @@ interface AdminRouteRouteChildren {
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminAkunRoute: AdminAkunRoute,
   AdminLogAuditRoute: AdminLogAuditRoute,
   AdminPenggunaRoute: AdminPenggunaRoute,
   AdminPeranRoute: AdminPeranRoute,
