@@ -20,6 +20,9 @@ jobs:
     steps:
       - id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          # PRs opened with GITHUB_TOKEN trigger no workflows, so the release PR would get no CI.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
 
   images:
     needs: release-please
