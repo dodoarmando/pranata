@@ -15,8 +15,9 @@ static COMMON: LazyLock<HashSet<&str>> = LazyLock::new(|| {
         .collect()
 });
 
-/// Pinned so a crate upgrade cannot silently change them: m=19456 KiB, t=2, p=1.
-const PARAMS: Params = match Params::new(19_456, 2, 1, None) {
+/// Pinned so a crate upgrade cannot silently change them: m=19456 KiB, t=2, p=1. The output
+/// length is explicit too, since parameters read back from a stored hash always carry it.
+const PARAMS: Params = match Params::new(19_456, 2, 1, Some(Params::DEFAULT_OUTPUT_LEN)) {
     Ok(params) => params,
     Err(_) => panic!("invalid Argon2 parameters"),
 };

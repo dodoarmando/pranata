@@ -176,5 +176,12 @@ async fn a_hash_with_old_parameters_is_replaced_on_sign_in(pool: PgPool) {
         stored.starts_with("$argon2id$v=19$m=19456,t=2,p=1$"),
         "{stored}"
     );
+
+    // A current hash stays as it is.
     app.sign_in("admin", false).await;
+    let again: String = sqlx::query_scalar("SELECT password_hash FROM users")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(again, stored);
 }
