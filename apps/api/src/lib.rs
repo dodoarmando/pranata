@@ -6,6 +6,8 @@ mod password;
 pub mod user;
 pub mod village;
 
+pub use auth::purge_expired;
+
 use axum::{
     Router,
     http::StatusCode,
@@ -24,6 +26,9 @@ fn api() -> OpenApiRouter<PgPool> {
         .routes(routes!(health::healthz))
         .routes(routes!(village::get_village))
         .routes(routes!(auth::use_access_link))
+        .routes(routes!(auth::sign_in))
+        .routes(routes!(auth::sign_out))
+        .routes(routes!(auth::me))
 }
 
 /// The HTTP application, ready to serve.
@@ -38,7 +43,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 }
 
 /// Why a request failed; anything unexpected becomes a logged `500` without its details.
-enum ApiError {
+pub(crate) enum ApiError {
     Status(StatusCode),
     PasswordRejected(password::PasswordProblem),
     Internal(anyhow::Error),
