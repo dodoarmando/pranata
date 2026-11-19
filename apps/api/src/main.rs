@@ -29,6 +29,19 @@ enum Command {
     },
     /// Print the OpenAPI spec as JSON.
     Openapi,
+    /// Provision the Installation's Village.
+    #[command(subcommand)]
+    Village(VillageCommand),
+}
+
+#[derive(Subcommand)]
+enum VillageCommand {
+    /// Set the Village from its 10-digit desa or desa adat code in the national list.
+    SetCode {
+        code: String,
+        #[arg(long, env = "DATABASE_URL", hide_env_values = true)]
+        database_url: String,
+    },
 }
 
 #[tokio::main]
@@ -68,6 +81,12 @@ async fn main() -> anyhow::Result<()> {
             tracing::info!("migrations applied");
         }
         Command::Openapi => println!("{}", pranata::openapi().to_pretty_json()?),
+        Command::Village(VillageCommand::SetCode { code, database_url }) => {
+            let pool = PgPool::connect(&database_url).await?;
+            pranata::db::ensure_schema(&pool).await?;
+            pranata::village::set_code(&pool, &code).await?;
+            tracing::info!(%code, "village set");
+        }
     }
     Ok(())
 }

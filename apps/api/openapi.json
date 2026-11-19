@@ -40,6 +40,31 @@
           }
         }
       }
+    },
+    "/village": {
+      "get": {
+        "tags": [
+          "village"
+        ],
+        "summary": "The Village's official identity; read-only, set by the vendor from the CLI.",
+        "description": "# Errors\n`404` before the Village Code is set, `500` when the database is unreachable.",
+        "operationId": "getVillage",
+        "responses": {
+          "200": {
+            "description": "The Village",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Village"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The Village Code is not set yet"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -61,6 +86,47 @@
           "ok",
           "unavailable"
         ]
+      },
+      "TimeZone": {
+        "type": "string",
+        "description": "Indonesia's three time zones; the Village's drives every date-only rule.",
+        "enum": [
+          "WIB",
+          "WITA",
+          "WIT"
+        ]
+      },
+      "Village": {
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "district",
+          "regency",
+          "province",
+          "timeZone"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The 10-digit Village Code."
+          },
+          "district": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "province": {
+            "type": "string"
+          },
+          "regency": {
+            "type": "string"
+          },
+          "timeZone": {
+            "$ref": "#/components/schemas/TimeZone"
+          }
+        }
       }
     }
   }
