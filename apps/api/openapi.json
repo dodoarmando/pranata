@@ -164,7 +164,7 @@
           "auth"
         ],
         "summary": "Signs in with a passkey instead of the password, starting a session held in the\n`__Host-session` cookie.",
-        "description": "# Errors\n`401`, the same for a decoy, an unknown, used or expired ceremony, a failed assertion and an\ninactive User.",
+        "description": "# Errors\n`401`, the same for a decoy, an unknown, used or expired ceremony, a failed assertion and an\ninactive User; `429` after 20 attempts a minute from the address.",
         "operationId": "signInWithPasskey",
         "requestBody": {
           "content": {
@@ -182,6 +182,9 @@
           },
           "401": {
             "description": "The passkey does not sign this User in"
+          },
+          "429": {
+            "description": "Too many attempts from the address; try again later"
           }
         }
       }
@@ -467,7 +470,7 @@
           "auth"
         ],
         "summary": "Signs in with a username and password, starting a session held in the `__Host-session` cookie.",
-        "description": "# Errors\n`401`, the same for every wrong username or password.",
+        "description": "# Errors\n`401`, the same for every wrong username or password; `429` without checking them, after 5\nfailures for the username or 20 attempts a minute from the address.",
         "operationId": "signIn",
         "requestBody": {
           "content": {
@@ -485,6 +488,9 @@
           },
           "401": {
             "description": "The username or password is wrong"
+          },
+          "429": {
+            "description": "Too many attempts for the username or from the address; try again later"
           }
         }
       }

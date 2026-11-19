@@ -31,6 +31,7 @@ use crate::{
     ApiError,
     audit::{self, Actor},
     auth::{self, Session},
+    throttle::Throttle,
 };
 
 /// Ceremonies in flight; more are refused, so a flood of challenges cannot exhaust memory.
@@ -410,7 +411,7 @@ pub struct PasskeySignIn {
 ///
 /// # Errors
 /// `401`, the same for a decoy, an unknown, used or expired ceremony, a failed assertion and an
-/// inactive User.
+/// inactive User; `429` after 20 attempts a minute from the address.
 #[utoipa::path(
     post,
     path = "/auth/passkey-sign-in",
@@ -420,14 +421,20 @@ pub struct PasskeySignIn {
     responses(
         (status = NO_CONTENT, description = "Signed in; the response sets the session cookie"),
         (status = UNAUTHORIZED, description = "The passkey does not sign this User in"),
+        (status = TOO_MANY_REQUESTS, description = "Too many attempts from the address; try again later"),
     ),
 )]
 pub(crate) async fn finish_sign_in(
     State(pool): State<PgPool>,
     State(passkeys): State<Arc<Passkeys>>,
+    State(throttle): State<Arc<Throttle>>,
     headers: HeaderMap,
     Json(body): Json<PasskeySignIn>,
 ) -> Result<impl IntoResponse, ApiError> {
+    // No delay per username: a passkey cannot be guessed, and keeps the User from being locked out.
+    if !throttle.admit_address(auth::client_ip(&headers)) {
+        return Err(ApiError::Status(StatusCode::TOO_MANY_REQUESTS));
+    }
     let ceremony = passkeys.sign_ins.finish(body.ceremony_id).flatten();
     let attempted = ceremony.as_ref().map(|(user_id, _)| user_id.to_string());
     let verified = ceremony.and_then(|(user_id, state)| {

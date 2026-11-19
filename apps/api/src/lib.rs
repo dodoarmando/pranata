@@ -6,6 +6,7 @@ mod health;
 mod passkey;
 mod password;
 mod role;
+mod throttle;
 pub mod user;
 pub mod village;
 
@@ -28,11 +29,13 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 #[openapi(info(title = "Pranata API"))]
 struct ApiDoc;
 
-/// What every handler can reach: the database and the passkey ceremonies in flight.
+/// What every handler can reach: the database, the passkey ceremonies in flight and the
+/// sign-in throttle.
 #[derive(Clone)]
 pub(crate) struct AppState {
     pool: PgPool,
     passkeys: Arc<passkey::Passkeys>,
+    throttle: Arc<throttle::Throttle>,
 }
 
 impl FromRef<AppState> for PgPool {
@@ -44,6 +47,12 @@ impl FromRef<AppState> for PgPool {
 impl FromRef<AppState> for Arc<passkey::Passkeys> {
     fn from_ref(state: &AppState) -> Self {
         state.passkeys.clone()
+    }
+}
+
+impl FromRef<AppState> for Arc<throttle::Throttle> {
+    fn from_ref(state: &AppState) -> Self {
+        state.throttle.clone()
     }
 }
 
@@ -88,7 +97,11 @@ pub fn app(pool: PgPool, public_origin: String) -> anyhow::Result<Router> {
             public_origin,
             same_origin_only,
         ))
-        .with_state(AppState { pool, passkeys }))
+        .with_state(AppState {
+            pool,
+            passkeys,
+            throttle: Arc::default(),
+        }))
 }
 
 /// CSRF defence without tokens: an unsafe method needs `Sec-Fetch-Site: same-origin` or,

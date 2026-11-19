@@ -463,10 +463,15 @@ export type signInWithPasskeyResponse401 = {
   status: 401
 }
 
+export type signInWithPasskeyResponse429 = {
+  data: void
+  status: 429
+}
+
 export type signInWithPasskeyResponseSuccess = (signInWithPasskeyResponse204) & {
   headers: Headers;
 };
-export type signInWithPasskeyResponseError = (signInWithPasskeyResponse401) & {
+export type signInWithPasskeyResponseError = (signInWithPasskeyResponse401 | signInWithPasskeyResponse429) & {
   headers: Headers;
 };
 
@@ -483,7 +488,7 @@ export const getSignInWithPasskeyUrl = () => {
 /**
  * # Errors
  * `401`, the same for a decoy, an unknown, used or expired ceremony, a failed assertion and an
- * inactive User.
+ * inactive User; `429` after 20 attempts a minute from the address.
  * @summary Signs in with a passkey instead of the password, starting a session held in the
 `__Host-session` cookie.
  */
@@ -929,10 +934,15 @@ export type signInResponse401 = {
   status: 401
 }
 
+export type signInResponse429 = {
+  data: void
+  status: 429
+}
+
 export type signInResponseSuccess = (signInResponse204) & {
   headers: Headers;
 };
-export type signInResponseError = (signInResponse401) & {
+export type signInResponseError = (signInResponse401 | signInResponse429) & {
   headers: Headers;
 };
 
@@ -948,7 +958,8 @@ export const getSignInUrl = () => {
 
 /**
  * # Errors
- * `401`, the same for every wrong username or password.
+ * `401`, the same for every wrong username or password; `429` without checking them, after 5
+ * failures for the username or 20 attempts a minute from the address.
  * @summary Signs in with a username and password, starting a session held in the `__Host-session` cookie.
  */
 export const signIn = async (signInBody: SignIn, options?: Parameters<typeof apiFetch>[1]): Promise<signInResponse> => {
