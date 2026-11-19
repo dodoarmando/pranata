@@ -4,16 +4,18 @@ mod dashboard;
 pub mod db;
 mod export;
 mod health;
+mod imaging;
 mod passkey;
 mod password;
 mod role;
+pub mod storage;
 mod throttle;
 pub mod user;
 pub mod village;
 
 pub use auth::purge_expired;
 
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use axum::{
     Router,
@@ -30,13 +32,14 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 #[openapi(info(title = "Pranata API"))]
 struct ApiDoc;
 
-/// What every handler can reach: the database, the passkey ceremonies in flight and the
-/// sign-in throttle.
+/// What every handler can reach: the database, the passkey ceremonies in flight, the
+/// sign-in throttle and the files volume.
 #[derive(Clone)]
 pub(crate) struct AppState {
     pool: PgPool,
     passkeys: Arc<passkey::Passkeys>,
     throttle: Arc<throttle::Throttle>,
+    storage: Arc<storage::Storage>,
 }
 
 impl FromRef<AppState> for PgPool {
@@ -57,10 +60,18 @@ impl FromRef<AppState> for Arc<throttle::Throttle> {
     }
 }
 
+impl FromRef<AppState> for Arc<storage::Storage> {
+    fn from_ref(state: &AppState) -> Self {
+        state.storage.clone()
+    }
+}
+
 fn api() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(health::healthz))
         .routes(routes!(village::get_village))
+        .routes(routes!(village::upload_logo))
+        .routes(routes!(storage::get_media))
         .routes(routes!(auth::use_access_link))
         .routes(routes!(auth::sign_in))
         .routes(routes!(auth::sign_out))
@@ -86,11 +97,12 @@ fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(user::remove_passkeys))
 }
 
-/// The HTTP application, ready to serve at `public_origin` (`https://host`, no trailing slash).
+/// The HTTP application, ready to serve at `public_origin` (`https://host`, no trailing slash)
+/// with files kept under `files_dir`.
 ///
 /// # Errors
 /// When `public_origin` is not a URL with a domain, which passkeys are bound to.
-pub fn app(pool: PgPool, public_origin: String) -> anyhow::Result<Router> {
+pub fn app(pool: PgPool, public_origin: String, files_dir: PathBuf) -> anyhow::Result<Router> {
     let passkeys = Arc::new(passkey::Passkeys::new(&public_origin)?);
     Ok(api()
         .split_for_parts()
@@ -103,6 +115,7 @@ pub fn app(pool: PgPool, public_origin: String) -> anyhow::Result<Router> {
             pool,
             passkeys,
             throttle: Arc::default(),
+            storage: Arc::new(storage::Storage::new(files_dir)),
         }))
 }
 

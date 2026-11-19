@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, path::PathBuf};
 
 use anyhow::Context;
 use clap::{Parser, Subcommand};
@@ -24,6 +24,9 @@ enum Command {
         /// The Installation's public origin, such as `https://example.desa.id`.
         #[arg(long, env = "PRANATA_PUBLIC_ORIGIN")]
         public_origin: String,
+        /// Where uploaded files live; created when missing.
+        #[arg(long, env = "PRANATA_FILES_DIR")]
+        files_dir: PathBuf,
     },
     /// Apply pending database migrations.
     Migrate {
@@ -98,9 +101,12 @@ async fn main() -> anyhow::Result<()> {
             database_url,
             listen,
             public_origin,
+            files_dir,
         } => {
             let pool = PgPool::connect(&database_url).await?;
             pranata::db::ensure_schema(&pool).await?;
+            std::fs::create_dir_all(&files_dir)
+                .with_context(|| format!("cannot create {}", files_dir.display()))?;
             let listener = tokio::net::TcpListener::bind(listen)
                 .await
                 .with_context(|| format!("cannot listen on {listen}"))?;
@@ -109,7 +115,7 @@ async fn main() -> anyhow::Result<()> {
             tokio::spawn(purge_expired_every_10_minutes(pool.clone()));
             tracing::info!(%listen, "serving");
             let public_origin = public_origin.trim_end_matches('/').to_owned();
-            axum::serve(listener, pranata::app(pool, public_origin)?)
+            axum::serve(listener, pranata::app(pool, public_origin, files_dir)?)
                 .with_graceful_shutdown(async move {
                     tokio::select! {
                         _ = terminate.recv() => {}

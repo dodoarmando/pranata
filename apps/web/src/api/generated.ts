@@ -245,6 +245,11 @@ export const TimeZone = {
   WIT: 'WIT',
 } as const;
 
+export interface Upload {
+  /** The stored file, unreferenced until saved into its owner and swept after 24 h if not. */
+  id: string;
+}
+
 export interface UseAccessLink {
   password: string;
   /** The token after `#` in the Access Link. */
@@ -1255,6 +1260,59 @@ export const getHealth = async ( options?: Parameters<typeof apiFetch>[1]): Prom
 
 
 
+export type getMediaResponse200ImageWebp = {
+  data: Blob
+  status: 200
+}
+
+export type getMediaResponse200ImageJpeg = {
+  data: Blob
+  status: 200
+}
+
+export type getMediaResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getMediaResponseSuccess = (getMediaResponse200ImageWebp | getMediaResponse200ImageJpeg) & {
+  headers: Headers;
+};
+export type getMediaResponseError = (getMediaResponse404) & {
+  headers: Headers;
+};
+
+export type getMediaResponse = (getMediaResponseSuccess | getMediaResponseError)
+
+export const getGetMediaUrl = (id: string,
+    variant: string,) => {
+
+
+
+
+  return `/media/${id}/${variant}`
+}
+
+/**
+ * # Errors
+ * `404` for an unknown file or variant.
+ * @summary An image's public rendition: `480`, `960` or `1600` (WebP) or `share` (JPEG). Cached
+forever, since a file never changes; only images that hold no personal data come here.
+ */
+export const getMedia = async (id: string,
+    variant: string, options?: Parameters<typeof apiFetch>[1]): Promise<getMediaResponse> => {
+
+  return apiFetch<getMediaResponse>(getGetMediaUrl(id,variant),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
 export type listRolesResponse200 = {
   data: Role[]
   status: 200
@@ -1863,5 +1921,71 @@ export const getVillage = async ( options?: Parameters<typeof apiFetch>[1]): Pro
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type uploadVillageLogoResponse201 = {
+  data: Upload
+  status: 201
+}
+
+export type uploadVillageLogoResponse401 = {
+  data: void
+  status: 401
+}
+
+export type uploadVillageLogoResponse403 = {
+  data: void
+  status: 403
+}
+
+export type uploadVillageLogoResponse413 = {
+  data: void
+  status: 413
+}
+
+export type uploadVillageLogoResponse415 = {
+  data: void
+  status: 415
+}
+
+export type uploadVillageLogoResponse422 = {
+  data: void
+  status: 422
+}
+
+export type uploadVillageLogoResponseSuccess = (uploadVillageLogoResponse201) & {
+  headers: Headers;
+};
+export type uploadVillageLogoResponseError = (uploadVillageLogoResponse401 | uploadVillageLogoResponse403 | uploadVillageLogoResponse413 | uploadVillageLogoResponse415 | uploadVillageLogoResponse422) & {
+  headers: Headers;
+};
+
+export type uploadVillageLogoResponse = (uploadVillageLogoResponseSuccess | uploadVillageLogoResponseError)
+
+export const getUploadVillageLogoUrl = () => {
+
+
+
+
+  return `/village/logo`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `413` over 2 MiB, `415`
+ * for content that is not PNG or SVG, `422` over 40 megapixels or undecodable.
+ * @summary Stores a Village logo, a PNG or SVG of at most 2 MiB, for saving into the profile.
+ */
+export const uploadVillageLogo = async (uploadVillageLogoBody: Blob, options?: Parameters<typeof apiFetch>[1]): Promise<uploadVillageLogoResponse> => {
+
+  return apiFetch<uploadVillageLogoResponse>(getUploadVillageLogoUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/octet-stream' }, options?.headers),
+    body: uploadVillageLogoBody
   }
 );}
