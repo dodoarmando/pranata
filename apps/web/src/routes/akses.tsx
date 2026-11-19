@@ -1,11 +1,8 @@
 import { createFileRoute, Link, useHydrated } from '@tanstack/react-router';
 import { createServerFn, useServerFn } from '@tanstack/react-start';
 import { type FormEvent, useState } from 'react';
-import {
-  type PasswordProblem,
-  useAccessLink as setPasswordFromAccessLink,
-  type UseAccessLink,
-} from '../api/generated';
+import { useAccessLink as setPasswordFromAccessLink, type UseAccessLink } from '../api/generated';
+import { passwordHint, passwordProblems } from '../password';
 
 const setPasswordFn = createServerFn({ method: 'POST' })
   .validator((data: UseAccessLink) => data)
@@ -15,14 +12,6 @@ const setPasswordFn = createServerFn({ method: 'POST' })
       ? { status: response.status, problem: response.data.problem }
       : { status: response.status };
   });
-
-const problems: Record<PasswordProblem, string> = {
-  tooShort: 'Kata sandi minimal 12 karakter.',
-  tooLong: 'Kata sandi paling banyak 128 karakter.',
-  common: 'Kata sandi ini terlalu umum atau pernah bocor. Pilih yang lain.',
-  containsUsername: 'Kata sandi tidak boleh memuat nama pengguna.',
-  containsVillageName: 'Kata sandi tidak boleh memuat nama desa.',
-};
 
 export const Route = createFileRoute('/akses')({
   head: () => ({ meta: [{ title: 'Buat kata sandi · Pranata' }] }),
@@ -47,7 +36,7 @@ function AccessLinkPage() {
     if (result.status === 204) {
       setDone(true);
     } else if (result.problem) {
-      setError(problems[result.problem]);
+      setError(passwordProblems[result.problem]);
     } else {
       setError('Tautan Akses ini tidak berlaku lagi. Minta tautan baru ke Administrator desa.');
     }
@@ -78,9 +67,7 @@ function AccessLinkPage() {
             required
           />
         </label>
-        <p id="password-hint">
-          12–128 karakter. Jangan memakai kata sandi umum, nama pengguna, atau nama desa.
-        </p>
+        <p id="password-hint">{passwordHint}</p>
         {error && <p role="alert">{error}</p>}
         <button type="submit" disabled={busy || !hydrated}>
           Simpan kata sandi
