@@ -20,6 +20,7 @@ export function VillageLogo({
       alt={`Logo ${villageTitle(village)}`}
       width={48}
       height={48}
+      loading="lazy"
       className={`${className} flex-none object-contain`}
     />
   ) : (
