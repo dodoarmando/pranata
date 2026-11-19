@@ -21,6 +21,15 @@ test('the first Administrator sets a password from the Access Link, signs in and
   await expect(page.getByRole('heading', { name: 'Beranda' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Menu admin' })).toContainText('Log audit');
 
+  await page.getByText('Sistem').click();
+  await page.getByRole('link', { name: 'Log audit' }).click();
+  await page.getByLabel('Pengguna').fill(username);
+  await page.getByRole('button', { name: 'Saring' }).click();
+  await expect(page).toHaveURL(new RegExp(`username=${username}`));
+  await expect(page.getByRole('table')).toContainText('session.sign_in');
+  await expect(page.getByRole('table')).toContainText('access_link.use');
+  await expect(page.getByRole('table')).toContainText('{"remember":false}');
+
   await page.getByRole('button', { name: 'Keluar' }).click();
   await expect(page).toHaveURL(/\/masuk$/);
   await page.goto('/admin');
