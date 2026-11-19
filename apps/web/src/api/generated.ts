@@ -16,6 +16,12 @@ export interface Health {
   status: HealthStatus;
 }
 
+export interface Me {
+  /** The name of the User's Role. */
+  role: string;
+  username: string;
+}
+
 /**
  * Why a new password is refused.
  */
@@ -32,6 +38,13 @@ export const PasswordProblem = {
 
 export interface PasswordRejected {
   problem: PasswordProblem;
+}
+
+export interface SignIn {
+  password: string;
+  /** "Ingat saya": 7 days idle and 30 days absolute instead of 30 minutes and 12 hours. */
+  remember: boolean;
+  username: string;
 }
 
 /**
@@ -127,6 +140,141 @@ export const useAccessLink = async (useAccessLinkBody: UseAccessLink, options?: 
     method: 'POST',
     headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
     body: JSON.stringify(useAccessLinkBody)
+  }
+);}
+
+
+
+export type getMeResponse200 = {
+  data: Me
+  status: 200
+}
+
+export type getMeResponse401 = {
+  data: void
+  status: 401
+}
+
+export type getMeResponseSuccess = (getMeResponse200) & {
+  headers: Headers;
+};
+export type getMeResponseError = (getMeResponse401) & {
+  headers: Headers;
+};
+
+export type getMeResponse = (getMeResponseSuccess | getMeResponseError)
+
+export const getGetMeUrl = () => {
+
+
+
+
+  return `/auth/me`
+}
+
+/**
+ * # Errors
+ * `401` without a live session.
+ * @summary The signed-in User.
+ */
+export const getMe = async ( options?: Parameters<typeof apiFetch>[1]): Promise<getMeResponse> => {
+
+  return apiFetch<getMeResponse>(getGetMeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type signInResponse204 = {
+  data: void
+  status: 204
+}
+
+export type signInResponse401 = {
+  data: void
+  status: 401
+}
+
+export type signInResponseSuccess = (signInResponse204) & {
+  headers: Headers;
+};
+export type signInResponseError = (signInResponse401) & {
+  headers: Headers;
+};
+
+export type signInResponse = (signInResponseSuccess | signInResponseError)
+
+export const getSignInUrl = () => {
+
+
+
+
+  return `/auth/sign-in`
+}
+
+/**
+ * # Errors
+ * `401`, the same for every wrong username or password.
+ * @summary Signs in with a username and password, starting a session held in the `__Host-session` cookie.
+ */
+export const signIn = async (signInBody: SignIn, options?: Parameters<typeof apiFetch>[1]): Promise<signInResponse> => {
+
+  return apiFetch<signInResponse>(getSignInUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(signInBody)
+  }
+);}
+
+
+
+export type signOutResponse204 = {
+  data: void
+  status: 204
+}
+
+export type signOutResponse401 = {
+  data: void
+  status: 401
+}
+
+export type signOutResponseSuccess = (signOutResponse204) & {
+  headers: Headers;
+};
+export type signOutResponseError = (signOutResponse401) & {
+  headers: Headers;
+};
+
+export type signOutResponse = (signOutResponseSuccess | signOutResponseError)
+
+export const getSignOutUrl = () => {
+
+
+
+
+  return `/auth/sign-out`
+}
+
+/**
+ * # Errors
+ * `401` without a live session.
+ * @summary Ends the current session and clears its cookie.
+ */
+export const signOut = async ( options?: Parameters<typeof apiFetch>[1]): Promise<signOutResponse> => {
+
+  return apiFetch<signOutResponse>(getSignOutUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
   }
 );}
 

@@ -48,6 +48,77 @@
         }
       }
     },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "The signed-in User.",
+        "description": "# Errors\n`401` without a live session.",
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "description": "The signed-in User",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          }
+        }
+      }
+    },
+    "/auth/sign-in": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Signs in with a username and password, starting a session held in the `__Host-session` cookie.",
+        "description": "# Errors\n`401`, the same for every wrong username or password.",
+        "operationId": "signIn",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Signed in; the response sets the session cookie"
+          },
+          "401": {
+            "description": "The username or password is wrong"
+          }
+        }
+      }
+    },
+    "/auth/sign-out": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Ends the current session and clears its cookie.",
+        "description": "# Errors\n`401` without a live session.",
+        "operationId": "signOut",
+        "responses": {
+          "204": {
+            "description": "Signed out; the response clears the session cookie"
+          },
+          "401": {
+            "description": "There is no live session"
+          }
+        }
+      }
+    },
     "/healthz": {
       "get": {
         "tags": [
@@ -125,6 +196,22 @@
           "unavailable"
         ]
       },
+      "Me": {
+        "type": "object",
+        "required": [
+          "username",
+          "role"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "The name of the User's Role."
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
       "PasswordProblem": {
         "type": "string",
         "description": "Why a new password is refused.",
@@ -144,6 +231,26 @@
         "properties": {
           "problem": {
             "$ref": "#/components/schemas/PasswordProblem"
+          }
+        }
+      },
+      "SignIn": {
+        "type": "object",
+        "required": [
+          "username",
+          "password",
+          "remember"
+        ],
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "remember": {
+            "type": "boolean",
+            "description": "\"Ingat saya\": 7 days idle and 30 days absolute instead of 30 minutes and 12 hours."
+          },
+          "username": {
+            "type": "string"
           }
         }
       },

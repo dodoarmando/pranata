@@ -63,6 +63,16 @@ enum VillageCommand {
     },
 }
 
+async fn purge_expired_every_10_minutes(pool: PgPool) {
+    let mut tick = tokio::time::interval(std::time::Duration::from_secs(600));
+    loop {
+        tick.tick().await;
+        if let Err(error) = pranata::purge_expired(&pool).await {
+            tracing::error!(%error, "cannot purge expired sessions and Access Links");
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -83,6 +93,7 @@ async fn main() -> anyhow::Result<()> {
                 .with_context(|| format!("cannot listen on {listen}"))?;
             // As PID 1 in a container, SIGTERM is ignored unless handled.
             let mut terminate = signal(SignalKind::terminate())?;
+            tokio::spawn(purge_expired_every_10_minutes(pool.clone()));
             tracing::info!(%listen, "serving");
             axum::serve(listener, pranata::app(pool))
                 .with_graceful_shutdown(async move {

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM sessions WHERE expires_at <= now() OR last_seen_at + idle_timeout <= now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "9fa4b04cde62894adb0ff8557803c4d272e5a77f81ca94ece6d81e5c414b4eeb"
+}

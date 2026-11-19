@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH live AS (\n                 UPDATE sessions SET last_seen_at = now()\n                 WHERE token_hash = $1 AND expires_at > now() AND last_seen_at + idle_timeout > now()\n                 RETURNING user_id\n             )\n             SELECT users.id, users.username, roles.name AS role\n             FROM live JOIN users ON users.id = live.user_id JOIN roles ON roles.id = users.role_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "username",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "username"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "role",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "roles",
+            "name": "name"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Bytea"]
+    },
+    "nullable": [false, false, false]
+  },
+  "hash": "83cb22e7c9a3dbacaa6d059aac855daa31f8cf64303d90c35773d0712bcaeaa6"
+}
