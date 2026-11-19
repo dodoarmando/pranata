@@ -1,16 +1,16 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id FROM users WHERE id = $1 FOR UPDATE",
+  "query": "SELECT active FROM users WHERE id = $1 FOR UPDATE",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "id",
-        "type_info": "Uuid",
+        "name": "active",
+        "type_info": "Bool",
         "origin": {
           "Table": {
             "table": "users",
-            "name": "id"
+            "name": "active"
           }
         }
       }
@@ -20,5 +20,5 @@
     },
     "nullable": [false]
   },
-  "hash": "a02948fc025de863ddadf3e2a61b998a2b0520acecb22e003c0b9fbb74314f6f"
+  "hash": "90dc62246b2de12adb306b024f54c337998a071dd64c9a365acdf3e5a87c1d45"
 }

@@ -37,6 +37,7 @@ fn api() -> OpenApiRouter<PgPool> {
         .routes(routes!(role::list, role::create))
         .routes(routes!(role::update))
         .routes(routes!(user::list, user::create))
+        .routes(routes!(user::update))
         .routes(routes!(user::reset))
         .routes(routes!(user::revoke_sessions))
 }

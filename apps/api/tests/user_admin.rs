@@ -260,3 +260,214 @@ async fn actions_on_users_need_sudo_mode(pool: PgPool) {
     let users = app.call("GET", "/users", None, Some(&cookie)).await;
     assert_eq!(users.status, StatusCode::OK);
 }
+
+async fn patch(app: &TestApp, cookie: &str, id: &str, body: Value) -> StatusCode {
+    app.call("PATCH", &format!("/users/{id}"), Some(&body), Some(cookie))
+        .await
+        .status
+}
+
+async fn last_changes(pool: &PgPool, id: &str) -> (String, Value) {
+    sqlx::query_as(
+        "SELECT action, changes FROM audit_entries WHERE object_id = $1 ORDER BY id DESC LIMIT 1",
+    )
+    .bind(id)
+    .fetch_one(pool)
+    .await
+    .unwrap()
+}
+
+#[sqlx::test]
+async fn deactivating_a_user_signs_them_out_at_once_until_reactivated(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    let cookie = admin(&app, &pool).await;
+    let (id, token) = create_user(&app, &cookie, "kaur", role_id(&pool, "Operator").await).await;
+    use_link(&app, &token).await;
+    let kaur = app.sign_in("kaur", false).await;
+
+    assert_eq!(
+        patch(&app, &cookie, &id, json!({ "active": false })).await,
+        StatusCode::NO_CONTENT
+    );
+    assert_eq!(
+        last_changes(&pool, &id).await,
+        (
+            "user.update".to_owned(),
+            json!([{ "field": "active", "from": true, "to": false }])
+        )
+    );
+
+    let me = app.call("GET", "/auth/me", None, Some(&kaur)).await;
+    assert_eq!(me.status, StatusCode::UNAUTHORIZED);
+    let sign_in = app
+        .call(
+            "POST",
+            "/auth/sign-in",
+            Some(&json!({ "username": "kaur", "password": PASSWORD, "remember": false })),
+            None,
+        )
+        .await;
+    assert_eq!(sign_in.status, StatusCode::UNAUTHORIZED);
+    let users = app.call("GET", "/users", None, Some(&cookie)).await.body;
+    let kaur = users
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|u| u["id"] == id.as_str())
+        .unwrap();
+    assert_eq!(kaur["active"], false);
+
+    assert_eq!(
+        patch(&app, &cookie, &id, json!({ "active": true })).await,
+        StatusCode::NO_CONTENT
+    );
+    app.sign_in("kaur", false).await;
+}
+
+#[sqlx::test]
+async fn a_new_role_applies_on_the_users_next_request(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    let cookie = admin(&app, &pool).await;
+    let (id, token) = create_user(&app, &cookie, "kaur", role_id(&pool, "Operator").await).await;
+    use_link(&app, &token).await;
+    let kaur = app.sign_in("kaur", false).await;
+    let kontributor = role_id(&pool, "Kontributor Web").await;
+
+    assert_eq!(
+        patch(&app, &cookie, &id, json!({ "roleId": kontributor })).await,
+        StatusCode::NO_CONTENT
+    );
+
+    let me = app.call("GET", "/auth/me", None, Some(&kaur)).await;
+    assert_eq!(me.body["role"], "Kontributor Web");
+    assert_eq!(
+        last_changes(&pool, &id).await,
+        (
+            "user.update".to_owned(),
+            json!([{ "field": "role", "from": "Operator", "to": "Kontributor Web" }])
+        )
+    );
+}
+
+#[sqlx::test]
+async fn the_last_active_administrator_is_never_deactivated_or_demoted(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    let cookie = admin(&app, &pool).await;
+    let me = sqlx::query_scalar::<_, Uuid>("SELECT id FROM users WHERE username = 'admin'")
+        .fetch_one(&pool)
+        .await
+        .unwrap()
+        .to_string();
+    let administrator = role_id(&pool, "Administrator").await;
+    let operator = role_id(&pool, "Operator").await;
+    let (other, _) = create_user(&app, &cookie, "admin2", administrator).await;
+
+    // An inactive Administrator does not count.
+    assert_eq!(
+        patch(&app, &cookie, &other, json!({ "active": false })).await,
+        StatusCode::NO_CONTENT
+    );
+    for body in [json!({ "active": false }), json!({ "roleId": operator })] {
+        assert_eq!(
+            patch(&app, &cookie, &me, body.clone()).await,
+            StatusCode::CONFLICT,
+            "{body}"
+        );
+    }
+    let still: bool =
+        sqlx::query_scalar("SELECT active AND role_id = $1 FROM users WHERE username = 'admin'")
+            .bind(administrator)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert!(still);
+
+    // With another active Administrator, stepping down is allowed.
+    assert_eq!(
+        patch(&app, &cookie, &other, json!({ "active": true })).await,
+        StatusCode::NO_CONTENT
+    );
+    assert_eq!(
+        patch(&app, &cookie, &me, json!({ "roleId": operator })).await,
+        StatusCode::NO_CONTENT
+    );
+}
+
+#[sqlx::test]
+async fn changing_a_user_needs_a_known_user_and_role(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    let cookie = admin(&app, &pool).await;
+    let (id, _) = create_user(&app, &cookie, "kaur", role_id(&pool, "Operator").await).await;
+
+    let unknown_user = patch(
+        &app,
+        &cookie,
+        &Uuid::nil().to_string(),
+        json!({ "active": false }),
+    )
+    .await;
+    let unknown_role = patch(&app, &cookie, &id, json!({ "roleId": Uuid::nil() })).await;
+
+    assert_eq!(unknown_user, StatusCode::NOT_FOUND);
+    assert_eq!(unknown_role, StatusCode::UNPROCESSABLE_ENTITY);
+}
+
+#[sqlx::test]
+async fn changing_a_user_is_for_the_administrator_in_sudo_mode(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    let cookie = admin(&app, &pool).await;
+    let (id, _) = create_user(&app, &cookie, "kaur", role_id(&pool, "Operator").await).await;
+    let kades = app.user_with(&pool, "kades", &["audit.read"]).await;
+
+    assert_eq!(
+        patch(&app, &kades, &id, json!({ "active": false })).await,
+        StatusCode::FORBIDDEN
+    );
+    sqlx::query("UPDATE sessions SET authenticated_at = now() - interval '16 minutes'")
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        patch(&app, &cookie, &id, json!({ "active": false })).await,
+        StatusCode::PRECONDITION_REQUIRED
+    );
+}
+
+#[sqlx::test]
+async fn a_change_that_changes_nothing_writes_no_audit_entry(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    let cookie = admin(&app, &pool).await;
+    let operator = role_id(&pool, "Operator").await;
+    let (id, _) = create_user(&app, &cookie, "kaur", operator).await;
+
+    for body in [
+        json!({ "active": true }),
+        json!({ "roleId": operator }),
+        json!({}),
+    ] {
+        assert_eq!(
+            patch(&app, &cookie, &id, body).await,
+            StatusCode::NO_CONTENT
+        );
+    }
+
+    assert_eq!(
+        actions(&pool, &id).await,
+        ["user.create", "access_link.create"]
+    );
+}
+
+#[sqlx::test]
+async fn an_inactive_user_gets_no_access_link_until_reactivated(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    let cookie = admin(&app, &pool).await;
+    let (id, token) = create_user(&app, &cookie, "kaur", role_id(&pool, "Operator").await).await;
+    patch(&app, &cookie, &id, json!({ "active": false })).await;
+    let path = format!("/users/{id}/access-link");
+    let reset = || app.call("POST", &path, None, Some(&cookie));
+
+    assert_eq!(use_link(&app, &token).await, StatusCode::NOT_FOUND);
+    assert_eq!(reset().await.status, StatusCode::CONFLICT);
+    patch(&app, &cookie, &id, json!({ "active": true })).await;
+    assert_eq!(reset().await.status, StatusCode::CREATED);
+}

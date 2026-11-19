@@ -167,12 +167,16 @@ pub async fn sign_in(
     Json(body): Json<SignIn>,
 ) -> Result<impl IntoResponse, ApiError> {
     let user = sqlx::query!(
-        "SELECT id, password_hash FROM users WHERE username = $1",
+        "SELECT id, password_hash, active FROM users WHERE username = $1",
         body.username,
     )
     .fetch_optional(&pool)
     .await?;
-    let stored = user.as_ref().and_then(|user| user.password_hash.clone());
+    // A deactivated User is refused like a wrong password.
+    let stored = user
+        .as_ref()
+        .filter(|user| user.active)
+        .and_then(|user| user.password_hash.clone());
     let attempted = user.as_ref().map(|user| user.id.to_string());
     let mut tx = pool.begin().await?;
     let (Some(user), Verdict::Right { rehashed }) =
@@ -296,7 +300,7 @@ impl FromRequestParts<PgPool> for Session {
              )
              SELECT users.id, users.username, roles.name AS role, roles.administrator, live.sudo AS \"sudo!\",
                     roles.permissions AS \"permissions: Vec<Permission>\"
-             FROM live JOIN users ON users.id = live.user_id JOIN roles ON roles.id = users.role_id",
+             FROM live JOIN users ON users.id = live.user_id AND users.active JOIN roles ON roles.id = users.role_id",
             token_hash,
         )
         .fetch_optional(pool)

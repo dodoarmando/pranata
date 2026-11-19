@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "WITH live AS (\n                 UPDATE sessions SET last_seen_at = now()\n                 WHERE token_hash = $1 AND expires_at > now() AND last_seen_at + idle_timeout > now()\n                 RETURNING user_id, authenticated_at > now() - interval '15 minutes' AS sudo\n             )\n             SELECT users.id, users.username, roles.name AS role, roles.administrator, live.sudo AS \"sudo!\",\n                    roles.permissions AS \"permissions: Vec<Permission>\"\n             FROM live JOIN users ON users.id = live.user_id JOIN roles ON roles.id = users.role_id",
+  "query": "WITH live AS (\n                 UPDATE sessions SET last_seen_at = now()\n                 WHERE token_hash = $1 AND expires_at > now() AND last_seen_at + idle_timeout > now()\n                 RETURNING user_id, authenticated_at > now() - interval '15 minutes' AS sudo\n             )\n             SELECT users.id, users.username, roles.name AS role, roles.administrator, live.sudo AS \"sudo!\",\n                    roles.permissions AS \"permissions: Vec<Permission>\"\n             FROM live JOIN users ON users.id = live.user_id AND users.active JOIN roles ON roles.id = users.role_id",
   "describe": {
     "columns": [
       {
@@ -70,5 +70,5 @@
     },
     "nullable": [false, false, false, false, null, false]
   },
-  "hash": "fa56a30db88c7fbe8696dae09d8d7a53f368295f137c9cde16c0617b331f45de"
+  "hash": "c9eabebb220e32766d744affb266b9b9c5694326f5ce7a7d7ae3abbae86561a8"
 }

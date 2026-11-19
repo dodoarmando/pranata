@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT users.id, username, role_id, roles.name AS role\n         FROM users JOIN roles ON roles.id = role_id ORDER BY users.id",
+  "query": "SELECT users.id, username, role_id, roles.name AS role, active\n         FROM users JOIN roles ON roles.id = role_id ORDER BY users.id",
   "describe": {
     "columns": [
       {
@@ -46,12 +46,23 @@
             "name": "name"
           }
         }
+      },
+      {
+        "ordinal": 4,
+        "name": "active",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "active"
+          }
+        }
       }
     ],
     "parameters": {
       "Left": []
     },
-    "nullable": [false, false, false, false]
+    "nullable": [false, false, false, false, false]
   },
-  "hash": "e8e78df6f6da1de6c35b4da88369275c5f17f8d5d009bd79070faf837ede1110"
+  "hash": "74d33274fe943d39ff23a911a41dcf4afce94b0a8c6ff876c924cc7a798d10b8"
 }

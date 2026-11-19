@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT users.active, roles.name AS role FROM users JOIN roles ON roles.id = role_id\n         WHERE users.id = $1 FOR UPDATE OF users",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "active",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "active"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "role",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "roles",
+            "name": "name"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": [false, false]
+  },
+  "hash": "beea2849b0f5e28be2a318b9d7c6c5fdb48123dbfc3ceaa68ead9ed886d9baa5"
+}

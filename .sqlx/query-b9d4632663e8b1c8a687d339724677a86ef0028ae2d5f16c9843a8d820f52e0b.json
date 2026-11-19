@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM access_links WHERE user_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "b9d4632663e8b1c8a687d339724677a86ef0028ae2d5f16c9843a8d820f52e0b"
+}
