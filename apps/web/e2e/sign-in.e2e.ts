@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 // `just e2e-run` creates an Administrator from the CLI and passes on the username and link.
 const username = process.env.PRANATA_E2E_USERNAME ?? '';
@@ -17,7 +17,7 @@ test('the first Administrator sets a password from the Access Link, signs in and
   await page.getByRole('link', { name: 'masuk' }).click();
   await page.getByLabel('Nama pengguna').fill(username);
   await page.getByLabel('Kata sandi', { exact: true }).fill(password);
-  await page.getByRole('button', { name: 'Masuk' }).click();
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Beranda' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Menu admin' })).toContainText('Log audit');
 
@@ -42,7 +42,7 @@ test('a wrong password is refused and the forgotten-password hint names the Admi
   await page.goto('/masuk');
   await page.getByLabel('Nama pengguna').fill(username);
   await page.getByLabel('Kata sandi', { exact: true }).fill('bukan kata sandinya');
-  await page.getByRole('button', { name: 'Masuk' }).click();
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
   await expect(page.getByRole('alert')).toHaveText('Nama pengguna atau kata sandi salah.');
 
   await page.getByText('Lupa kata sandi?').click();
@@ -57,7 +57,7 @@ test('the Administrator creates a User from an Access Link, composes a Role and 
   await page.goto('/masuk');
   await page.getByLabel('Nama pengguna').fill(username);
   await page.getByLabel('Kata sandi', { exact: true }).fill(password);
-  await page.getByRole('button', { name: 'Masuk' }).click();
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Pengguna aktif' })).toBeVisible();
 
   await page.goto('/admin/pengguna');
@@ -90,4 +90,47 @@ test('the Administrator creates a User from an Access Link, composes a Role and 
   const saved = page.getByRole('form', { name: `Peran ${username}` });
   await expect(saved.getByLabel('Baca pengaduan')).toBeChecked();
   await expect(saved.getByLabel('Baca log audit')).not.toBeChecked();
+});
+
+/** A platform authenticator that verifies the User without asking, as Chrome's DevTools offer. */
+async function addVirtualAuthenticator(page: Page) {
+  const devtools = await page.context().newCDPSession(page);
+  await devtools.send('WebAuthn.enable');
+  await devtools.send('WebAuthn.addVirtualAuthenticator', {
+    options: {
+      protocol: 'ctap2',
+      transport: 'internal',
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+      automaticPresenceSimulation: true,
+    },
+  });
+}
+
+test('a User adds a passkey on Akun saya and signs in with it instead of the password', async ({
+  page,
+}) => {
+  await addVirtualAuthenticator(page);
+  await page.goto('/masuk');
+  await page.getByLabel('Nama pengguna').fill(username);
+  await page.getByLabel('Kata sandi', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Beranda' })).toBeVisible();
+
+  await page.goto('/admin/akun');
+  await page.getByLabel('Nama passkey').fill('Laptop uji');
+  await page.getByRole('button', { name: 'Tambah passkey' }).click();
+  await expect(page.getByRole('alert')).toHaveText('Passkey Laptop uji ditambahkan.');
+  await expect(page.getByRole('cell', { name: 'Laptop uji', exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Keluar', exact: true }).click();
+  await expect(page).toHaveURL(/\/masuk$/);
+  await page.getByLabel('Nama pengguna').fill(username);
+  await page.getByRole('button', { name: 'Masuk dengan passkey' }).click();
+  await expect(page.getByRole('heading', { name: 'Beranda' })).toBeVisible();
+
+  await page.goto(`/admin/log-audit?username=${username}`);
+  await expect(page.getByRole('table')).toContainText('passkey.create');
+  await expect(page.getByRole('table')).toContainText('"passkey":"Laptop uji"');
 });

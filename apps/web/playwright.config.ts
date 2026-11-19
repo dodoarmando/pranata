@@ -6,6 +6,7 @@ export default defineConfig({
   // `.e2e.ts`, not `.spec.ts`, so Rstest does not pick these up.
   testMatch: '**/*.e2e.ts',
   forbidOnly: !!process.env.CI,
-  use: { baseURL: 'http://127.0.0.1:13000', trace: 'retain-on-failure' },
+  // `localhost`, the API's public origin: passkeys cannot be bound to an IP address.
+  use: { baseURL: 'http://localhost:13000', trace: 'retain-on-failure' },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 });
