@@ -220,6 +220,16 @@ _Avoid_: Activity, history, event
 The complete, append-only collection of Audit Entries for an Installation.
 _Avoid_: Activity log, history
 
+### Records
+
+**Retention Schedule**:
+The Village's keeping period for each kind of record, taken from its regency's archive retention schedule (JRA); population records are kept permanently.
+_Avoid_: Retention policy, TTL, jadwal retensi (in code)
+
+**Destruction**:
+An approved act, recorded with the number and date of its destruction report (berita acara), that erases the personal data of records past their Retention Schedule while keeping their statistical skeleton; never automatic.
+_Avoid_: Deletion, purge, erasure, pemusnahan (in code)
+
 ### Website
 
 **Draft**:
