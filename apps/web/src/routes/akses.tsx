@@ -2,6 +2,11 @@ import { createFileRoute, Link, useHydrated } from '@tanstack/react-router';
 import { createServerFn, useServerFn } from '@tanstack/react-start';
 import { type FormEvent, useState } from 'react';
 import { useAccessLink as setPasswordFromAccessLink, type UseAccessLink } from '../api/generated';
+import { Notice } from '../components/admin';
+import { AuthLayout, authInput, authSubmit } from '../components/auth-layout';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { passwordHint, passwordProblems } from '../password';
 
 const setPasswordFn = createServerFn({ method: 'POST' })
@@ -44,35 +49,41 @@ function AccessLinkPage() {
 
   if (done) {
     return (
-      <main>
-        <h1>Kata sandi tersimpan</h1>
-        <p>
-          Silakan <Link to="/masuk">masuk</Link> dengan nama pengguna dan kata sandi baru Anda.
+      <AuthLayout title="Kata sandi tersimpan">
+        <p className="text-muted-foreground">
+          Silakan{' '}
+          <Link to="/masuk" className="font-medium text-primary hover:underline">
+            masuk
+          </Link>{' '}
+          dengan nama pengguna dan kata sandi baru Anda.
         </p>
-      </main>
+      </AuthLayout>
     );
   }
   return (
-    <main>
-      <h1>Buat kata sandi</h1>
-      <form method="post" onSubmit={onSubmit}>
-        <label>
-          Kata sandi baru
-          <input
+    <AuthLayout title="Buat kata sandi">
+      <form method="post" onSubmit={onSubmit} className="flex flex-col gap-5">
+        <div className="grid gap-2">
+          <Label htmlFor="password">Kata sandi baru</Label>
+          <Input
+            id="password"
             name="password"
             type="password"
             autoComplete="new-password"
             minLength={12}
             aria-describedby="password-hint"
+            className={authInput}
             required
           />
-        </label>
-        <p id="password-hint">{passwordHint}</p>
-        {error && <p role="alert">{error}</p>}
-        <button type="submit" disabled={busy || !hydrated}>
+          <p id="password-hint" className="text-sm text-muted-foreground">
+            {passwordHint}
+          </p>
+        </div>
+        {error && <Notice error>{error}</Notice>}
+        <Button type="submit" className={authSubmit} disabled={busy || !hydrated}>
           Simpan kata sandi
-        </button>
+        </Button>
       </form>
-    </main>
+    </AuthLayout>
   );
 }

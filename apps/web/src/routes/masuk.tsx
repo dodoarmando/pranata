@@ -1,5 +1,6 @@
-import { createFileRoute, getRouteApi, useHydrated, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, useHydrated, useNavigate } from '@tanstack/react-router';
 import { createServerFn, useServerFn } from '@tanstack/react-start';
+import { KeyRound, LogIn } from 'lucide-react';
 import { type FormEvent, type MouseEvent, useState } from 'react';
 import {
   type PasskeySignIn,
@@ -8,8 +9,12 @@ import {
   signInWithPasskey,
   startPasskeySignIn,
 } from '../api/generated';
+import { Notice } from '../components/admin';
+import { AuthLayout, authInput, authSubmit } from '../components/auth-layout';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { getPasskeyCredential } from '../passkey';
-import { villageTitle } from '../village';
 
 const signInFn = createServerFn({ method: 'POST' })
   .validator((data: SignIn) => data)
@@ -29,15 +34,12 @@ const passkeySignInFn = createServerFn({ method: 'POST' })
   .validator((data: PasskeySignIn) => data)
   .handler(async ({ data }) => (await signInWithPasskey(data)).status);
 
-const root = getRouteApi('__root__');
-
 export const Route = createFileRoute('/masuk')({
   head: () => ({ meta: [{ title: 'Masuk · Pranata' }] }),
   component: SignInPage,
 });
 
 function SignInPage() {
-  const village = root.useLoaderData();
   const navigate = useNavigate();
   const submit = useServerFn(signInFn);
   const startPasskey = useServerFn(startPasskeySignInFn);
@@ -97,46 +99,65 @@ function SignInPage() {
   }
 
   return (
-    <main>
-      <h1>Masuk Pengelola Situs</h1>
-      {village && <p>Pemerintah {villageTitle(village)}</p>}
-      <form method="post" onSubmit={onSubmit}>
-        <label>
-          Nama pengguna
-          <input
+    <AuthLayout title="Masuk Pengelola Situs">
+      <form method="post" onSubmit={onSubmit} className="flex flex-col gap-5">
+        <div className="grid gap-2">
+          <Label htmlFor="username">Nama pengguna</Label>
+          <Input
+            id="username"
             name="username"
             autoComplete="username"
             autoCapitalize="none"
             placeholder="Masukkan nama pengguna Anda"
+            className={authInput}
             required
           />
-        </label>
-        <button type="button" onClick={onPasskey} disabled={busy || !hydrated}>
-          Masuk dengan passkey
-        </button>
-        <label>
-          Kata sandi
-          <input
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="password">Kata sandi</Label>
+          <Input
+            id="password"
             name="password"
             type="password"
             autoComplete="current-password"
             placeholder="Masukkan kata sandi Anda"
+            className={authInput}
             required
           />
+          <details className="text-sm">
+            <summary className="w-fit cursor-pointer font-medium text-primary hover:underline">
+              Lupa kata sandi?
+            </summary>
+            <p className="mt-2 text-muted-foreground">
+              Hubungi Administrator desa Anda untuk meminta Tautan Akses baru.
+            </p>
+          </details>
+        </div>
+        <label className="flex items-center gap-2.5 text-sm">
+          <input name="remember" type="checkbox" className="size-4.5 accent-primary" /> Ingat saya
+          di perangkat ini
         </label>
-        <details>
-          <summary>Lupa kata sandi?</summary>
-          <p>Hubungi Administrator desa Anda untuk meminta Tautan Akses baru.</p>
-        </details>
-        <label>
-          <input name="remember" type="checkbox" /> Ingat saya di perangkat ini
-        </label>
-        {error && <p role="alert">{error}</p>}
-        <button type="submit" disabled={busy || !hydrated}>
+        {error && <Notice error>{error}</Notice>}
+        <Button type="submit" className={authSubmit} disabled={busy || !hydrated}>
           Masuk
-        </button>
+          <LogIn aria-hidden="true" />
+        </Button>
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex w-full items-center gap-3 text-sm text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
+            atau
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 px-4 text-[0.9375rem]"
+            onClick={onPasskey}
+            disabled={busy || !hydrated}
+          >
+            Masuk dengan passkey
+            <KeyRound aria-hidden="true" />
+          </Button>
+        </div>
       </form>
-      <a href="/">Kembali ke situs desa</a>
-    </main>
+    </AuthLayout>
   );
 }
