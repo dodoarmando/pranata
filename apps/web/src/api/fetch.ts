@@ -17,7 +17,8 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   const response = await fetch(`${baseUrl}${path}`, { ...init, headers });
   const setCookie = response.headers.get('set-cookie');
   if (setCookie) setResponseHeader('set-cookie', setCookie);
-  const text = await response.text();
-  const data: unknown = text ? JSON.parse(text) : undefined;
+  // Refusals such as a malformed query come back as plain text, not JSON.
+  const json = response.headers.get('content-type')?.startsWith('application/json');
+  const data: unknown = json ? await response.json() : undefined;
   return { data, status: response.status, headers: response.headers } as T;
 }
