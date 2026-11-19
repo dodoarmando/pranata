@@ -63,7 +63,7 @@ check-api: db-up
 
 # CI job `web`
 check-web:
-    bunx biome ci .
+    bunx biome ci --error-on-warnings .
     cd apps/web && bun run typecheck && bun run test && bun run build
 
 # CI job `contract`: the committed spec and client match the code
