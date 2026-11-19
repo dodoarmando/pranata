@@ -6,7 +6,9 @@
       "**",
       "!apps/api/openapi.json",
       "!**/src/api/generated.ts",
-      "!**/src/routeTree.gen.ts"
+      "!**/src/routeTree.gen.ts",
+      "!CHANGELOG.md",
+      "!.release-please-manifest.json"
     ]
   },
   "formatter": { "indentStyle": "space", "lineWidth": 100 },
