@@ -15,19 +15,73 @@
         "tags": [
           "audit"
         ],
-        "summary": "The latest Audit Entries, newest first.",
+        "summary": "The Audit Log, newest first, filtered and a page at a time.",
         "description": "# Errors\n`401` without a live session, `403` without `audit.read`.",
         "operationId": "listAuditEntries",
+        "parameters": [
+          {
+            "name": "objectType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "objectId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "query",
+            "description": "The acting User's username.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "The first day, in the Village's time zone.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "The last day, inclusive, in the Village's time zone.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "description": "The `next` of the previous page.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "The latest 100 Audit Entries, newest first",
+            "description": "A page of matching Audit Entries",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/AuditEntry"
-                  }
+                  "$ref": "#/components/schemas/AuditPage"
                 }
               }
             }
@@ -251,6 +305,29 @@
               "null"
             ],
             "description": "The acting User's username, when the actor is a User."
+          }
+        }
+      },
+      "AuditPage": {
+        "type": "object",
+        "required": [
+          "entries"
+        ],
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEntry"
+            },
+            "description": "At most 50 Audit Entries, newest first."
+          },
+          "next": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Pass as `before` for the next, older page; null on the last page."
           }
         }
       },

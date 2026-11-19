@@ -21,6 +21,16 @@ export interface AuditEntry {
   username?: string | null;
 }
 
+export interface AuditPage {
+  /** At most 50 Audit Entries, newest first. */
+  entries: AuditEntry[];
+  /**
+     * Pass as `before` for the next, older page; null on the last page.
+     * @nullable
+     */
+  next?: string | null;
+}
+
 export type HealthStatus = typeof HealthStatus[keyof typeof HealthStatus];
 
 
@@ -92,6 +102,19 @@ export interface Village {
   timeZone: TimeZone;
 }
 
+export type ListAuditEntriesParams = {
+  objectType?: string;
+  objectId?: string;
+  /** The acting User's username. */
+  username?: string;
+  /** The first day, in the Village's time zone. */
+  from?: string;
+  /** The last day, inclusive, in the Village's time zone. */
+  to?: string;
+  /** The `next` of the previous page. */
+  before?: string;
+};
+
 const getHeaders = (...sources: (RequestInit['headers'] | Record<string, string | undefined>)[]) => {
   const seen = new Set<string>();
   const layers: [string, string | readonly string[]][][] = [];
@@ -113,7 +136,7 @@ const getHeaders = (...sources: (RequestInit['headers'] | Record<string, string 
 };
 
 export type listAuditEntriesResponse200 = {
-  data: AuditEntry[]
+  data: AuditPage
   status: 200
 }
 
@@ -136,22 +159,29 @@ export type listAuditEntriesResponseError = (listAuditEntriesResponse401 | listA
 
 export type listAuditEntriesResponse = (listAuditEntriesResponseSuccess | listAuditEntriesResponseError)
 
-export const getListAuditEntriesUrl = () => {
+export const getListAuditEntriesUrl = (params?: ListAuditEntriesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/audit-entries`
+  return stringifiedParams.length > 0 ? `/audit-entries?${stringifiedParams}` : `/audit-entries`
 }
 
 /**
  * # Errors
  * `401` without a live session, `403` without `audit.read`.
- * @summary The latest Audit Entries, newest first.
+ * @summary The Audit Log, newest first, filtered and a page at a time.
  */
-export const listAuditEntries = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listAuditEntriesResponse> => {
+export const listAuditEntries = async (params?: ListAuditEntriesParams, options?: Parameters<typeof apiFetch>[1]): Promise<listAuditEntriesResponse> => {
 
-  return apiFetch<listAuditEntriesResponse>(getListAuditEntriesUrl(),
+  return apiFetch<listAuditEntriesResponse>(getListAuditEntriesUrl(params),
   {
     ...options,
     method: 'GET'

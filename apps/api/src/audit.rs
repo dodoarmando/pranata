@@ -1,12 +1,16 @@
-use axum::{Json, extract::State, http::StatusCode};
-use chrono::{DateTime, Utc};
-use serde::Serialize;
+use axum::{
+    Json,
+    extract::{Query, State},
+    http::StatusCode,
+};
+use chrono::{DateTime, NaiveDate, Utc};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{PgConnection, PgPool};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use crate::{ApiError, auth::Session};
+use crate::{ApiError, auth::Session, village::TimeZone};
 
 /// Who an Audit Entry says acted.
 #[derive(Clone, Copy)]
@@ -65,7 +69,34 @@ pub struct AuditEntry {
     details: Value,
 }
 
-/// The latest Audit Entries, newest first.
+const PAGE: usize = 50;
+
+/// Filters on the Audit Log; they all apply together.
+#[derive(Deserialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+#[into_params(parameter_in = Query, rename_all = "camelCase")]
+pub struct AuditFilter {
+    object_type: Option<String>,
+    object_id: Option<String>,
+    /// The acting User's username.
+    username: Option<String>,
+    /// The first day, in the Village's time zone.
+    from: Option<NaiveDate>,
+    /// The last day, inclusive, in the Village's time zone.
+    to: Option<NaiveDate>,
+    /// The `next` of the previous page.
+    before: Option<Uuid>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct AuditPage {
+    /// At most 50 Audit Entries, newest first.
+    entries: Vec<AuditEntry>,
+    /// Pass as `before` for the next, older page; null on the last page.
+    next: Option<Uuid>,
+}
+
+/// The Audit Log, newest first, filtered and a page at a time.
 ///
 /// # Errors
 /// `401` without a live session, `403` without `audit.read`.
@@ -74,8 +105,9 @@ pub struct AuditEntry {
     path = "/audit-entries",
     operation_id = "listAuditEntries",
     tag = "audit",
+    params(AuditFilter),
     responses(
-        (status = OK, description = "The latest 100 Audit Entries, newest first", body = Vec<AuditEntry>),
+        (status = OK, description = "A page of matching Audit Entries", body = AuditPage),
         (status = UNAUTHORIZED, description = "There is no live session"),
         (status = FORBIDDEN, description = "The User may not read the Audit Log"),
     ),
@@ -83,18 +115,41 @@ pub struct AuditEntry {
 pub async fn list(
     State(pool): State<PgPool>,
     session: Session,
-) -> Result<Json<Vec<AuditEntry>>, ApiError> {
+    Query(filter): Query<AuditFilter>,
+) -> Result<Json<AuditPage>, ApiError> {
     if !session.holds("audit.read") {
         return Err(ApiError::Status(StatusCode::FORBIDDEN));
     }
-    // shortcut: the latest 100 only; the Audit Log viewer adds filters and paging.
-    let entries = sqlx::query_as!(
+    // Before the Village Code is set, its days are taken as WIB.
+    let code = sqlx::query_scalar!("SELECT code FROM village")
+        .fetch_optional(&pool)
+        .await?;
+    let zone = code.map_or(TimeZone::Wib, |code| TimeZone::of_province(&code));
+    let mut entries = sqlx::query_as!(
         AuditEntry,
         "SELECT audit_entries.id, at, actor, users.username AS \"username?\", action, object_type, object_id, details
          FROM audit_entries LEFT JOIN users ON users.id = actor_id
-         ORDER BY at DESC, audit_entries.id DESC LIMIT 100",
+         WHERE ($1::text IS NULL OR object_type = $1)
+           AND ($2::text IS NULL OR object_id = $2)
+           AND ($3::text IS NULL OR users.username = $3)
+           AND ($4::date IS NULL OR at >= $4::date::timestamp AT TIME ZONE $7)
+           AND ($5::date IS NULL OR at < ($5::date + 1)::timestamp AT TIME ZONE $7)
+           AND ($6::uuid IS NULL OR (at, audit_entries.id) < (SELECT at, id FROM audit_entries WHERE id = $6))
+         ORDER BY at DESC, audit_entries.id DESC LIMIT $8",
+        filter.object_type,
+        filter.object_id,
+        filter.username,
+        filter.from,
+        filter.to,
+        filter.before,
+        zone.iana(),
+        i64::try_from(PAGE + 1)?,
     )
     .fetch_all(&pool)
     .await?;
-    Ok(Json(entries))
+    let next = (entries.len() > PAGE).then(|| {
+        entries.truncate(PAGE);
+        entries[PAGE - 1].id
+    });
+    Ok(Json(AuditPage { entries, next }))
 }
