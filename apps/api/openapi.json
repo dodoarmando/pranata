@@ -264,6 +264,100 @@
             "description": "The User is not an Administrator"
           }
         }
+      },
+      "post": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Creates a Role from the Permission catalog.",
+        "description": "# Errors\n`401` without a live session, `403` outside the Administrator Role, `409` for a taken\nname, `422` for a blank name or a Permission outside the catalog.",
+        "operationId": "createRole",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User is not an Administrator"
+          },
+          "409": {
+            "description": "Another Role has the name"
+          },
+          "422": {
+            "description": "The name is blank or a Permission is unknown"
+          }
+        }
+      }
+    },
+    "/roles/{id}": {
+      "put": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Renames a Role and replaces its Permissions; its Users hold them from their next request.",
+        "description": "# Errors\n`401` without a live session, `403` outside the Administrator Role, `404` for an unknown\nRole, `409` for the locked Administrator Role or a taken name, `422` as for creating.",
+        "operationId": "updateRole",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Role",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Role is changed"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User is not an Administrator"
+          },
+          "404": {
+            "description": "There is no such Role"
+          },
+          "409": {
+            "description": "The Role is the Administrator, or another Role has the name"
+          },
+          "422": {
+            "description": "The name is blank or a Permission is unknown"
+          }
+        }
       }
     },
     "/village": {
@@ -479,6 +573,25 @@
           },
           "name": {
             "type": "string"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Permission"
+            }
+          }
+        }
+      },
+      "RoleInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "permissions"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unique among Roles; surrounding spaces are dropped."
           },
           "permissions": {
             "type": "array",

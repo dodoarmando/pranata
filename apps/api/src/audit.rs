@@ -34,20 +34,63 @@ pub async fn record(
     (object_type, object_id): (&str, Option<&str>),
     details: Value,
 ) -> sqlx::Result<()> {
+    insert(
+        conn,
+        actor,
+        action,
+        (object_type, object_id),
+        details,
+        Value::Array(vec![]),
+    )
+    .await
+}
+
+/// Appends an Audit Entry for a data change, with its per-field diff as
+/// `[{ "field", "from", "to" }]`; call it in the transaction of the change.
+///
+/// # Errors
+/// When the insert fails, which must abort the change.
+pub async fn record_change(
+    conn: &mut PgConnection,
+    actor: Actor,
+    action: &str,
+    object: (&str, Option<&str>),
+    changes: Value,
+) -> sqlx::Result<()> {
+    insert(
+        conn,
+        actor,
+        action,
+        object,
+        Value::Object(serde_json::Map::new()),
+        changes,
+    )
+    .await
+}
+
+async fn insert(
+    conn: &mut PgConnection,
+    actor: Actor,
+    action: &str,
+    (object_type, object_id): (&str, Option<&str>),
+    details: Value,
+    changes: Value,
+) -> sqlx::Result<()> {
     let (kind, actor_id) = match actor {
         Actor::User(id) => ("user", Some(id)),
         Actor::System => ("system", None),
         Actor::Anonymous => ("anonymous", None),
     };
     sqlx::query!(
-        "INSERT INTO audit_entries (actor, actor_id, action, object_type, object_id, details)
-         VALUES ($1, $2, $3, $4, $5, $6)",
+        "INSERT INTO audit_entries (actor, actor_id, action, object_type, object_id, details, changes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)",
         kind,
         actor_id,
         action,
         object_type,
         object_id,
         details,
+        changes,
     )
     .execute(conn)
     .await?;

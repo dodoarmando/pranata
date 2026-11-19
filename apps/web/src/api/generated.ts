@@ -105,6 +105,12 @@ export interface Role {
   permissions: Permission[];
 }
 
+export interface RoleInput {
+  /** Unique among Roles; surrounding spaces are dropped. */
+  name: string;
+  permissions: Permission[];
+}
+
 export interface SignIn {
   password: string;
   /** "Ingat saya": 7 days idle and 30 days absolute instead of 30 minutes and 12 hours. */
@@ -503,6 +509,134 @@ export const listRoles = async ( options?: Parameters<typeof apiFetch>[1]): Prom
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type createRoleResponse201 = {
+  data: Role
+  status: 201
+}
+
+export type createRoleResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createRoleResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createRoleResponse409 = {
+  data: void
+  status: 409
+}
+
+export type createRoleResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createRoleResponseSuccess = (createRoleResponse201) & {
+  headers: Headers;
+};
+export type createRoleResponseError = (createRoleResponse401 | createRoleResponse403 | createRoleResponse409 | createRoleResponse422) & {
+  headers: Headers;
+};
+
+export type createRoleResponse = (createRoleResponseSuccess | createRoleResponseError)
+
+export const getCreateRoleUrl = () => {
+
+
+
+
+  return `/roles`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` outside the Administrator Role, `409` for a taken
+ * name, `422` for a blank name or a Permission outside the catalog.
+ * @summary Creates a Role from the Permission catalog.
+ */
+export const createRole = async (roleInput: RoleInput, options?: Parameters<typeof apiFetch>[1]): Promise<createRoleResponse> => {
+
+  return apiFetch<createRoleResponse>(getCreateRoleUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(roleInput)
+  }
+);}
+
+
+
+export type updateRoleResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateRoleResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateRoleResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateRoleResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateRoleResponse409 = {
+  data: void
+  status: 409
+}
+
+export type updateRoleResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateRoleResponseSuccess = (updateRoleResponse204) & {
+  headers: Headers;
+};
+export type updateRoleResponseError = (updateRoleResponse401 | updateRoleResponse403 | updateRoleResponse404 | updateRoleResponse409 | updateRoleResponse422) & {
+  headers: Headers;
+};
+
+export type updateRoleResponse = (updateRoleResponseSuccess | updateRoleResponseError)
+
+export const getUpdateRoleUrl = (id: string,) => {
+
+
+
+
+  return `/roles/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` outside the Administrator Role, `404` for an unknown
+ * Role, `409` for the locked Administrator Role or a taken name, `422` as for creating.
+ * @summary Renames a Role and replaces its Permissions; its Users hold them from their next request.
+ */
+export const updateRole = async (id: string,
+    roleInput: RoleInput, options?: Parameters<typeof apiFetch>[1]): Promise<updateRoleResponse> => {
+
+  return apiFetch<updateRoleResponse>(getUpdateRoleUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(roleInput)
   }
 );}
 
