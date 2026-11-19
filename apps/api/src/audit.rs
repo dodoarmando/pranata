@@ -1,5 +1,3 @@
-use std::fmt::Write;
-
 use axum::{
     Json,
     extract::{Query, State},
@@ -310,7 +308,7 @@ fn csv(entries: &[AuditEntry], zone: TimeZone) -> String {
         "Keterangan",
     ];
     let mut out = String::from("\u{feff}");
-    row(&mut out, &header);
+    export::csv_row(&mut out, &header);
     for entry in entries {
         let changes = entry
             .changes
@@ -336,7 +334,7 @@ fn csv(entries: &[AuditEntry], zone: TimeZone) -> String {
             (None, "system") => "Sistem",
             (None, _) => "Tidak dikenal",
         };
-        row(
+        export::csv_row(
             &mut out,
             &[
                 &at.to_string(),
@@ -358,16 +356,4 @@ fn shown(value: &Value) -> String {
         Value::String(text) => text.clone(),
         other => other.to_string(),
     }
-}
-
-/// Appends one CSV row, every cell quoted; a cell that a spreadsheet would run as a formula
-/// starts with `'` instead.
-fn row(out: &mut String, cells: &[&str]) {
-    for (i, cell) in cells.iter().enumerate() {
-        let formula = cell.starts_with(['=', '+', '-', '@', '\t', '\r']);
-        let separator = if i == 0 { "" } else { "," };
-        let quote = if formula { "'" } else { "" };
-        let _ = write!(out, "{separator}\"{quote}{}\"", cell.replace('"', "\"\""));
-    }
-    out.push_str("\r\n");
 }
