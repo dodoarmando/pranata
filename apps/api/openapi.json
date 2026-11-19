@@ -232,6 +232,31 @@
         }
       }
     },
+    "/dashboard": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "The admin dashboard's figures, for any signed-in User.",
+        "description": "# Errors\n`401` without a live session.",
+        "operationId": "getDashboard",
+        "responses": {
+          "200": {
+            "description": "The dashboard's figures",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          }
+        }
+      }
+    },
     "/healthz": {
       "get": {
         "tags": [
@@ -734,6 +759,19 @@
             ],
             "format": "uuid",
             "description": "Pass as `before` for the next, older page; null on the last page."
+          }
+        }
+      },
+      "Dashboard": {
+        "type": "object",
+        "description": "The figures behind the admin dashboard's cards.",
+        "required": [
+          "activeUsers"
+        ],
+        "properties": {
+          "activeUsers": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },

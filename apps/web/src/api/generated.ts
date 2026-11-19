@@ -54,6 +54,13 @@ export interface AuditPage {
   next?: string | null;
 }
 
+/**
+ * The figures behind the admin dashboard's cards.
+ */
+export interface Dashboard {
+  activeUsers: number;
+}
+
 export type HealthStatus = typeof HealthStatus[keyof typeof HealthStatus];
 
 
@@ -501,6 +508,51 @@ export const signOut = async ( options?: Parameters<typeof apiFetch>[1]): Promis
   {
     ...options,
     method: 'POST'
+
+
+  }
+);}
+
+
+
+export type getDashboardResponse200 = {
+  data: Dashboard
+  status: 200
+}
+
+export type getDashboardResponse401 = {
+  data: void
+  status: 401
+}
+
+export type getDashboardResponseSuccess = (getDashboardResponse200) & {
+  headers: Headers;
+};
+export type getDashboardResponseError = (getDashboardResponse401) & {
+  headers: Headers;
+};
+
+export type getDashboardResponse = (getDashboardResponseSuccess | getDashboardResponseError)
+
+export const getGetDashboardUrl = () => {
+
+
+
+
+  return `/dashboard`
+}
+
+/**
+ * # Errors
+ * `401` without a live session.
+ * @summary The admin dashboard's figures, for any signed-in User.
+ */
+export const getDashboard = async ( options?: Parameters<typeof apiFetch>[1]): Promise<getDashboardResponse> => {
+
+  return apiFetch<getDashboardResponse>(getGetDashboardUrl(),
+  {
+    ...options,
+    method: 'GET'
 
 
   }
