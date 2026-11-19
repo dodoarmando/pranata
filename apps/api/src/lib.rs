@@ -1,5 +1,6 @@
 mod audit;
 mod auth;
+mod dashboard;
 pub mod db;
 mod health;
 mod password;
@@ -34,6 +35,7 @@ fn api() -> OpenApiRouter<PgPool> {
         .routes(routes!(auth::me))
         .routes(routes!(auth::reauthenticate))
         .routes(routes!(audit::list))
+        .routes(routes!(dashboard::get))
         .routes(routes!(role::list, role::create))
         .routes(routes!(role::update))
         .routes(routes!(user::list, user::create))
