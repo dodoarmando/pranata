@@ -95,6 +95,11 @@ e2e-run: db-up
     trap 'cleanup $?' EXIT
     podman run --rm "${api[@]}" pranata-api:local migrate
     podman run --rm "${api[@]}" pranata-api:local village set-code 1101012001
+    # The CLI prints the Access Link on stdout, as at provisioning. A fresh username each run,
+    # since the local database outlives runs and usernames are never reused.
+    export PRANATA_E2E_USERNAME="e2e$(date +%s)"
+    PRANATA_E2E_ACCESS_LINK=$(podman run --rm "${api[@]}" pranata-api:local user create --admin "$PRANATA_E2E_USERNAME")
+    export PRANATA_E2E_ACCESS_LINK
     podman run -d --name pranata-e2e-api "${api[@]}" pranata-api:local
     podman run -d --name pranata-e2e-web "${web[@]}" pranata-web:local
     timeout 60 bash -c 'until curl -sfo /dev/null http://127.0.0.1:18080/healthz && curl -sfo /dev/null http://127.0.0.1:13000/; do sleep 0.5; done'
