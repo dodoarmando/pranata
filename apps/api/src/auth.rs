@@ -238,7 +238,7 @@ pub async fn sign_in(
 /// The User of a live session, which each use keeps from going idle.
 pub(crate) struct Session {
     token_hash: Vec<u8>,
-    user_id: Uuid,
+    pub(crate) user_id: Uuid,
     username: String,
     role: String,
     pub(crate) administrator: bool,

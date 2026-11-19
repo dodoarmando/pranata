@@ -33,7 +33,8 @@ fn api() -> OpenApiRouter<PgPool> {
         .routes(routes!(auth::sign_out))
         .routes(routes!(auth::me))
         .routes(routes!(audit::list))
-        .routes(routes!(role::list))
+        .routes(routes!(role::list, role::create))
+        .routes(routes!(role::update))
 }
 
 /// The HTTP application, ready to serve at `public_origin` (`https://host`, no trailing slash).
