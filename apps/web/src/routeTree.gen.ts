@@ -19,6 +19,7 @@ import { Route as AdminAkunRouteImport } from './routes/admin/akun'
 import { Route as AdminLogAuditRouteImport } from './routes/admin/log-audit'
 import { Route as AdminPenggunaRouteImport } from './routes/admin/pengguna'
 import { Route as AdminPeranRouteImport } from './routes/admin/peran'
+import { Route as MediaIdVariantRouteImport } from './routes/media.$id.$variant'
 
 const PublicRoute = PublicRouteImport.update({
   id: '/_public',
@@ -69,6 +70,11 @@ const AdminPeranRoute = AdminPeranRouteImport.update({
   path: '/peran',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const MediaIdVariantRoute = MediaIdVariantRouteImport.update({
+  id: '/media/$id/$variant',
+  path: '/media/$id/$variant',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteRouteWithChildren
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/admin/pengguna': typeof AdminPenggunaRoute
   '/admin/peran': typeof AdminPeranRoute
   '/admin/': typeof AdminIndexRoute
+  '/media/$id/$variant': typeof MediaIdVariantRoute
 }
 export interface FileRoutesByTo {
   '/akses': typeof AksesRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/admin/peran': typeof AdminPeranRoute
   '/': typeof PublicIndexRoute
   '/admin': typeof AdminIndexRoute
+  '/media/$id/$variant': typeof MediaIdVariantRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/admin/peran': typeof AdminPeranRoute
   '/_public/': typeof PublicIndexRoute
   '/admin/': typeof AdminIndexRoute
+  '/media/$id/$variant': typeof MediaIdVariantRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/admin/pengguna'
     | '/admin/peran'
     | '/admin/'
+    | '/media/$id/$variant'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/akses'
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/admin/peran'
     | '/'
     | '/admin'
+    | '/media/$id/$variant'
   id:
     | '__root__'
     | '/admin'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/admin/peran'
     | '/_public/'
     | '/admin/'
+    | '/media/$id/$variant'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -145,6 +157,7 @@ export interface RootRouteChildren {
   PublicRoute: typeof PublicRouteWithChildren
   AksesRoute: typeof AksesRoute
   MasukRoute: typeof MasukRoute
+  MediaIdVariantRoute: typeof MediaIdVariantRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -219,6 +232,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPeranRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/media/$id/$variant': {
+      id: '/media/$id/$variant'
+      path: '/media/$id/$variant'
+      fullPath: '/media/$id/$variant'
+      preLoaderRoute: typeof MediaIdVariantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -258,6 +278,7 @@ const rootRouteChildren: RootRouteChildren = {
   PublicRoute: PublicRouteWithChildren,
   AksesRoute: AksesRoute,
   MasukRoute: MasukRoute,
+  MediaIdVariantRoute: MediaIdVariantRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
