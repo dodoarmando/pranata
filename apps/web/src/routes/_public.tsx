@@ -1,5 +1,6 @@
 import { createFileRoute, getRouteApi, Link, Outlet } from '@tanstack/react-router';
-import { regencyShort, villageInitial, villageTitle } from '../village';
+import { VillageLogo } from '../components/village-logo';
+import { regencyShort, villageTitle } from '../village';
 
 const root = getRouteApi('__root__');
 
@@ -11,13 +12,14 @@ export const Route = createFileRoute('/_public')({
 function PublicLayout() {
   const village = root.useLoaderData();
   const logo = (
-    <span
-      className="grid size-9.5 flex-none place-items-center rounded-full bg-primary text-[0.8125rem] font-bold text-primary-foreground md:size-11 md:text-[0.9375rem]"
-      aria-hidden="true"
-    >
-      {villageInitial(village)}
-    </span>
+    <VillageLogo
+      village={village}
+      className="size-9.5 md:size-11"
+      placeholderClassName="rounded-full text-[0.8125rem] font-bold md:text-[0.9375rem]"
+    />
   );
+  const navItem =
+    'rounded-md px-3 py-1 text-[0.9375rem] font-medium data-[status=active]:text-primary';
   return (
     <div className="backdrop flex min-h-dvh flex-col">
       <a
@@ -48,12 +50,12 @@ function PublicLayout() {
               <strong className="text-[1.0625rem] md:text-[1.1875rem]">Pranata</strong>
             )}
           </Link>
-          <nav aria-label="Menu utama">
-            <Link
-              to="/"
-              className="rounded-md px-3 py-1 text-[0.9375rem] font-medium data-[status=active]:text-primary"
-            >
+          <nav aria-label="Menu utama" className="flex">
+            <Link to="/" className={navItem}>
               Beranda
+            </Link>
+            <Link to="/kontak" className={navItem}>
+              Kontak
             </Link>
           </nav>
         </div>
@@ -76,9 +78,10 @@ function PublicLayout() {
               </p>
             </div>
           )}
-          <p className="border-t border-white/10 pt-6 pb-8 text-[0.8125rem] text-on-dark-2">
-            Dikelola dengan Pranata
-          </p>
+          <div className="flex flex-wrap justify-between gap-x-6 gap-y-1 border-t border-white/10 pt-6 pb-8 text-[0.8125rem] text-on-dark-2">
+            <p>Dikelola dengan Pranata</p>
+            {village?.pseNumber && <p>Nomor Tanda Daftar PSE: {village.pseNumber}</p>}
+          </div>
         </div>
       </footer>
     </div>
