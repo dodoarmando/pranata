@@ -128,3 +128,80 @@ async fn unknown_files_and_variants_are_not_found(pool: PgPool) {
         assert_eq!(status, StatusCode::NOT_FOUND, "{path}");
     }
 }
+
+async fn upload_logo(app: &TestApp, cookie: &str) -> String {
+    let reply = app.upload("/village/logo", png(8, 8), cookie).await;
+    reply.body["id"].as_str().unwrap().to_owned()
+}
+
+async fn served(app: &TestApp, id: &str) -> bool {
+    app.get_raw(&format!("/media/{id}/480")).await.0 == StatusCode::OK
+}
+
+/// Moves a file's sweep deadline into the past, as if a day had gone by.
+async fn age(pool: &PgPool, id: &str) {
+    sqlx::query("UPDATE files SET sweep_after = now() - interval '1 second' WHERE id = $1::uuid")
+        .bind(id)
+        .execute(pool)
+        .await
+        .unwrap();
+}
+
+async fn save_logo(app: &TestApp, id: &str, cookie: &str) {
+    let body = serde_json::json!({ "logo": id });
+    let reply = app
+        .call("PUT", "/village/profile", Some(&body), Some(cookie))
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT);
+}
+
+#[sqlx::test]
+async fn an_upload_no_owner_references_is_swept_after_24_hours(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    let cookie = app.user_with(&pool, "operator", &["village.manage"]).await;
+    let (fresh, stale) = (
+        upload_logo(&app, &cookie).await,
+        upload_logo(&app, &cookie).await,
+    );
+    age(&pool, &stale).await;
+
+    let swept = pranata::storage::sweep(&pool, app.files.path())
+        .await
+        .unwrap();
+
+    assert_eq!(swept, 1);
+    assert!(served(&app, &fresh).await);
+    assert!(!served(&app, &stale).await);
+    assert!(!app.files.path().join(&stale).exists());
+}
+
+#[sqlx::test]
+async fn a_logo_in_use_is_kept_and_a_replaced_one_gets_another_24_hours(pool: PgPool) {
+    pranata::village::set_code(&pool, "1101012001")
+        .await
+        .unwrap();
+    let app = TestApp::new(pool.clone());
+    let cookie = app.user_with(&pool, "operator", &["village.manage"]).await;
+    let old = upload_logo(&app, &cookie).await;
+    save_logo(&app, &old, &cookie).await;
+    age(&pool, &old).await;
+    pranata::storage::sweep(&pool, app.files.path())
+        .await
+        .unwrap();
+    assert!(served(&app, &old).await);
+
+    let new = upload_logo(&app, &cookie).await;
+    save_logo(&app, &new, &cookie).await;
+    pranata::storage::sweep(&pool, app.files.path())
+        .await
+        .unwrap();
+    assert!(served(&app, &old).await);
+
+    age(&pool, &old).await;
+    age(&pool, &new).await;
+    pranata::storage::sweep(&pool, app.files.path())
+        .await
+        .unwrap();
+    assert!(!served(&app, &old).await);
+    assert!(served(&app, &new).await);
+}

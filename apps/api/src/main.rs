@@ -78,12 +78,17 @@ enum VillageCommand {
     },
 }
 
-async fn purge_expired_every_10_minutes(pool: PgPool) {
+async fn clean_up_every_10_minutes(pool: PgPool, files_dir: PathBuf) {
     let mut tick = tokio::time::interval(std::time::Duration::from_secs(600));
     loop {
         tick.tick().await;
         if let Err(error) = pranata::purge_expired(&pool).await {
             tracing::error!(%error, "cannot purge expired sessions and Access Links");
+        }
+        match pranata::storage::sweep(&pool, &files_dir).await {
+            Ok(0) => {}
+            Ok(swept) => tracing::info!(swept, "swept unreferenced files"),
+            Err(error) => tracing::error!(error = format!("{error:#}"), "cannot sweep files"),
         }
     }
 }
@@ -112,7 +117,7 @@ async fn main() -> anyhow::Result<()> {
                 .with_context(|| format!("cannot listen on {listen}"))?;
             // As PID 1 in a container, SIGTERM is ignored unless handled.
             let mut terminate = signal(SignalKind::terminate())?;
-            tokio::spawn(purge_expired_every_10_minutes(pool.clone()));
+            tokio::spawn(clean_up_every_10_minutes(pool.clone(), files_dir.clone()));
             tracing::info!(%listen, "serving");
             let public_origin = public_origin.trim_end_matches('/').to_owned();
             axum::serve(listener, pranata::app(pool, public_origin, files_dir)?)

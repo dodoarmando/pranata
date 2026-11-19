@@ -60,6 +60,31 @@ impl Storage {
     }
 }
 
+/// Deletes every file no owner references once its `sweep_after` has passed, and returns how
+/// many went.
+///
+/// # Errors
+/// When the database is unreachable or a file's directory cannot be removed.
+pub async fn sweep(pool: &PgPool, dir: &Path) -> anyhow::Result<usize> {
+    // Each owner adds its reference here; the foreign keys refuse a delete one forgets.
+    let ids = sqlx::query_scalar!(
+        "DELETE FROM files WHERE sweep_after < now()
+         AND id NOT IN (SELECT logo_file_id FROM village WHERE logo_file_id IS NOT NULL)
+         RETURNING id"
+    )
+    .fetch_all(pool)
+    .await?;
+    for id in &ids {
+        match tokio::fs::remove_dir_all(dir.join(id.to_string())).await {
+            Err(error) if error.kind() != ErrorKind::NotFound => {
+                return Err(error).with_context(|| format!("cannot remove file {id}"));
+            }
+            _ => {}
+        }
+    }
+    Ok(ids.len())
+}
+
 /// Starts the 24 h before a file its owner no longer references is swept; call it in the
 /// transaction that drops the reference.
 ///
