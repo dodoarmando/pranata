@@ -100,6 +100,39 @@ pub(crate) async fn release(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Re
     Ok(())
 }
 
+/// Rebuilds every variant of every image from its master, such as after the variants change,
+/// and returns how many images it rebuilt.
+///
+/// # Errors
+/// When the volume cannot be read or written, or a master does not decode.
+pub fn regenerate(dir: &Path) -> anyhow::Result<usize> {
+    let mut rebuilt = 0;
+    for entry in std::fs::read_dir(dir)? {
+        let file = entry?.path();
+        // Skips staging directories and files that are not images.
+        let is_file = file
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.parse::<Uuid>().is_ok());
+        let master = ["master.png", "master.jpg"]
+            .map(|name| file.join(name))
+            .into_iter()
+            .find(|master| master.exists());
+        let (true, Some(master)) = (is_file, master) else {
+            continue;
+        };
+        let image =
+            image::open(&master).with_context(|| format!("cannot decode {}", master.display()))?;
+        for variant in Variant::ALL {
+            let staged = file.join(format!(".{}", variant.file_name()));
+            std::fs::write(&staged, imaging::render(&image, variant)?)?;
+            std::fs::rename(&staged, file.join(variant.file_name()))?;
+        }
+        rebuilt += 1;
+    }
+    Ok(rebuilt)
+}
+
 /// Writes the master and variants beside each other, then moves them into place at once;
 /// the move fails rather than replace an existing file.
 fn write_image(dir: &Path, id: Uuid, image: &DynamicImage) -> anyhow::Result<()> {

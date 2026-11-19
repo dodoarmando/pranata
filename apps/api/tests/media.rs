@@ -205,3 +205,22 @@ async fn a_logo_in_use_is_kept_and_a_replaced_one_gets_another_24_hours(pool: Pg
     assert!(!served(&app, &old).await);
     assert!(served(&app, &new).await);
 }
+
+#[sqlx::test]
+async fn regenerating_rebuilds_every_variant_from_the_master(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    let cookie = app.user_with(&pool, "operator", &["village.manage"]).await;
+    let id = upload_logo(&app, &cookie).await;
+    let file = app.files.path().join(&id);
+    std::fs::remove_file(file.join("480.webp")).unwrap();
+    std::fs::write(file.join("share.jpg"), b"broken").unwrap();
+
+    let rebuilt = pranata::storage::regenerate(app.files.path()).unwrap();
+
+    assert_eq!(rebuilt, 1);
+    let (status, _, bytes) = app.get_raw(&format!("/media/{id}/480")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(image::load_from_memory_with_format(&bytes, ImageFormat::WebP).is_ok());
+    let (_, _, bytes) = app.get_raw(&format!("/media/{id}/share")).await;
+    assert!(image::load_from_memory_with_format(&bytes, ImageFormat::Jpeg).is_ok());
+}

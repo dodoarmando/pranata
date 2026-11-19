@@ -41,6 +41,18 @@ enum Command {
     /// Manage Users.
     #[command(subcommand)]
     User(UserCommand),
+    /// Maintain uploaded images.
+    #[command(subcommand)]
+    Media(MediaCommand),
+}
+
+#[derive(Subcommand)]
+enum MediaCommand {
+    /// Rebuild every image variant from its master.
+    Regenerate {
+        #[arg(long, env = "PRANATA_FILES_DIR")]
+        files_dir: PathBuf,
+    },
 }
 
 #[derive(Subcommand)]
@@ -134,6 +146,10 @@ async fn main() -> anyhow::Result<()> {
             let pool = PgPool::connect(&database_url).await?;
             pranata::db::MIGRATOR.run(&pool).await?;
             tracing::info!("migrations applied");
+        }
+        Command::Media(MediaCommand::Regenerate { files_dir }) => {
+            let rebuilt = pranata::storage::regenerate(&files_dir)?;
+            tracing::info!(rebuilt, "image variants rebuilt");
         }
         Command::Openapi => println!("{}", pranata::openapi().to_pretty_json()?),
         Command::Village(VillageCommand::SetCode { code, database_url }) => {
