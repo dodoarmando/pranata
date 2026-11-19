@@ -1,5 +1,6 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { createServerFn, useServerFn } from '@tanstack/react-start';
+import { Lock } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 import {
   createRole,
@@ -9,6 +10,17 @@ import {
   type RoleInput,
   updateRole,
 } from '../../api/generated';
+import { Notice, PageHead } from '../../components/admin';
+import { Button } from '../../components/ui/button';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+} from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
 import { useSudo } from '../../sudo';
 
 // Server-only; the Roles, or the status that refused them.
@@ -55,8 +67,8 @@ function Roles() {
   if (typeof roles === 'number') {
     return (
       <>
-        <h1>Peran</h1>
-        <p role="alert">Hanya Administrator yang dapat mengelola peran.</p>
+        <PageHead title="Peran" />
+        <Notice error>Hanya Administrator yang dapat mengelola peran.</Notice>
       </>
     );
   }
@@ -83,15 +95,24 @@ function Roles() {
 
   return (
     <>
-      <h1>Peran</h1>
+      <PageHead title="Peran" />
       {sudo.prompt}
-      {message && <p role="alert">{message}</p>}
+      {message && <Notice>{message}</Notice>}
       {roles.map((role) =>
         role.administrator ? (
-          <section key={role.id} aria-labelledby={`role-${role.id}`}>
-            <h2 id={`role-${role.id}`}>{role.name}</h2>
-            <p>Bawaan dan terkunci: memegang semua izin serta mengelola pengguna dan peran.</p>
-          </section>
+          <Card key={role.id} role="region" aria-labelledby={`role-${role.id}`}>
+            <CardHeader>
+              <h2 id={`role-${role.id}`} className="text-base font-semibold">
+                {role.name}
+              </h2>
+              <CardDescription>
+                Bawaan dan terkunci: memegang semua izin serta mengelola pengguna dan peran.
+              </CardDescription>
+              <CardAction>
+                <Lock className="size-4 text-muted-foreground" aria-hidden="true" />
+              </CardAction>
+            </CardHeader>
+          </Card>
         ) : (
           // Keyed by content so a saved change resets the form to the stored Role.
           <RoleForm
@@ -114,28 +135,40 @@ function RoleForm({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   const title = role ? role.name : 'Peran baru';
+  const id = role?.id ?? 'new';
   return (
-    <form onSubmit={onSubmit} aria-label={title}>
-      <h2>{title}</h2>
-      <label>
-        Nama peran
-        <input name="name" defaultValue={role?.name} required />
-      </label>
-      <fieldset>
-        <legend>Izin</legend>
-        {(Object.keys(permissionLabels) as Permission[]).map((permission) => (
-          <label key={permission}>
-            <input
-              type="checkbox"
-              name="permissions"
-              value={permission}
-              defaultChecked={role?.permissions.includes(permission)}
-            />{' '}
-            {permissionLabels[permission]}
-          </label>
-        ))}
-      </fieldset>
-      <button type="submit">{role ? 'Simpan' : 'Buat peran'}</button>
-    </form>
+    <Card>
+      <form onSubmit={onSubmit} aria-label={title} className="contents">
+        <CardHeader>
+          <h2 className="text-base font-semibold">{title}</h2>
+        </CardHeader>
+        <CardContent className="grid gap-5">
+          <div className="grid max-w-xs gap-2">
+            <Label htmlFor={`role-name-${id}`}>Nama peran</Label>
+            <Input id={`role-name-${id}`} name="name" defaultValue={role?.name} required />
+          </div>
+          <fieldset className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+            <legend className="mb-2.5 text-[0.8125rem] font-semibold text-muted-foreground">
+              Izin
+            </legend>
+            {(Object.keys(permissionLabels) as Permission[]).map((permission) => (
+              <label key={permission} className="flex items-start gap-2.5">
+                <input
+                  type="checkbox"
+                  name="permissions"
+                  value={permission}
+                  defaultChecked={role?.permissions.includes(permission)}
+                  className="mt-0.5 size-4 accent-primary"
+                />
+                {permissionLabels[permission]}
+              </label>
+            ))}
+          </fieldset>
+          <Button type="submit" size="lg" className="w-fit px-4">
+            {role ? 'Simpan' : 'Buat peran'}
+          </Button>
+        </CardContent>
+      </form>
+    </Card>
   );
 }

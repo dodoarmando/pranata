@@ -1,6 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { getDashboard } from '../../api/generated';
+import { PageHead } from '../../components/admin';
+import { Card } from '../../components/ui/card';
 
 // Server-only; null when the session ended since the shell checked it.
 const fetchDashboard = createServerFn({ method: 'GET' }).handler(async () => {
@@ -17,12 +19,18 @@ function Dashboard() {
   const dashboard = Route.useLoaderData();
   return (
     <>
-      <h1>Beranda</h1>
+      <PageHead title="Beranda" />
       {dashboard && (
-        <section aria-labelledby="active-users">
-          <h2 id="active-users">Pengguna aktif</h2>
-          <p>{dashboard.activeUsers}</p>
-        </section>
+        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+          <Card role="region" aria-labelledby="active-users" className="gap-1 px-5 py-5">
+            <h2 id="active-users" className="text-muted-foreground">
+              Pengguna aktif
+            </h2>
+            <p className="text-[1.625rem] leading-tight font-semibold tracking-tight">
+              {dashboard.activeUsers}
+            </p>
+          </Card>
+        </div>
       )}
     </>
   );

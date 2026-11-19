@@ -1,10 +1,17 @@
 import { createFileRoute, getRouteApi, Link } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
+import { ChevronRight, ChevronsLeft } from 'lucide-react';
 import {
   type AuditEntry,
   type ListAuditEntriesParams,
   listAuditEntries,
 } from '../../api/generated';
+import { DataTable, Notice, PageHead } from '../../components/admin';
+import { Badge } from '../../components/ui/badge';
+import { Button, buttonVariants } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { ianaZones } from '../../village';
 
 const filterKeys = ['objectType', 'objectId', 'username', 'from', 'to', 'before'] as const;
@@ -70,86 +77,119 @@ function AuditLog() {
 
   return (
     <>
-      <h1>Log audit</h1>
-      <form method="get">
-        <label>
-          Jenis objek
-          <input name="objectType" defaultValue={filter.objectType} />
-        </label>
-        <label>
-          ID objek
-          <input name="objectId" defaultValue={filter.objectId} />
-        </label>
-        <label>
-          Pengguna
-          <input name="username" autoCapitalize="none" defaultValue={filter.username} />
-        </label>
-        <label>
-          Dari tanggal
-          <input name="from" type="date" defaultValue={filter.from} />
-        </label>
-        <label>
-          Sampai tanggal
-          <input name="to" type="date" defaultValue={filter.to} />
-        </label>
-        <button type="submit">Saring</button> <Link to="/admin/log-audit">Hapus saringan</Link>
+      <PageHead title="Log audit" />
+      <form method="get" className="flex flex-wrap items-end gap-2">
+        <Filter label="Jenis objek" name="objectType" value={filter.objectType} />
+        <Filter label="ID objek" name="objectId" value={filter.objectId} />
+        <Filter label="Pengguna" name="username" value={filter.username} />
+        <Filter label="Dari tanggal" name="from" type="date" value={filter.from} />
+        <Filter label="Sampai tanggal" name="to" type="date" value={filter.to} />
+        <Button type="submit">Saring</Button>
+        <Link to="/admin/log-audit" className={buttonVariants({ variant: 'ghost' })}>
+          Hapus saringan
+        </Link>
       </form>
       {page === 403 ? (
-        <p role="alert">Anda tidak memiliki izin membaca log audit.</p>
+        <Notice error>Anda tidak memiliki izin membaca log audit.</Notice>
       ) : typeof page === 'number' ? (
-        <p role="alert">Saringan tidak valid.</p>
+        <Notice error>Saringan tidak valid.</Notice>
       ) : page.entries.length === 0 ? (
-        <p>Tidak ada entri yang cocok.</p>
+        <Notice>Tidak ada entri yang cocok.</Notice>
       ) : (
         <>
-          <table>
-            <thead>
-              <tr>
-                <th>Waktu ({zone})</th>
-                <th>Pelaku</th>
-                <th>Tindakan</th>
-                <th>Objek</th>
-                <th>Perubahan</th>
-                <th>Keterangan</th>
-              </tr>
-            </thead>
-            <tbody>
+          <DataTable>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Waktu ({zone})</TableHead>
+                <TableHead>Pelaku</TableHead>
+                <TableHead>Tindakan</TableHead>
+                <TableHead>Objek</TableHead>
+                <TableHead>Perubahan</TableHead>
+                <TableHead>Keterangan</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {page.entries.map((entry) => (
-                <tr key={entry.id}>
-                  <td>{time.format(new Date(entry.at))}</td>
-                  <td>{actor(entry)}</td>
-                  <td>{entry.action}</td>
-                  <td>
+                <TableRow key={entry.id} className="align-top">
+                  <TableCell className="text-muted-foreground">
+                    {time.format(new Date(entry.at))}
+                  </TableCell>
+                  <TableCell className="font-medium">{actor(entry)}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="font-mono">
+                      {entry.action}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
                     {entry.objectType} {entry.objectId}
-                  </td>
-                  <td>
-                    <ul>
+                  </TableCell>
+                  <TableCell>
+                    <ul className="grid gap-1">
                       {entry.changes.map((change) => (
                         <li key={change.field}>
-                          {change.field}: {change.from} → {change.to}
+                          {change.field}: <del className="text-red">{change.from}</del> →{' '}
+                          <ins className="font-medium text-primary no-underline">{change.to}</ins>
                         </li>
                       ))}
                     </ul>
-                  </td>
-                  <td>{entry.details}</td>
-                </tr>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">{entry.details}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-          <nav aria-label="Halaman log audit">
+            </TableBody>
+          </DataTable>
+          <nav aria-label="Halaman log audit" className="flex justify-end gap-2">
             {before && (
-              <Link to="/admin/log-audit" search={newest}>
+              <Link
+                to="/admin/log-audit"
+                search={newest}
+                className={buttonVariants({ variant: 'outline' })}
+              >
+                <ChevronsLeft aria-hidden="true" />
                 Terbaru
               </Link>
-            )}{' '}
+            )}
             {page.next && (
-              <Link to="/admin/log-audit" search={{ ...filter, before: page.next }}>
+              <Link
+                to="/admin/log-audit"
+                search={{ ...filter, before: page.next }}
+                className={buttonVariants({ variant: 'outline' })}
+              >
                 Lebih lama
+                <ChevronRight aria-hidden="true" />
               </Link>
             )}
           </nav>
         </>
       )}
     </>
+  );
+}
+
+function Filter({
+  label,
+  name,
+  value,
+  type = 'text',
+}: {
+  label: string;
+  name: string;
+  value: string | undefined;
+  type?: string;
+}) {
+  return (
+    <div className="grid gap-1.5">
+      <Label htmlFor={`filter-${name}`} className="text-xs text-muted-foreground">
+        {label}
+      </Label>
+      <Input
+        id={`filter-${name}`}
+        name={name}
+        type={type}
+        autoCapitalize="none"
+        defaultValue={value}
+        className="w-40"
+      />
+    </div>
   );
 }
