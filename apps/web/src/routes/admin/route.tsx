@@ -22,7 +22,8 @@ import { Fragment, useState } from 'react';
 import { getMe, type Me, signOut } from '../../api/generated';
 import { Button } from '../../components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '../../components/ui/sheet';
-import { villageInitial, villageTitle } from '../../village';
+import { VillageLogo } from '../../components/village-logo';
+import { villageTitle } from '../../village';
 
 // Server-only: forwards the session cookie; null without a live session.
 const fetchMe = createServerFn({ method: 'GET' }).handler(async (): Promise<Me | null> => {
@@ -85,12 +86,11 @@ function AdminShell() {
         onClick={close}
         className="flex items-center gap-2 rounded-lg p-2 hover:bg-accent"
       >
-        <span
-          className="grid size-8 flex-none place-items-center rounded-lg bg-primary font-semibold text-primary-foreground"
-          aria-hidden="true"
-        >
-          {villageInitial(village)}
-        </span>
+        <VillageLogo
+          village={village}
+          className="size-8"
+          placeholderClassName="rounded-lg font-semibold"
+        />
         <span className="grid min-w-0 leading-tight">
           <strong className="truncate">{village ? villageTitle(village) : 'Pranata'}</strong>
           <small className="text-xs text-muted-foreground">Admin desa</small>
