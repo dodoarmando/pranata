@@ -137,6 +137,31 @@ test('a User adds a passkey on Akun saya and signs in with it instead of the pas
   await expect(page.getByRole('table')).toContainText('"passkey":"Laptop uji"');
 });
 
+test('the Audit Log is exported as a ZIP with its one-time password shown once', async ({
+  page,
+}) => {
+  await page.goto('/masuk');
+  await page.getByLabel('Nama pengguna').fill(username);
+  await page.getByLabel('Kata sandi', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Beranda' })).toBeVisible();
+
+  await page.goto(`/admin/log-audit?username=${username}`);
+  await page.getByRole('button', { name: 'Ekspor CSV' }).click();
+  await page.getByLabel('Alasan ekspor').fill('Uji ekspor');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Ekspor', exact: true }).click();
+  expect((await download).suggestedFilename()).toBe('log-audit.zip');
+  await expect(page.getByRole('dialog', { name: 'Kata sandi berkas' })).toContainText(
+    /\w{5}-\w{5}-\w{5}-\w{5}/,
+  );
+  await page.getByRole('button', { name: 'Selesai' }).click();
+
+  await page.reload();
+  await expect(page.getByRole('table')).toContainText('audit_log.export');
+  await expect(page.getByRole('table')).toContainText('"reason":"Uji ekspor"');
+});
+
 test('every page has the stylesheet, and the public site stays light', async ({ page }) => {
   // Admin code is split into route chunks the public home page never fetches.
   const scripts: Promise<string>[] = [];
