@@ -22,6 +22,7 @@ import { Route as AdminLogAuditRouteImport } from './routes/admin/log-audit'
 import { Route as AdminPenggunaRouteImport } from './routes/admin/pengguna'
 import { Route as AdminPeranRouteImport } from './routes/admin/peran'
 import { Route as AdminProfilDesaRouteImport } from './routes/admin/profil-desa'
+import { Route as AdminWilayahRouteImport } from './routes/admin/wilayah'
 import { Route as MediaIdVariantRouteImport } from './routes/media.$id.$variant'
 
 const PublicRoute = PublicRouteImport.update({
@@ -88,6 +89,11 @@ const AdminProfilDesaRoute = AdminProfilDesaRouteImport.update({
   path: '/profil-desa',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminWilayahRoute = AdminWilayahRouteImport.update({
+  id: '/wilayah',
+  path: '/wilayah',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const MediaIdVariantRoute = MediaIdVariantRouteImport.update({
   id: '/media/$id/$variant',
   path: '/media/$id/$variant',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/admin/pengguna': typeof AdminPenggunaRoute
   '/admin/peran': typeof AdminPeranRoute
   '/admin/profil-desa': typeof AdminProfilDesaRoute
+  '/admin/wilayah': typeof AdminWilayahRoute
   '/admin/': typeof AdminIndexRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
 }
@@ -119,6 +126,7 @@ export interface FileRoutesByTo {
   '/admin/pengguna': typeof AdminPenggunaRoute
   '/admin/peran': typeof AdminPeranRoute
   '/admin/profil-desa': typeof AdminProfilDesaRoute
+  '/admin/wilayah': typeof AdminWilayahRoute
   '/': typeof PublicIndexRoute
   '/admin': typeof AdminIndexRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
@@ -136,6 +144,7 @@ export interface FileRoutesById {
   '/admin/pengguna': typeof AdminPenggunaRoute
   '/admin/peran': typeof AdminPeranRoute
   '/admin/profil-desa': typeof AdminProfilDesaRoute
+  '/admin/wilayah': typeof AdminWilayahRoute
   '/_public/': typeof PublicIndexRoute
   '/admin/': typeof AdminIndexRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
@@ -154,6 +163,7 @@ export interface FileRouteTypes {
     | '/admin/pengguna'
     | '/admin/peran'
     | '/admin/profil-desa'
+    | '/admin/wilayah'
     | '/admin/'
     | '/media/$id/$variant'
   fileRoutesByTo: FileRoutesByTo
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
     | '/admin/pengguna'
     | '/admin/peran'
     | '/admin/profil-desa'
+    | '/admin/wilayah'
     | '/'
     | '/admin'
     | '/media/$id/$variant'
@@ -183,6 +194,7 @@ export interface FileRouteTypes {
     | '/admin/pengguna'
     | '/admin/peran'
     | '/admin/profil-desa'
+    | '/admin/wilayah'
     | '/_public/'
     | '/admin/'
     | '/media/$id/$variant'
@@ -289,6 +301,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProfilDesaRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/wilayah': {
+      id: '/admin/wilayah'
+      path: '/wilayah'
+      fullPath: '/admin/wilayah'
+      preLoaderRoute: typeof AdminWilayahRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/media/$id/$variant': {
       id: '/media/$id/$variant'
       path: '/media/$id/$variant'
@@ -305,6 +324,7 @@ interface AdminRouteRouteChildren {
   AdminPenggunaRoute: typeof AdminPenggunaRoute
   AdminPeranRoute: typeof AdminPeranRoute
   AdminProfilDesaRoute: typeof AdminProfilDesaRoute
+  AdminWilayahRoute: typeof AdminWilayahRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
@@ -314,6 +334,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminPenggunaRoute: AdminPenggunaRoute,
   AdminPeranRoute: AdminPeranRoute,
   AdminProfilDesaRoute: AdminProfilDesaRoute,
+  AdminWilayahRoute: AdminWilayahRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 

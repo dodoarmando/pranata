@@ -190,6 +190,43 @@ test('the Vision and Mission saved on Profil desa shows on the public Profil pag
   await expect(page.getByRole('region', { name: /^Profil Desa / })).toContainText('11.01.01.2001');
 });
 
+test('a village manager builds a Hamlet with an RW and RT on Wilayah, then deactivates the RT', async ({
+  page,
+}) => {
+  await page.goto('/masuk');
+  await page.getByLabel('Nama pengguna').fill(username);
+  await page.getByLabel('Kata sandi', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Beranda' })).toBeVisible();
+
+  // The local database outlives runs: a fresh Hamlet name, and an RW number unlikely to be taken.
+  const hamlet = `Krajan ${Date.now()}`;
+  const rw = String((Date.now() % 999) + 1).padStart(3, '0');
+  await page.getByRole('link', { name: 'Wilayah' }).click();
+  await expect(page.getByRole('heading', { name: 'Wilayah' })).toBeVisible();
+  await page.getByRole('button', { name: 'Tambah dusun' }).click();
+  await page.getByLabel('Nama dusun').fill(hamlet);
+  await page.getByRole('button', { name: 'Simpan', exact: true }).click();
+  const card = page.getByRole('region', { name: `Dusun ${hamlet}` });
+
+  await card.getByRole('button', { name: 'Tambah RW' }).click();
+  await page.getByLabel('Nomor RW').fill(rw);
+  await page.getByRole('button', { name: 'Simpan', exact: true }).click();
+  await expect(card.getByRole('table')).toContainText(`RW ${rw}`);
+
+  await card.getByRole('button', { name: 'RT', exact: true }).click();
+  await page.getByLabel('Nomor RT').fill('1');
+  await page.getByLabel('Nama ketua (opsional)').fill('Pak Sastro');
+  await page.getByRole('button', { name: 'Simpan', exact: true }).click();
+  const rt = card.getByRole('row', { name: /RT 001/ });
+  await expect(rt).toContainText('Pak Sastro');
+
+  await rt.getByRole('button', { name: 'Ubah' }).click();
+  await page.getByLabel('Aktif').uncheck();
+  await page.getByRole('button', { name: 'Simpan', exact: true }).click();
+  await expect(rt).toContainText('Nonaktif');
+});
+
 test('every page has the stylesheet, and the public site stays light', async ({ page }) => {
   // Admin code is split into route chunks the public home page never fetches.
   const scripts: Promise<string>[] = [];

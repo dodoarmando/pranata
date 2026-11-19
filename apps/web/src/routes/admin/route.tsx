@@ -13,6 +13,7 @@ import {
   House,
   Landmark,
   LogOut,
+  MapPinned,
   PanelLeft,
   ScrollText,
   ShieldCheck,
@@ -40,6 +41,7 @@ const signOutFn = createServerFn({ method: 'POST' }).handler(async () => {
 const pages = [
   { group: '', to: '/admin', label: 'Beranda', icon: House },
   { group: 'Desa', to: '/admin/profil-desa', label: 'Profil desa', icon: Landmark },
+  { group: 'Desa', to: '/admin/wilayah', label: 'Wilayah', icon: MapPinned },
   { group: 'Sistem', to: '/admin/pengguna', label: 'Pengguna', icon: Users },
   { group: 'Sistem', to: '/admin/peran', label: 'Peran', icon: ShieldCheck },
   { group: 'Sistem', to: '/admin/log-audit', label: 'Log audit', icon: ScrollText },
