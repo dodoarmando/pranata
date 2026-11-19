@@ -1,12 +1,20 @@
 import { createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router';
 import { createServerFn, useServerFn } from '@tanstack/react-start';
 import { type ChangeEvent, type FormEvent, useState } from 'react';
-import { updateVillageProfile, uploadVillageLogo, type VillageProfile } from '../../api/generated';
+import {
+  getVisionMission,
+  updateVillageProfile,
+  updateVisionMission,
+  uploadVillageLogo,
+  type VillageProfile,
+  type VisionMission,
+} from '../../api/generated';
 import { Notice, PageHead } from '../../components/admin';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { Textarea } from '../../components/ui/textarea';
 import { regencyShort, villageTitle } from '../../village';
 
 const uploadLogoFn = createServerFn({ method: 'POST' })
@@ -26,6 +34,15 @@ const saveProfileFn = createServerFn({ method: 'POST' })
   .validator((profile: VillageProfile) => profile)
   .handler(async ({ data }) => (await updateVillageProfile(data)).status);
 
+const fetchVisionMission = createServerFn({ method: 'GET' }).handler(async () => {
+  const response = await getVisionMission();
+  return response.status === 200 ? response.data : null;
+});
+
+const saveVisionMissionFn = createServerFn({ method: 'POST' })
+  .validator((visionMission: VisionMission) => visionMission)
+  .handler(async ({ data }) => (await updateVisionMission(data)).status);
+
 const MAX_LOGO_BYTES = 2 << 20;
 
 const forbidden = 'Anda tidak memiliki izin mengelola data desa.';
@@ -42,9 +59,15 @@ const saveErrors: Record<number, string> = {
   422: 'Periksa lagi isian: kode pos 5 angka, email dan telepon yang sah, serta lintang dan bujur yang diisi keduanya.',
 };
 
+const visionMissionErrors: Record<number, string> = {
+  403: forbidden,
+  422: 'Periksa lagi isian: visi dan 1–20 misi wajib diisi, masing-masing paling banyak 1.000 karakter, dan periode RPJMDes di antara 2000–2100 dengan tahun akhir sesudah tahun awal.',
+};
+
 const root = getRouteApi('__root__');
 
 export const Route = createFileRoute('/admin/profil-desa')({
+  loader: () => fetchVisionMission(),
   head: () => ({ meta: [{ title: 'Profil desa · Pranata' }] }),
   component: VillageProfilePage,
 });
@@ -57,9 +80,11 @@ const number = (form: FormData, name: string) => {
 
 function VillageProfilePage() {
   const village = root.useLoaderData();
+  const visionMission = Route.useLoaderData();
   const router = useRouter();
   const uploadLogo = useServerFn(uploadLogoFn);
   const saveProfile = useServerFn(saveProfileFn);
+  const saveVisionMission = useServerFn(saveVisionMissionFn);
   const [logo, setLogo] = useState(village?.logo ?? null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
@@ -116,6 +141,25 @@ function VillageProfilePage() {
     if (status === 204) await router.invalidate();
   }
 
+  async function onSaveVisionMission(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const status = await saveVisionMission({
+      data: {
+        vision: String(form.get('vision')),
+        missions: String(form.get('missions')).split('\n'),
+        startYear: Number(form.get('startYear')),
+        endYear: Number(form.get('endYear')),
+      },
+    });
+    setMessage(
+      status === 204
+        ? { text: 'Visi dan misi tersimpan.', error: false }
+        : { text: visionMissionErrors[status] ?? 'Gagal menyimpan.', error: true },
+    );
+    if (status === 204) await router.invalidate();
+  }
+
   const field = (name: keyof VillageProfile, label: string, props = {}) => (
     <div className="grid gap-2">
       <Label htmlFor={`profile-${name}`}>{label}</Label>
@@ -125,7 +169,9 @@ function VillageProfilePage() {
 
   return (
     <>
-      <PageHead title="Profil desa">Kontak kantor dan logo yang tampil di situs publik.</PageHead>
+      <PageHead title="Profil desa">
+        Kontak kantor, logo, serta visi dan misi yang tampil di situs publik.
+      </PageHead>
       {message && <Notice error={message.error}>{message.text}</Notice>}
       <Card role="region" aria-labelledby="identity-title">
         <CardHeader>
@@ -208,6 +254,64 @@ function VillageProfilePage() {
         </Card>
         <Button type="submit" size="lg" className="w-fit px-4" disabled={uploading}>
           Simpan
+        </Button>
+      </form>
+      <form onSubmit={onSaveVisionMission} aria-label="Visi dan misi" className="grid gap-5">
+        <Card>
+          <CardHeader>
+            <h2 className="text-base font-semibold">Visi dan misi</h2>
+            <CardDescription>
+              Tampil di halaman Profil situs publik. Versi sebelumnya tetap tercatat di Log audit.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid max-w-2xl gap-5 sm:grid-cols-2">
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="vision">Visi</Label>
+              <Textarea
+                id="vision"
+                name="vision"
+                required
+                maxLength={1000}
+                defaultValue={visionMission?.vision}
+              />
+            </div>
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="missions">Misi</Label>
+              <Textarea
+                id="missions"
+                name="missions"
+                required
+                rows={5}
+                aria-describedby="missions-hint"
+                defaultValue={visionMission?.missions.join('\n')}
+              />
+              <p id="missions-hint" className="text-muted-foreground">
+                Satu misi per baris, berurutan dari misi pertama.
+              </p>
+            </div>
+            {(
+              [
+                ['startYear', 'RPJMDes dari tahun'],
+                ['endYear', 'Sampai tahun'],
+              ] as const
+            ).map(([name, label]) => (
+              <div key={name} className="grid gap-2">
+                <Label htmlFor={name}>{label}</Label>
+                <Input
+                  id={name}
+                  name={name}
+                  type="number"
+                  required
+                  min={2000}
+                  max={2100}
+                  defaultValue={visionMission?.[name]}
+                />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        <Button type="submit" size="lg" className="w-fit px-4">
+          Simpan visi dan misi
         </Button>
       </form>
     </>
