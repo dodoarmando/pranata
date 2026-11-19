@@ -4,8 +4,8 @@ import {
   type AuditEntry,
   type ListAuditEntriesParams,
   listAuditEntries,
-  type TimeZone,
 } from '../../api/generated';
+import { ianaZones } from '../../village';
 
 const filterKeys = ['objectType', 'objectId', 'username', 'from', 'to', 'before'] as const;
 
@@ -53,12 +53,6 @@ export const Route = createFileRoute('/admin/log-audit')({
   component: AuditLog,
 });
 
-const zones: Record<TimeZone, string> = {
-  WIB: 'Asia/Jakarta',
-  WITA: 'Asia/Makassar',
-  WIT: 'Asia/Jayapura',
-};
-
 const actor = (entry: Pick<AuditEntry, 'actor' | 'username'>) =>
   entry.username ?? (entry.actor === 'system' ? 'Sistem' : 'Tidak dikenal');
 
@@ -71,7 +65,7 @@ function AuditLog() {
   const time = new Intl.DateTimeFormat('id-ID', {
     dateStyle: 'medium',
     timeStyle: 'medium',
-    timeZone: zones[zone],
+    timeZone: ianaZones[zone],
   });
 
   return (
