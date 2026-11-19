@@ -7,6 +7,7 @@
     "build": "rsbuild build",
     "typecheck": "tsc --noEmit",
     "test": "rstest run --passWithNoTests",
+    "e2e": "playwright test",
     "gen": "orval"
   },
   "dependencies": {
@@ -17,6 +18,7 @@
     "srvx": "1.0.8"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.1",
     "@rsbuild/core": "2.3.3",
     "@rsbuild/plugin-react": "2.1.1",
     "@rstest/core": "0.12.6",

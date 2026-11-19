@@ -39,7 +39,7 @@ gen:
     cd apps/web && bun run gen
 
 # Every required CI job except perf
-check: check-commits check-api check-web check-contract images
+check: check-commits check-api check-web check-contract images e2e
 
 # Run all tests
 test: test-api test-web
@@ -75,3 +75,23 @@ check-contract: gen
 images:
     podman build --platform linux/amd64 -f apps/api/Containerfile -t pranata-api:local .
     podman build --platform linux/amd64 -f apps/web/Containerfile -t pranata-web:local .
+
+# CI job `e2e`: Playwright against the production images and Postgres 18
+e2e: images db-up
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Host network reaches the database on 127.0.0.1; ports differ from `just dev`.
+    api=(--network host -e DATABASE_URL -e PRANATA_LISTEN=127.0.0.1:18080)
+    web=(--network host -e HOST=127.0.0.1 -e PORT=13000 -e PRANATA_API_URL=http://127.0.0.1:18080)
+    cleanup() {
+        if [ "$1" -ne 0 ]; then podman logs pranata-e2e-api; podman logs pranata-e2e-web; fi || true
+        podman rm -fi -t 0 pranata-e2e-api pranata-e2e-web >/dev/null
+    }
+    trap 'cleanup $?' EXIT
+    podman run --rm "${api[@]}" pranata-api:local migrate
+    podman run -d --name pranata-e2e-api "${api[@]}" pranata-api:local
+    podman run -d --name pranata-e2e-web "${web[@]}" pranata-web:local
+    timeout 60 bash -c 'until curl -sfo /dev/null http://127.0.0.1:18080/healthz && curl -sfo /dev/null http://127.0.0.1:13000/; do sleep 0.5; done'
+    cd apps/web
+    bunx playwright install chromium
+    bun run e2e

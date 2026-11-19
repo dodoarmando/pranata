@@ -8,3 +8,7 @@
 /target/
 node_modules/
 dist/
+
+# Playwright output
+test-results/
+playwright-report/
