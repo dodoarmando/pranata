@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT has_rw FROM village FOR SHARE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "has_rw",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "has_rw"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false]
+  },
+  "hash": "6bb9d938f525a9a384d21ec304fe2c03b7eac7621921abfa06faaf5ec122c353"
+}

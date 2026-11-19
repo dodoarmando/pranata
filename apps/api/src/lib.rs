@@ -7,6 +7,7 @@ mod health;
 mod imaging;
 mod passkey;
 mod password;
+mod region;
 mod role;
 pub mod storage;
 mod throttle;
@@ -76,6 +77,11 @@ fn api() -> OpenApiRouter<AppState> {
             village::get_vision_mission,
             village::update_vision_mission
         ))
+        .routes(routes!(region::get_tree))
+        .routes(routes!(region::update_settings))
+        .routes(routes!(region::create_unit))
+        .routes(routes!(region::update_unit))
+        .routes(routes!(region::order_hamlets))
         .routes(routes!(storage::get_media))
         .routes(routes!(auth::use_access_link))
         .routes(routes!(auth::sign_in))

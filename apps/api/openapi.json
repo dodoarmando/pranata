@@ -731,6 +731,207 @@
         }
       }
     },
+    "/regions": {
+      "get": {
+        "tags": [
+          "regions"
+        ],
+        "summary": "The Village's region tree with its settings, heads included, for any signed-in User.",
+        "description": "# Errors\n`401` without a live session, `404` before the Village Code is set.",
+        "operationId": "getRegionTree",
+        "responses": {
+          "200": {
+            "description": "The region tree",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegionTree"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "404": {
+            "description": "The Village Code is not set yet"
+          }
+        }
+      }
+    },
+    "/regions/hamlet-order": {
+      "put": {
+        "tags": [
+          "regions"
+        ],
+        "summary": "Puts every Hamlet in a new manual order.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `422` unless the list holds\nevery Hamlet exactly once.",
+        "operationId": "orderHamlets",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HamletOrder"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Hamlets are reordered"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "422": {
+            "description": "The list is not every Hamlet exactly once"
+          }
+        }
+      }
+    },
+    "/regions/settings": {
+      "put": {
+        "tags": [
+          "regions"
+        ],
+        "summary": "Renames the Hamlet level and turns the RW level on or off, which only while no RT exists\nand, to turn it off, every RW is inactive.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `404` before the Village\nCode is set, `409` for toggling the RW level once an RT exists or turning it off while an RW\nis active, `422` for a blank label or\none over 30 characters.",
+        "operationId": "updateRegionSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegionSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The settings are saved"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "404": {
+            "description": "The Village Code is not set yet"
+          },
+          "409": {
+            "description": "The RW level changes while an RT or active RW exists"
+          },
+          "422": {
+            "description": "The label is blank or too long"
+          }
+        }
+      }
+    },
+    "/regions/units": {
+      "post": {
+        "tags": [
+          "regions"
+        ],
+        "summary": "Adds a Hamlet at the end of the order, an RW to a Hamlet, or an RT to its RW (or Hamlet).",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `404` before the Village\nCode is set, `409` for a taken number or an RW while the Village has no RW level, `422`\nfor a malformed field or a parent that is missing, inactive or of the wrong level.",
+        "operationId": "createRegionUnit",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewRegionUnit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Region Unit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "404": {
+            "description": "The Village Code is not set yet"
+          },
+          "409": {
+            "description": "The number is taken, or the Village has no RW level"
+          },
+          "422": {
+            "description": "A field is malformed or the parent cannot take it"
+          }
+        }
+      }
+    },
+    "/regions/units/{id}": {
+      "put": {
+        "tags": [
+          "regions"
+        ],
+        "summary": "Renames or renumbers a Region Unit in place, edits its head, and deactivates or\nreactivates it.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `404` for an unknown unit,\n`409` for a taken number, deactivating a unit with an active child, or reactivating one\nunder an inactive parent or, for an RW, while the Village has no RW level, `422` for a\nmalformed field.",
+        "operationId": "updateRegionUnit",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Region Unit",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegionUnitUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Region Unit is changed"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "404": {
+            "description": "There is no such Region Unit"
+          },
+          "409": {
+            "description": "The number is taken, the unit is not empty, or its parent is inactive"
+          },
+          "422": {
+            "description": "A field is malformed"
+          }
+        }
+      }
+    },
     "/roles": {
       "get": {
         "tags": [
@@ -1424,6 +1625,18 @@
           }
         }
       },
+      "Created": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "Dashboard": {
         "type": "object",
         "description": "The figures behind the admin dashboard's cards.",
@@ -1492,6 +1705,22 @@
           "to": {}
         }
       },
+      "HamletOrder": {
+        "type": "object",
+        "required": [
+          "ids"
+        ],
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Every Hamlet, active or not, in its new order."
+          }
+        }
+      },
       "Health": {
         "type": "object",
         "required": [
@@ -1558,6 +1787,32 @@
             "type": "string"
           }
         }
+      },
+      "NewRegionUnit": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RegionUnitFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "$ref": "#/components/schemas/RegionKind"
+              },
+              "parentId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Required for an RW or RT, absent for a Hamlet; must be active."
+              }
+            }
+          }
+        ]
       },
       "NewUser": {
         "type": "object",
@@ -1699,6 +1954,144 @@
             "type": "string"
           }
         }
+      },
+      "RegionKind": {
+        "type": "string",
+        "description": "Which level of the tree a Region Unit is.",
+        "enum": [
+          "hamlet",
+          "rw",
+          "rt"
+        ]
+      },
+      "RegionSettings": {
+        "type": "object",
+        "description": "How the Village names and shapes its tree.",
+        "required": [
+          "hamletLabel",
+          "hasRw"
+        ],
+        "properties": {
+          "hamletLabel": {
+            "type": "string",
+            "description": "The local name for a Hamlet, such as dusun, banjar, jorong or lingkungan; kept lowercase."
+          },
+          "hasRw": {
+            "type": "boolean",
+            "description": "Whether RTs belong to RWs rather than straight to their Hamlet."
+          }
+        }
+      },
+      "RegionTree": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RegionSettings"
+          },
+          {
+            "type": "object",
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/RegionUnit"
+                },
+                "description": "Hamlets in their manual order, then RWs and RTs by number."
+              }
+            }
+          }
+        ]
+      },
+      "RegionUnit": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RegionUnitFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "kind",
+              "active"
+            ],
+            "properties": {
+              "active": {
+                "type": "boolean",
+                "description": "An inactive unit cannot be picked for new references."
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/RegionKind"
+              },
+              "parentId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "An RW's Hamlet, or an RT's RW (its Hamlet when the Village has no RW level)."
+              }
+            }
+          }
+        ]
+      },
+      "RegionUnitFields": {
+        "type": "object",
+        "description": "What a User edits on a Region Unit: a Hamlet's name, or an RW's or RT's number and head.",
+        "properties": {
+          "headName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The RW's or RT's head, never shown publicly."
+          },
+          "headPhone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A Hamlet's free-text name; null for an RW or RT."
+          },
+          "number": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "An RW's or RT's number, 1–999; null for a Hamlet."
+          }
+        }
+      },
+      "RegionUnitUpdate": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RegionUnitFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "active"
+            ],
+            "properties": {
+              "active": {
+                "type": "boolean",
+                "description": "False only once every child is inactive; true only under an active parent, and for an RW\nonly while the Village has an RW level."
+              }
+            }
+          }
+        ]
       },
       "Role": {
         "type": "object",

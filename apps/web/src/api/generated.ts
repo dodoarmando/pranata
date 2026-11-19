@@ -70,6 +70,10 @@ export interface AuditPage {
   next?: string | null;
 }
 
+export interface Created {
+  id: string;
+}
+
 /**
  * The figures behind the admin dashboard's cards.
  */
@@ -94,6 +98,11 @@ export interface EncryptedFile {
  */
 export interface ExportReason {
   reason: string;
+}
+
+export interface HamletOrder {
+  /** Every Hamlet, active or not, in its new order. */
+  ids: string[];
 }
 
 export type HealthStatus = typeof HealthStatus[keyof typeof HealthStatus];
@@ -130,6 +139,50 @@ export interface NewPasskey {
 export interface NewPassword {
   password: string;
 }
+
+/**
+ * What a User edits on a Region Unit: a Hamlet's name, or an RW's or RT's number and head.
+ */
+export interface RegionUnitFields {
+  /**
+     * The RW's or RT's head, never shown publicly.
+     * @nullable
+     */
+  headName?: string | null;
+  /** @nullable */
+  headPhone?: string | null;
+  /**
+     * A Hamlet's free-text name; null for an RW or RT.
+     * @nullable
+     */
+  name?: string | null;
+  /**
+     * An RW's or RT's number, 1–999; null for a Hamlet.
+     * @nullable
+     */
+  number?: number | null;
+}
+
+/**
+ * Which level of the tree a Region Unit is.
+ */
+export type RegionKind = typeof RegionKind[keyof typeof RegionKind];
+
+
+export const RegionKind = {
+  hamlet: 'hamlet',
+  rw: 'rw',
+  rt: 'rt',
+} as const;
+
+export type NewRegionUnit = RegionUnitFields & ({
+  kind: RegionKind;
+  /**
+     * Required for an RW or RT, absent for a Hamlet; must be active.
+     * @nullable
+     */
+  parentId?: string | null;
+});
 
 export interface NewUser {
   roleId: string;
@@ -211,6 +264,41 @@ export const Permission = {
 export interface Reauthenticate {
   password: string;
 }
+
+/**
+ * How the Village names and shapes its tree.
+ */
+export interface RegionSettings {
+  /** The local name for a Hamlet, such as dusun, banjar, jorong or lingkungan; kept lowercase. */
+  hamletLabel: string;
+  /** Whether RTs belong to RWs rather than straight to their Hamlet. */
+  hasRw: boolean;
+}
+
+export type RegionUnit = RegionUnitFields & ({
+  /** An inactive unit cannot be picked for new references. */
+  active: boolean;
+  id: string;
+  kind: RegionKind;
+  /**
+     * An RW's Hamlet, or an RT's RW (its Hamlet when the Village has no RW level).
+     * @nullable
+     */
+  parentId?: string | null;
+});
+
+export type RegionTree = RegionSettings & {
+  /** Hamlets in their manual order, then RWs and RTs by number. */
+  units: RegionUnit[];
+};
+
+export type RegionUnitUpdate = RegionUnitFields & {
+  /**
+     * False only once every child is inactive; true only under an active parent, and for an RW
+     * only while the Village has an RW level.
+     */
+  active: boolean;
+};
 
 export interface Role {
   /** The built-in, locked Administrator Role, which holds every Permission whatever `permissions` says. */
@@ -1358,6 +1446,318 @@ export const getMedia = async (id: string,
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type getRegionTreeResponse200 = {
+  data: RegionTree
+  status: 200
+}
+
+export type getRegionTreeResponse401 = {
+  data: void
+  status: 401
+}
+
+export type getRegionTreeResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getRegionTreeResponseSuccess = (getRegionTreeResponse200) & {
+  headers: Headers;
+};
+export type getRegionTreeResponseError = (getRegionTreeResponse401 | getRegionTreeResponse404) & {
+  headers: Headers;
+};
+
+export type getRegionTreeResponse = (getRegionTreeResponseSuccess | getRegionTreeResponseError)
+
+export const getGetRegionTreeUrl = () => {
+
+
+
+
+  return `/regions`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `404` before the Village Code is set.
+ * @summary The Village's region tree with its settings, heads included, for any signed-in User.
+ */
+export const getRegionTree = async ( options?: Parameters<typeof apiFetch>[1]): Promise<getRegionTreeResponse> => {
+
+  return apiFetch<getRegionTreeResponse>(getGetRegionTreeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type orderHamletsResponse204 = {
+  data: void
+  status: 204
+}
+
+export type orderHamletsResponse401 = {
+  data: void
+  status: 401
+}
+
+export type orderHamletsResponse403 = {
+  data: void
+  status: 403
+}
+
+export type orderHamletsResponse422 = {
+  data: void
+  status: 422
+}
+
+export type orderHamletsResponseSuccess = (orderHamletsResponse204) & {
+  headers: Headers;
+};
+export type orderHamletsResponseError = (orderHamletsResponse401 | orderHamletsResponse403 | orderHamletsResponse422) & {
+  headers: Headers;
+};
+
+export type orderHamletsResponse = (orderHamletsResponseSuccess | orderHamletsResponseError)
+
+export const getOrderHamletsUrl = () => {
+
+
+
+
+  return `/regions/hamlet-order`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `422` unless the list holds
+ * every Hamlet exactly once.
+ * @summary Puts every Hamlet in a new manual order.
+ */
+export const orderHamlets = async (hamletOrder: HamletOrder, options?: Parameters<typeof apiFetch>[1]): Promise<orderHamletsResponse> => {
+
+  return apiFetch<orderHamletsResponse>(getOrderHamletsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(hamletOrder)
+  }
+);}
+
+
+
+export type updateRegionSettingsResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateRegionSettingsResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateRegionSettingsResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateRegionSettingsResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateRegionSettingsResponse409 = {
+  data: void
+  status: 409
+}
+
+export type updateRegionSettingsResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateRegionSettingsResponseSuccess = (updateRegionSettingsResponse204) & {
+  headers: Headers;
+};
+export type updateRegionSettingsResponseError = (updateRegionSettingsResponse401 | updateRegionSettingsResponse403 | updateRegionSettingsResponse404 | updateRegionSettingsResponse409 | updateRegionSettingsResponse422) & {
+  headers: Headers;
+};
+
+export type updateRegionSettingsResponse = (updateRegionSettingsResponseSuccess | updateRegionSettingsResponseError)
+
+export const getUpdateRegionSettingsUrl = () => {
+
+
+
+
+  return `/regions/settings`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `404` before the Village
+ * Code is set, `409` for toggling the RW level once an RT exists or turning it off while an RW
+ * is active, `422` for a blank label or
+ * one over 30 characters.
+ * @summary Renames the Hamlet level and turns the RW level on or off, which only while no RT exists
+and, to turn it off, every RW is inactive.
+ */
+export const updateRegionSettings = async (regionSettings: RegionSettings, options?: Parameters<typeof apiFetch>[1]): Promise<updateRegionSettingsResponse> => {
+
+  return apiFetch<updateRegionSettingsResponse>(getUpdateRegionSettingsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(regionSettings)
+  }
+);}
+
+
+
+export type createRegionUnitResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createRegionUnitResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createRegionUnitResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createRegionUnitResponse404 = {
+  data: void
+  status: 404
+}
+
+export type createRegionUnitResponse409 = {
+  data: void
+  status: 409
+}
+
+export type createRegionUnitResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createRegionUnitResponseSuccess = (createRegionUnitResponse201) & {
+  headers: Headers;
+};
+export type createRegionUnitResponseError = (createRegionUnitResponse401 | createRegionUnitResponse403 | createRegionUnitResponse404 | createRegionUnitResponse409 | createRegionUnitResponse422) & {
+  headers: Headers;
+};
+
+export type createRegionUnitResponse = (createRegionUnitResponseSuccess | createRegionUnitResponseError)
+
+export const getCreateRegionUnitUrl = () => {
+
+
+
+
+  return `/regions/units`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `404` before the Village
+ * Code is set, `409` for a taken number or an RW while the Village has no RW level, `422`
+ * for a malformed field or a parent that is missing, inactive or of the wrong level.
+ * @summary Adds a Hamlet at the end of the order, an RW to a Hamlet, or an RT to its RW (or Hamlet).
+ */
+export const createRegionUnit = async (newRegionUnit: NewRegionUnit, options?: Parameters<typeof apiFetch>[1]): Promise<createRegionUnitResponse> => {
+
+  return apiFetch<createRegionUnitResponse>(getCreateRegionUnitUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(newRegionUnit)
+  }
+);}
+
+
+
+export type updateRegionUnitResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateRegionUnitResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateRegionUnitResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateRegionUnitResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateRegionUnitResponse409 = {
+  data: void
+  status: 409
+}
+
+export type updateRegionUnitResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateRegionUnitResponseSuccess = (updateRegionUnitResponse204) & {
+  headers: Headers;
+};
+export type updateRegionUnitResponseError = (updateRegionUnitResponse401 | updateRegionUnitResponse403 | updateRegionUnitResponse404 | updateRegionUnitResponse409 | updateRegionUnitResponse422) & {
+  headers: Headers;
+};
+
+export type updateRegionUnitResponse = (updateRegionUnitResponseSuccess | updateRegionUnitResponseError)
+
+export const getUpdateRegionUnitUrl = (id: string,) => {
+
+
+
+
+  return `/regions/units/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `404` for an unknown unit,
+ * `409` for a taken number, deactivating a unit with an active child, or reactivating one
+ * under an inactive parent or, for an RW, while the Village has no RW level, `422` for a
+ * malformed field.
+ * @summary Renames or renumbers a Region Unit in place, edits its head, and deactivates or
+reactivates it.
+ */
+export const updateRegionUnit = async (id: string,
+    regionUnitUpdate: RegionUnitUpdate, options?: Parameters<typeof apiFetch>[1]): Promise<updateRegionUnitResponse> => {
+
+  return apiFetch<updateRegionUnitResponse>(getUpdateRegionUnitUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(regionUnitUpdate)
   }
 );}
 
