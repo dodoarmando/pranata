@@ -104,6 +104,21 @@ impl TestApp {
         assert_eq!(status, StatusCode::NO_CONTENT);
     }
 
+    /// Creates a User in a fresh Role holding only `permissions`, and signs them in.
+    pub async fn user_with(&self, pool: &PgPool, username: &str, permissions: &[&str]) -> String {
+        self.administrator(pool, username).await;
+        sqlx::query(
+            "WITH role AS (INSERT INTO roles (name, permissions) VALUES ($1, $2) RETURNING id)
+             UPDATE users SET role_id = role.id FROM role WHERE username = $1",
+        )
+        .bind(username)
+        .bind(permissions)
+        .execute(pool)
+        .await
+        .unwrap();
+        self.sign_in(username, false).await
+    }
+
     /// Signs in and returns the session cookie as `name=value`.
     pub async fn sign_in(&self, username: &str, remember: bool) -> String {
         let reply = self

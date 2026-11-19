@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "WITH live AS (\n                 UPDATE sessions SET last_seen_at = now()\n                 WHERE token_hash = $1 AND expires_at > now() AND last_seen_at + idle_timeout > now()\n                 RETURNING user_id\n             )\n             SELECT users.id, users.username, roles.name AS role, roles.administrator\n             FROM live JOIN users ON users.id = live.user_id JOIN roles ON roles.id = users.role_id",
+  "query": "WITH live AS (\n                 UPDATE sessions SET last_seen_at = now()\n                 WHERE token_hash = $1 AND expires_at > now() AND last_seen_at + idle_timeout > now()\n                 RETURNING user_id\n             )\n             SELECT users.id, users.username, roles.name AS role, roles.administrator, roles.permissions\n             FROM live JOIN users ON users.id = live.user_id JOIN roles ON roles.id = users.role_id",
   "describe": {
     "columns": [
       {
@@ -46,12 +46,23 @@
             "name": "administrator"
           }
         }
+      },
+      {
+        "ordinal": 4,
+        "name": "permissions",
+        "type_info": "TextArray",
+        "origin": {
+          "Table": {
+            "table": "roles",
+            "name": "permissions"
+          }
+        }
       }
     ],
     "parameters": {
       "Left": ["Bytea"]
     },
-    "nullable": [false, false, false, false]
+    "nullable": [false, false, false, false, false]
   },
-  "hash": "aca01c47f622bb5e281601945aa2a4bda6e801f360b1fb46dbebb964405b8d68"
+  "hash": "7d76ad6ad5ea3440824fbf8683aa3ba03e81c04d9d8ec8d2d90bd474e8121a5e"
 }

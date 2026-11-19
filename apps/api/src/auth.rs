@@ -240,7 +240,16 @@ pub(crate) struct Session {
     user_id: Uuid,
     username: String,
     role: String,
-    pub(crate) administrator: bool,
+    administrator: bool,
+    permissions: Vec<String>,
+}
+
+impl Session {
+    /// Whether the User's Role holds `permission`; the Administrator holds every one.
+    // shortcut: Permissions are unchecked strings until #34 fixes the catalog in code; then take its type.
+    pub(crate) fn holds(&self, permission: &str) -> bool {
+        self.administrator || self.permissions.iter().any(|held| held == permission)
+    }
 }
 
 fn session_token(headers: &HeaderMap) -> Option<&str> {
@@ -265,7 +274,7 @@ impl FromRequestParts<PgPool> for Session {
                  WHERE token_hash = $1 AND expires_at > now() AND last_seen_at + idle_timeout > now()
                  RETURNING user_id
              )
-             SELECT users.id, users.username, roles.name AS role, roles.administrator
+             SELECT users.id, users.username, roles.name AS role, roles.administrator, roles.permissions
              FROM live JOIN users ON users.id = live.user_id JOIN roles ON roles.id = users.role_id",
             token_hash,
         )
@@ -278,6 +287,7 @@ impl FromRequestParts<PgPool> for Session {
             username: row.username,
             role: row.role,
             administrator: row.administrator,
+            permissions: row.permissions,
         })
     }
 }

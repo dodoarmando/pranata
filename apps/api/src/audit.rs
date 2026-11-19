@@ -84,8 +84,7 @@ pub async fn list(
     State(pool): State<PgPool>,
     session: Session,
 ) -> Result<Json<Vec<AuditEntry>>, ApiError> {
-    // shortcut: only the Administrator Role exists yet, so it stands for `audit.read`; the Permission catalog replaces this check.
-    if !session.administrator {
+    if !session.holds("audit.read") {
         return Err(ApiError::Status(StatusCode::FORBIDDEN));
     }
     // shortcut: the latest 100 only; the Audit Log viewer adds filters and paging.
