@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE sessions SET authenticated_at = now() WHERE token_hash = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Bytea"]
+    },
+    "nullable": []
+  },
+  "hash": "4f1af67f607b6d9bfe9630921df9c63bd5e27a1024093c2c46618d37b7679a43"
+}

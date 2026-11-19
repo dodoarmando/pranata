@@ -158,6 +158,34 @@
         }
       }
     },
+    "/auth/reauthenticate": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Confirms the signed-in User's password, entering sudo mode for 15 minutes.",
+        "description": "# Errors\n`401` without a live session or for a wrong password.",
+        "operationId": "reauthenticate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reauthenticate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The password is right; sudo mode starts"
+          },
+          "401": {
+            "description": "There is no live session, or the password is wrong"
+          }
+        }
+      }
+    },
     "/auth/sign-in": {
       "post": {
         "tags": [
@@ -270,7 +298,7 @@
           "roles"
         ],
         "summary": "Creates a Role from the Permission catalog.",
-        "description": "# Errors\n`401` without a live session, `403` outside the Administrator Role, `409` for a taken\nname, `422` for a blank name or a Permission outside the catalog.",
+        "description": "# Errors\n`401` without a live session, `403` outside the Administrator Role, `409` for a taken\nname, `428` outside sudo mode, `422` for a blank name or a Permission outside the catalog.",
         "operationId": "createRole",
         "requestBody": {
           "content": {
@@ -304,6 +332,9 @@
           },
           "422": {
             "description": "The name is blank or a Permission is unknown"
+          },
+          "428": {
+            "description": "The User must re-authenticate first"
           }
         }
       }
@@ -314,7 +345,7 @@
           "roles"
         ],
         "summary": "Renames a Role and replaces its Permissions; its Users hold them from their next request.",
-        "description": "# Errors\n`401` without a live session, `403` outside the Administrator Role, `404` for an unknown\nRole, `409` for the locked Administrator Role or a taken name, `422` as for creating.",
+        "description": "# Errors\n`401` without a live session, `403` outside the Administrator Role, `404` for an unknown\nRole, `409` for the locked Administrator Role or a taken name, `428` outside sudo mode,\n`422` as for creating.",
         "operationId": "updateRole",
         "parameters": [
           {
@@ -356,6 +387,9 @@
           },
           "422": {
             "description": "The name is blank or a Permission is unknown"
+          },
+          "428": {
+            "description": "The User must re-authenticate first"
           }
         }
       }
@@ -553,6 +587,17 @@
           "complaint.handle",
           "audit.read"
         ]
+      },
+      "Reauthenticate": {
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "properties": {
+          "password": {
+            "type": "string"
+          }
+        }
       },
       "Role": {
         "type": "object",

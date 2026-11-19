@@ -100,7 +100,7 @@ impl RoleInput {
 ///
 /// # Errors
 /// `401` without a live session, `403` outside the Administrator Role, `409` for a taken
-/// name, `422` for a blank name or a Permission outside the catalog.
+/// name, `428` outside sudo mode, `422` for a blank name or a Permission outside the catalog.
 #[utoipa::path(
     post,
     path = "/roles",
@@ -112,6 +112,7 @@ impl RoleInput {
         (status = UNAUTHORIZED, description = "There is no live session"),
         (status = FORBIDDEN, description = "The User is not an Administrator"),
         (status = CONFLICT, description = "Another Role has the name"),
+        (status = PRECONDITION_REQUIRED, description = "The User must re-authenticate first"),
         (status = UNPROCESSABLE_ENTITY, description = "The name is blank or a Permission is unknown"),
     ),
 )]
@@ -121,6 +122,7 @@ pub async fn create(
     Json(body): Json<RoleInput>,
 ) -> Result<(StatusCode, Json<Role>), ApiError> {
     session.ensure_administrator()?;
+    session.ensure_sudo()?;
     let name = body.name()?;
     let mut tx = pool.begin().await?;
     let id = sqlx::query_scalar!(
@@ -154,7 +156,8 @@ pub async fn create(
 ///
 /// # Errors
 /// `401` without a live session, `403` outside the Administrator Role, `404` for an unknown
-/// Role, `409` for the locked Administrator Role or a taken name, `422` as for creating.
+/// Role, `409` for the locked Administrator Role or a taken name, `428` outside sudo mode,
+/// `422` as for creating.
 #[utoipa::path(
     put,
     path = "/roles/{id}",
@@ -168,6 +171,7 @@ pub async fn create(
         (status = FORBIDDEN, description = "The User is not an Administrator"),
         (status = NOT_FOUND, description = "There is no such Role"),
         (status = CONFLICT, description = "The Role is the Administrator, or another Role has the name"),
+        (status = PRECONDITION_REQUIRED, description = "The User must re-authenticate first"),
         (status = UNPROCESSABLE_ENTITY, description = "The name is blank or a Permission is unknown"),
     ),
 )]
@@ -178,6 +182,7 @@ pub async fn update(
     Json(body): Json<RoleInput>,
 ) -> Result<StatusCode, ApiError> {
     session.ensure_administrator()?;
+    session.ensure_sudo()?;
     let name = body.name()?;
     let mut tx = pool.begin().await?;
     let old = sqlx::query!(

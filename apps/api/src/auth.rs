@@ -243,6 +243,8 @@ pub(crate) struct Session {
     role: String,
     pub(crate) administrator: bool,
     permissions: Vec<Permission>,
+    /// Sudo mode: the User gave their password within the last 15 minutes.
+    sudo: bool,
 }
 
 impl Session {
@@ -257,6 +259,15 @@ impl Session {
             Ok(())
         } else {
             Err(ApiError::Status(StatusCode::FORBIDDEN))
+        }
+    }
+
+    /// Refuses with `428` outside sudo mode, so the User re-authenticates first.
+    pub(crate) fn ensure_sudo(&self) -> Result<(), ApiError> {
+        if self.sudo {
+            Ok(())
+        } else {
+            Err(ApiError::Status(StatusCode::PRECONDITION_REQUIRED))
         }
     }
 }
@@ -281,9 +292,9 @@ impl FromRequestParts<PgPool> for Session {
             "WITH live AS (
                  UPDATE sessions SET last_seen_at = now()
                  WHERE token_hash = $1 AND expires_at > now() AND last_seen_at + idle_timeout > now()
-                 RETURNING user_id
+                 RETURNING user_id, authenticated_at > now() - interval '15 minutes' AS sudo
              )
-             SELECT users.id, users.username, roles.name AS role, roles.administrator,
+             SELECT users.id, users.username, roles.name AS role, roles.administrator, live.sudo AS \"sudo!\",
                     roles.permissions AS \"permissions: Vec<Permission>\"
              FROM live JOIN users ON users.id = live.user_id JOIN roles ON roles.id = users.role_id",
             token_hash,
@@ -298,8 +309,82 @@ impl FromRequestParts<PgPool> for Session {
             role: row.role,
             administrator: row.administrator,
             permissions: row.permissions,
+            sudo: row.sudo,
         })
     }
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct Reauthenticate {
+    password: String,
+}
+
+/// Confirms the signed-in User's password, entering sudo mode for 15 minutes.
+///
+/// # Errors
+/// `401` without a live session or for a wrong password.
+#[utoipa::path(
+    post,
+    path = "/auth/reauthenticate",
+    operation_id = "reauthenticate",
+    tag = "auth",
+    request_body = Reauthenticate,
+    responses(
+        (status = NO_CONTENT, description = "The password is right; sudo mode starts"),
+        (status = UNAUTHORIZED, description = "There is no live session, or the password is wrong"),
+    ),
+)]
+pub async fn reauthenticate(
+    State(pool): State<PgPool>,
+    session: Session,
+    Json(body): Json<Reauthenticate>,
+) -> Result<StatusCode, ApiError> {
+    let stored = sqlx::query_scalar!(
+        "SELECT password_hash FROM users WHERE id = $1",
+        session.user_id
+    )
+    .fetch_one(&pool)
+    .await?;
+    let actor = Actor::User(session.user_id);
+    let user_id = session.user_id.to_string();
+    let mut tx = pool.begin().await?;
+    let Verdict::Right { rehashed } = password::verify(body.password, stored).await? else {
+        audit::record(
+            &mut tx,
+            actor,
+            "session.reauthenticate_failed",
+            ("user", Some(&user_id)),
+            json!({}),
+        )
+        .await?;
+        tx.commit().await?;
+        return Err(ApiError::Status(StatusCode::UNAUTHORIZED));
+    };
+    if let Some(hash) = rehashed {
+        sqlx::query!(
+            "UPDATE users SET password_hash = $1 WHERE id = $2",
+            hash,
+            session.user_id
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+    sqlx::query!(
+        "UPDATE sessions SET authenticated_at = now() WHERE token_hash = $1",
+        session.token_hash
+    )
+    .execute(&mut *tx)
+    .await?;
+    audit::record(
+        &mut tx,
+        actor,
+        "session.reauthenticate",
+        ("user", Some(&user_id)),
+        json!({}),
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Ends the current session and clears its cookie.
