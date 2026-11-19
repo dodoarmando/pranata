@@ -13,6 +13,22 @@ export interface AccessLink {
   userId: string;
 }
 
+export interface ActiveSession {
+  /** Whether this is the session making the request. */
+  current: boolean;
+  /**
+     * The address signed in from.
+     * @nullable
+     */
+  ip?: string | null;
+  lastSeenAt: string;
+  /**
+     * The browser's user agent at sign-in.
+     * @nullable
+     */
+  userAgent?: string | null;
+}
+
 /**
  * One field's change in an Audit Entry.
  */
@@ -421,6 +437,51 @@ export const reauthenticate = async (reauthenticateBody: Reauthenticate, options
     method: 'POST',
     headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
     body: JSON.stringify(reauthenticateBody)
+  }
+);}
+
+
+
+export type listSessionsResponse200 = {
+  data: ActiveSession[]
+  status: 200
+}
+
+export type listSessionsResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listSessionsResponseSuccess = (listSessionsResponse200) & {
+  headers: Headers;
+};
+export type listSessionsResponseError = (listSessionsResponse401) & {
+  headers: Headers;
+};
+
+export type listSessionsResponse = (listSessionsResponseSuccess | listSessionsResponseError)
+
+export const getListSessionsUrl = () => {
+
+
+
+
+  return `/auth/sessions`
+}
+
+/**
+ * # Errors
+ * `401` without a live session.
+ * @summary The signed-in User's live sessions, most recently active first.
+ */
+export const listSessions = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listSessionsResponse> => {
+
+  return apiFetch<listSessionsResponse>(getListSessionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
   }
 );}
 

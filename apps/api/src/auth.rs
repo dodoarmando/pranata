@@ -1,4 +1,4 @@
-use std::fmt::Write;
+use std::{fmt::Write, net::IpAddr};
 
 use axum::{
     Json,
@@ -6,6 +6,7 @@ use axum::{
     http::{HeaderMap, StatusCode, header, request::Parts},
     response::{AppendHeaders, IntoResponse},
 };
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -170,6 +171,7 @@ pub struct SignIn {
 )]
 pub async fn sign_in(
     State(pool): State<PgPool>,
+    headers: HeaderMap,
     Json(body): Json<SignIn>,
 ) -> Result<impl IntoResponse, ApiError> {
     let user = sqlx::query!(
@@ -210,13 +212,16 @@ pub async fn sign_in(
         .await?;
     }
     let (token, hash) = new_token();
+    let (user_agent, ip) = client(&headers);
     sqlx::query!(
-        "INSERT INTO sessions (token_hash, user_id, idle_timeout, expires_at) VALUES ($1, $2,
+        "INSERT INTO sessions (token_hash, user_id, idle_timeout, expires_at, user_agent, ip) VALUES ($1, $2,
          CASE WHEN $3::boolean THEN interval '7 days' ELSE interval '30 minutes' END,
-         now() + CASE WHEN $3::boolean THEN interval '30 days' ELSE interval '12 hours' END)",
+         now() + CASE WHEN $3::boolean THEN interval '30 days' ELSE interval '12 hours' END, $4, $5)",
         hash,
         user.id,
         body.remember,
+        user_agent,
+        ip,
     )
     .execute(&mut *tx)
     .await?;
@@ -243,6 +248,23 @@ pub async fn sign_in(
             format!("{COOKIE}={token}; Path=/; Secure; HttpOnly; SameSite=Lax{max_age}"),
         )]),
     ))
+}
+
+/// The browser's user agent and the client's address, as the web app forwards them; shown to
+/// the User only, so a forged value misleads no one else.
+fn client(headers: &HeaderMap) -> (Option<String>, Option<String>) {
+    let user_agent = headers
+        .get(header::USER_AGENT)
+        .and_then(|value| value.to_str().ok())
+        .map(|value| value.chars().take(512).collect());
+    // The last entry is the one the nearest proxy, the web app, vouches for.
+    let ip = headers
+        .get("x-forwarded-for")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.rsplit(',').next())
+        .and_then(|value| value.trim().parse::<IpAddr>().ok())
+        .map(|ip| ip.to_string());
+    (user_agent, ip)
 }
 
 /// The User of a live session, which each use keeps from going idle.
@@ -466,6 +488,49 @@ pub async fn me(session: Session) -> Json<Me> {
         username: session.username,
         role: session.role,
     })
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ActiveSession {
+    /// The browser's user agent at sign-in.
+    user_agent: Option<String>,
+    /// The address signed in from.
+    ip: Option<String>,
+    last_seen_at: DateTime<Utc>,
+    /// Whether this is the session making the request.
+    current: bool,
+}
+
+/// The signed-in User's live sessions, most recently active first.
+///
+/// # Errors
+/// `401` without a live session.
+#[utoipa::path(
+    get,
+    path = "/auth/sessions",
+    operation_id = "listSessions",
+    tag = "auth",
+    responses(
+        (status = OK, description = "The User's live sessions", body = Vec<ActiveSession>),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+    ),
+)]
+pub async fn sessions(
+    State(pool): State<PgPool>,
+    session: Session,
+) -> Result<Json<Vec<ActiveSession>>, ApiError> {
+    let sessions = sqlx::query_as!(
+        ActiveSession,
+        r#"SELECT user_agent, ip, last_seen_at, token_hash = $2 AS "current!" FROM sessions
+           WHERE user_id = $1 AND expires_at > now() AND last_seen_at + idle_timeout > now()
+           ORDER BY last_seen_at DESC"#,
+        session.user_id,
+        session.token_hash,
+    )
+    .fetch_all(&pool)
+    .await?;
+    Ok(Json(sessions))
 }
 
 /// Deletes expired sessions and Access Links, which are already refused; run periodically.

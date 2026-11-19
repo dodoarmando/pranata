@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO sessions (token_hash, user_id, idle_timeout, expires_at, user_agent, ip) VALUES ($1, $2,\n         CASE WHEN $3::boolean THEN interval '7 days' ELSE interval '30 minutes' END,\n         now() + CASE WHEN $3::boolean THEN interval '30 days' ELSE interval '12 hours' END, $4, $5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Bytea", "Uuid", "Bool", "Text", "Text"]
+    },
+    "nullable": []
+  },
+  "hash": "5f4d57250012732be8a112c397830d3f40eac54e0c22861f6c92385b3aee5f15"
+}
