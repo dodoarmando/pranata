@@ -6,3 +6,5 @@
 
 # Build output
 /target/
+node_modules/
+dist/

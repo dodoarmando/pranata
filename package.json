@@ -1,0 +1,11 @@
+{
+  "name": "pranata",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/web"
+  ],
+  "devDependencies": {
+    "@biomejs/biome": "2.6.8"
+  }
+}
