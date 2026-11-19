@@ -225,7 +225,7 @@
           },
           "actor": {
             "type": "string",
-            "description": "`user`, `system` (the CLI) or `visitor` (not identified)."
+            "description": "`user`, `system` (the CLI) or `anonymous` (not identified)."
           },
           "at": {
             "type": "string",

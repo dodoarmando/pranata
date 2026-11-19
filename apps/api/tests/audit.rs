@@ -50,7 +50,7 @@ async fn provisioning_and_signing_in_and_out_are_audited(pool: PgPool) {
     pranata::village::set_code(&pool, "1101012001")
         .await
         .unwrap();
-    app.admin(&pool, "admin").await;
+    app.administrator(&pool, "admin").await;
     app.call(
         "POST",
         "/auth/sign-in",
@@ -83,7 +83,7 @@ async fn provisioning_and_signing_in_and_out_are_audited(pool: PgPool) {
         ("user.create", &system),
         ("access_link.create", &system),
         ("access_link.use", &admin),
-        ("session.sign_in_failed", &(json!("visitor"), Value::Null)),
+        ("session.sign_in_failed", &(json!("anonymous"), Value::Null)),
         ("session.sign_in", &admin),
         ("session.sign_out", &admin),
         ("session.sign_in", &admin),
@@ -95,9 +95,11 @@ async fn provisioning_and_signing_in_and_out_are_audited(pool: PgPool) {
 #[sqlx::test]
 async fn a_failed_change_leaves_no_audit_entry_and_a_successful_one_exactly_one(pool: PgPool) {
     let app = TestApp::new(pool.clone());
-    app.admin(&pool, "admin").await;
+    app.administrator(&pool, "admin").await;
     let cookie = app.sign_in("admin", false).await;
-    let token = pranata::user::create_admin(&pool, "kedua").await.unwrap();
+    let token = pranata::user::create_administrator(&pool, "kedua")
+        .await
+        .unwrap();
     let uses = || async {
         entries(&app, &cookie)
             .await

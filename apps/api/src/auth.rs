@@ -179,7 +179,7 @@ pub async fn sign_in(
     else {
         audit::record(
             &mut tx,
-            Actor::Visitor,
+            Actor::Anonymous,
             "session.sign_in_failed",
             ("user", attempted.as_deref()),
             json!({}),

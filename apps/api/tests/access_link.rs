@@ -9,7 +9,9 @@ const GOOD_PASSWORD: &str = "kopi tubruk pagi hari";
 
 #[sqlx::test]
 async fn an_access_link_sets_the_password_only_once(pool: PgPool) {
-    let token = pranata::user::create_admin(&pool, "admin").await.unwrap();
+    let token = pranata::user::create_administrator(&pool, "admin")
+        .await
+        .unwrap();
     let app = TestApp::new(pool);
     let set = json!({ "token": token, "password": GOOD_PASSWORD });
 
@@ -22,7 +24,9 @@ async fn an_access_link_sets_the_password_only_once(pool: PgPool) {
 
 #[sqlx::test]
 async fn an_unknown_or_expired_access_link_is_refused(pool: PgPool) {
-    let token = pranata::user::create_admin(&pool, "admin").await.unwrap();
+    let token = pranata::user::create_administrator(&pool, "admin")
+        .await
+        .unwrap();
     sqlx::query("UPDATE access_links SET expires_at = now() - interval '1 second'")
         .execute(&pool)
         .await
@@ -46,7 +50,7 @@ async fn a_password_is_12_to_128_characters_and_neither_common_nor_personal(pool
         .await
         .unwrap();
     let village = pranata::village::region_name("11.01.01.2001").unwrap();
-    let token = pranata::user::create_admin(&pool, "kaur.umum")
+    let token = pranata::user::create_administrator(&pool, "kaur.umum")
         .await
         .unwrap();
     let app = TestApp::new(pool);

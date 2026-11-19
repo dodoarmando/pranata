@@ -91,8 +91,10 @@ impl TestApp {
     }
 
     /// Creates an Administrator from the CLI and sets their password through the Access Link.
-    pub async fn admin(&self, pool: &PgPool, username: &str) {
-        let token = pranata::user::create_admin(pool, username).await.unwrap();
+    pub async fn administrator(&self, pool: &PgPool, username: &str) {
+        let token = pranata::user::create_administrator(pool, username)
+            .await
+            .unwrap();
         let (status, _) = self
             .post(
                 "/auth/access-link",

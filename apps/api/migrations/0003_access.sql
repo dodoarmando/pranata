@@ -40,7 +40,7 @@ CREATE INDEX access_links_expires_at ON access_links (expires_at);
 CREATE TABLE audit_entries (
     id uuid PRIMARY KEY DEFAULT uuidv7(),
     at timestamptz NOT NULL DEFAULT now(),
-    actor text NOT NULL CHECK (actor IN ('user', 'system', 'visitor')),
+    actor text NOT NULL CHECK (actor IN ('user', 'system', 'anonymous')),
     actor_id uuid REFERENCES users CHECK ((actor = 'user') = (actor_id IS NOT NULL)),
     action text NOT NULL,
     object_type text NOT NULL,
