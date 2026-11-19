@@ -1,5 +1,8 @@
+pub mod audit;
+pub mod auth;
 pub mod db;
 mod health;
+pub mod user;
 pub mod village;
 
 use axum::Router;

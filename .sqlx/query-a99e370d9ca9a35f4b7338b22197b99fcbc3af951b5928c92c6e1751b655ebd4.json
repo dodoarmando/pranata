@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO access_links (token_hash, user_id, expires_at)\n         VALUES ($1, $2, now() + interval '24 hours')\n         ON CONFLICT (user_id) DO UPDATE SET token_hash = EXCLUDED.token_hash, expires_at = EXCLUDED.expires_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Bytea", "Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "a99e370d9ca9a35f4b7338b22197b99fcbc3af951b5928c92c6e1751b655ebd4"
+}

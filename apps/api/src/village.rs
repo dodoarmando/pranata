@@ -1,8 +1,11 @@
 use anyhow::Context;
 use axum::{Json, extract::State, http::StatusCode};
 use serde::Serialize;
+use serde_json::json;
 use sqlx::PgPool;
 use utoipa::ToSchema;
+
+use crate::audit::{self, Actor};
 
 /// The national code list, one `dotted-code<TAB>name` row each; see `data/README.md`.
 const REGIONS: &str = include_str!("../data/regions.tsv");
@@ -78,6 +81,7 @@ pub async fn set_code(pool: &PgPool, code: &str) -> anyhow::Result<()> {
     let regency = name(format!("{p}.{r}"))?;
     let province = name(p.to_owned())?;
 
+    let mut tx = pool.begin().await?;
     sqlx::query!(
         "INSERT INTO village (code, name, district, regency, province) VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT (singleton) DO UPDATE SET code = EXCLUDED.code, name = EXCLUDED.name,
@@ -88,9 +92,18 @@ pub async fn set_code(pool: &PgPool, code: &str) -> anyhow::Result<()> {
         regency,
         province,
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await
     .context("cannot save the Village")?;
+    audit::record(
+        &mut tx,
+        Actor::System,
+        "village.set_code",
+        ("village", Some(code)),
+        json!({ "name": village }),
+    )
+    .await?;
+    tx.commit().await?;
     Ok(())
 }
 
