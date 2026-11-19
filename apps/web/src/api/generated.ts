@@ -16,6 +16,28 @@ export interface Health {
   status: HealthStatus;
 }
 
+/**
+ * Indonesia's three time zones; the Village's drives every date-only rule.
+ */
+export type TimeZone = typeof TimeZone[keyof typeof TimeZone];
+
+
+export const TimeZone = {
+  WIB: 'WIB',
+  WITA: 'WITA',
+  WIT: 'WIT',
+} as const;
+
+export interface Village {
+  /** The 10-digit Village Code. */
+  code: string;
+  district: string;
+  name: string;
+  province: string;
+  regency: string;
+  timeZone: TimeZone;
+}
+
 export type getHealthResponse200 = {
   data: Health
   status: 200
@@ -49,6 +71,51 @@ export const getGetHealthUrl = () => {
 export const getHealth = async ( options?: Parameters<typeof apiFetch>[1]): Promise<getHealthResponse> => {
 
   return apiFetch<getHealthResponse>(getGetHealthUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getVillageResponse200 = {
+  data: Village
+  status: 200
+}
+
+export type getVillageResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getVillageResponseSuccess = (getVillageResponse200) & {
+  headers: Headers;
+};
+export type getVillageResponseError = (getVillageResponse404) & {
+  headers: Headers;
+};
+
+export type getVillageResponse = (getVillageResponseSuccess | getVillageResponseError)
+
+export const getGetVillageUrl = () => {
+
+
+
+
+  return `/village`
+}
+
+/**
+ * # Errors
+ * `404` before the Village Code is set, `500` when the database is unreachable.
+ * @summary The Village's official identity; read-only, set by the vendor from the CLI.
+ */
+export const getVillage = async ( options?: Parameters<typeof apiFetch>[1]): Promise<getVillageResponse> => {
+
+  return apiFetch<getVillageResponse>(getGetVillageUrl(),
   {
     ...options,
     method: 'GET'

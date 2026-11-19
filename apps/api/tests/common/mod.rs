@@ -29,4 +29,14 @@ impl TestApp {
         let body = serde_json::from_slice(&bytes).unwrap_or(Value::Null);
         (status, body)
     }
+
+    #[allow(dead_code)] // each test file compiles this module; not all of them use this
+    pub async fn request(&self, method: &str, path: &str) -> StatusCode {
+        let request = Request::builder()
+            .method(method)
+            .uri(path)
+            .body(Body::empty())
+            .unwrap();
+        self.router.clone().oneshot(request).await.unwrap().status()
+    }
 }

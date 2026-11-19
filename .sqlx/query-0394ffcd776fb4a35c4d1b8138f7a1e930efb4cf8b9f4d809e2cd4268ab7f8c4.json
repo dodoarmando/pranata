@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO village (code, name, district, regency, province) VALUES ($1, $2, $3, $4, $5)\n         ON CONFLICT (singleton) DO UPDATE SET code = EXCLUDED.code, name = EXCLUDED.name,\n         district = EXCLUDED.district, regency = EXCLUDED.regency, province = EXCLUDED.province",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Text", "Text", "Text", "Text", "Text"]
+    },
+    "nullable": []
+  },
+  "hash": "0394ffcd776fb4a35c4d1b8138f7a1e930efb4cf8b9f4d809e2cd4268ab7f8c4"
+}

@@ -1,5 +1,6 @@
 pub mod db;
 mod health;
+pub mod village;
 
 use axum::Router;
 use sqlx::PgPool;
@@ -11,7 +12,9 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 struct ApiDoc;
 
 fn api() -> OpenApiRouter<PgPool> {
-    OpenApiRouter::with_openapi(ApiDoc::openapi()).routes(routes!(health::healthz))
+    OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .routes(routes!(health::healthz))
+        .routes(routes!(village::get_village))
 }
 
 /// The HTTP application, ready to serve.
