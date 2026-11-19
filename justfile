@@ -29,9 +29,9 @@ db-up:
         docker.io/library/postgres:18 >/dev/null
     until podman exec {{ db_container }} pg_isready -q -d pranata; do sleep 0.5; done
 
-# Apply pending migrations to the dev database
+# Apply pending migrations; sqlx-cli, since checked queries cannot compile against an unmigrated database
 db-migrate: db-up
-    cargo run -q -p pranata -- migrate
+    sqlx migrate run --source apps/api/migrations
 
 # Regenerate the committed OpenAPI spec and the web client
 gen:
@@ -44,7 +44,7 @@ check: check-commits check-api check-web check-contract images e2e
 # Run all tests
 test: test-api test-web
 
-test-api: db-up
+test-api: db-migrate
     cargo test --workspace --locked
 
 test-web:
@@ -55,7 +55,7 @@ check-commits from='origin/main':
     bunx commitlint --from {{ from }} --to HEAD --verbose
 
 # CI job `api`
-check-api: db-up
+check-api: db-migrate
     cargo fmt --all --check
     cargo clippy --workspace --all-targets --locked -- -D warnings
     cargo sqlx prepare --workspace --check
