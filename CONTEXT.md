@@ -279,3 +279,7 @@ _Avoid_: Budget, anggaran (in code)
 **Category**:
 A Village-defined label shared by News Posts and Events.
 _Avoid_: Tag, topic, kategori (in code)
+
+**Quick Link**:
+A Village-chosen shortcut to a page of the public site, shown under the home page search box.
+_Avoid_: Popular search, tag, tautan cepat (in code)
