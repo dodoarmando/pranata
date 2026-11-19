@@ -93,3 +93,27 @@ async fn re_authenticating_needs_a_session(pool: PgPool) {
 
     assert_eq!(status, StatusCode::UNAUTHORIZED);
 }
+
+// Below the HTTP seam: what the migration gives sessions that predate sudo mode.
+#[sqlx::test(migrations = false)]
+async fn sessions_from_before_sudo_mode_start_outside_it(pool: PgPool) {
+    let migrator = &pranata::db::MIGRATOR;
+    migrator.run_to(7, &pool).await.unwrap();
+    sqlx::raw_sql(
+        "INSERT INTO users (username, role_id) SELECT 'admin', id FROM roles WHERE administrator;
+         INSERT INTO sessions (token_hash, user_id, idle_timeout, expires_at)
+         SELECT '\\x00', id, interval '30 minutes', now() + interval '12 hours' FROM users;",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    migrator.run(&pool).await.unwrap();
+
+    let sudo: bool =
+        sqlx::query_scalar("SELECT authenticated_at > now() - interval '15 minutes' FROM sessions")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert!(!sudo, "a session from before the migration is in sudo mode");
+}
