@@ -572,6 +572,60 @@ pub async fn sign_out_others(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[derive(Deserialize, ToSchema)]
+pub struct NewPassword {
+    password: String,
+}
+
+/// Changes the signed-in User's password, under the same policy as at set-up.
+///
+/// # Errors
+/// `401` without a live session, `422` for a refused password, `428` outside sudo mode.
+#[utoipa::path(
+    put,
+    path = "/auth/password",
+    operation_id = "changePassword",
+    tag = "auth",
+    request_body = NewPassword,
+    responses(
+        (status = NO_CONTENT, description = "The password is changed"),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = UNPROCESSABLE_ENTITY, description = "The password is refused", body = PasswordRejected),
+        (status = PRECONDITION_REQUIRED, description = "The User must re-authenticate first"),
+    ),
+)]
+pub async fn change_password(
+    State(pool): State<PgPool>,
+    session: Session,
+    Json(body): Json<NewPassword>,
+) -> Result<StatusCode, ApiError> {
+    session.ensure_sudo()?;
+    let village = sqlx::query_scalar!("SELECT name FROM village")
+        .fetch_optional(&pool)
+        .await?;
+    password::check(&body.password, &session.username, village.as_deref())
+        .map_err(ApiError::PasswordRejected)?;
+    let password_hash = password::hash(body.password).await?;
+    let mut tx = pool.begin().await?;
+    sqlx::query!(
+        "UPDATE users SET password_hash = $1 WHERE id = $2",
+        password_hash,
+        session.user_id,
+    )
+    .execute(&mut *tx)
+    .await?;
+    audit::record(
+        &mut tx,
+        Actor::User(session.user_id),
+        "user.password_change",
+        ("user", Some(&session.user_id.to_string())),
+        json!({}),
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// Deletes expired sessions and Access Links, which are already refused; run periodically.
 ///
 /// # Errors

@@ -95,6 +95,10 @@ export interface Me {
   username: string;
 }
 
+export interface NewPassword {
+  password: string;
+}
+
 export interface NewUser {
   roleId: string;
   /** 3–32 lowercase letters, digits, dots, underscores or dashes; never changed or reused. */
@@ -392,6 +396,61 @@ export const getMe = async ( options?: Parameters<typeof apiFetch>[1]): Promise<
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type changePasswordResponse204 = {
+  data: void
+  status: 204
+}
+
+export type changePasswordResponse401 = {
+  data: void
+  status: 401
+}
+
+export type changePasswordResponse422 = {
+  data: PasswordRejected
+  status: 422
+}
+
+export type changePasswordResponse428 = {
+  data: void
+  status: 428
+}
+
+export type changePasswordResponseSuccess = (changePasswordResponse204) & {
+  headers: Headers;
+};
+export type changePasswordResponseError = (changePasswordResponse401 | changePasswordResponse422 | changePasswordResponse428) & {
+  headers: Headers;
+};
+
+export type changePasswordResponse = (changePasswordResponseSuccess | changePasswordResponseError)
+
+export const getChangePasswordUrl = () => {
+
+
+
+
+  return `/auth/password`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `422` for a refused password, `428` outside sudo mode.
+ * @summary Changes the signed-in User's password, under the same policy as at set-up.
+ */
+export const changePassword = async (newPassword: NewPassword, options?: Parameters<typeof apiFetch>[1]): Promise<changePasswordResponse> => {
+
+  return apiFetch<changePasswordResponse>(getChangePasswordUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(newPassword)
   }
 );}
 

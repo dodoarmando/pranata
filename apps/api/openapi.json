@@ -158,6 +158,47 @@
         }
       }
     },
+    "/auth/password": {
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Changes the signed-in User's password, under the same policy as at set-up.",
+        "description": "# Errors\n`401` without a live session, `422` for a refused password, `428` outside sudo mode.",
+        "operationId": "changePassword",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewPassword"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The password is changed"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "422": {
+            "description": "The password is refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordRejected"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "The User must re-authenticate first"
+          }
+        }
+      }
+    },
     "/auth/reauthenticate": {
       "post": {
         "tags": [
@@ -902,6 +943,17 @@
             "description": "The name of the User's Role."
           },
           "username": {
+            "type": "string"
+          }
+        }
+      },
+      "NewPassword": {
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "properties": {
+          "password": {
             "type": "string"
           }
         }

@@ -36,6 +36,7 @@ fn api() -> OpenApiRouter<PgPool> {
         .routes(routes!(auth::reauthenticate))
         .routes(routes!(auth::sessions))
         .routes(routes!(auth::sign_out_others))
+        .routes(routes!(auth::change_password))
         .routes(routes!(audit::list))
         .routes(routes!(dashboard::get))
         .routes(routes!(role::list, role::create))
