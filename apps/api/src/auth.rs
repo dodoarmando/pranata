@@ -80,7 +80,8 @@ pub struct PasswordRejected {
     pub(crate) problem: PasswordProblem,
 }
 
-/// Sets the User's password from their Access Link, which is then used up.
+/// Sets the User's password from their Access Link, which is then used up, and revokes every
+/// session of theirs.
 ///
 /// # Errors
 /// `404` for an unknown, used or expired link, `422` for a refused password.
@@ -91,7 +92,7 @@ pub struct PasswordRejected {
     tag = "auth",
     request_body = UseAccessLink,
     responses(
-        (status = NO_CONTENT, description = "The password is set"),
+        (status = NO_CONTENT, description = "The password is set and every session of the User revoked"),
         (status = NOT_FOUND, description = "The Access Link is unknown, used or expired"),
         (status = UNPROCESSABLE_ENTITY, description = "The password is refused", body = PasswordRejected),
     ),
@@ -127,12 +128,17 @@ pub async fn use_access_link(
     sqlx::query!("DELETE FROM access_links WHERE token_hash = $1", hash)
         .execute(&mut *tx)
         .await?;
+    // A reset: whoever holds a session with the old password is signed out.
+    let revoked = sqlx::query!("DELETE FROM sessions WHERE user_id = $1", user.id)
+        .execute(&mut *tx)
+        .await?
+        .rows_affected();
     audit::record(
         &mut tx,
         Actor::User(user.id),
         "access_link.use",
         ("user", Some(&user.id.to_string())),
-        json!({}),
+        json!({ "sessionsRevoked": revoked }),
     )
     .await?;
     tx.commit().await?;

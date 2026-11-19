@@ -100,7 +100,7 @@
         "tags": [
           "auth"
         ],
-        "summary": "Sets the User's password from their Access Link, which is then used up.",
+        "summary": "Sets the User's password from their Access Link, which is then used up, and revokes every\nsession of theirs.",
         "description": "# Errors\n`404` for an unknown, used or expired link, `422` for a refused password.",
         "operationId": "useAccessLink",
         "requestBody": {
@@ -115,7 +115,7 @@
         },
         "responses": {
           "204": {
-            "description": "The password is set"
+            "description": "The password is set and every session of the User revoked"
           },
           "404": {
             "description": "The Access Link is unknown, used or expired"

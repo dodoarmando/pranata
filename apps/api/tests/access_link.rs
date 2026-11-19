@@ -83,3 +83,35 @@ async fn a_password_is_12_to_128_characters_and_neither_common_nor_personal(pool
         .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
 }
+
+#[sqlx::test]
+async fn using_an_access_link_revokes_every_session_of_the_user(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    app.administrator(&pool, "admin").await;
+    let token = pranata::user::reset_access_link(&pool, "admin")
+        .await
+        .unwrap();
+    // Signed in again with the old password while the link is still unused.
+    let phone = app.sign_in("admin", false).await;
+    let laptop = app.sign_in("admin", true).await;
+
+    let (status, _) = app
+        .post(
+            "/auth/access-link",
+            &json!({ "token": token, "password": GOOD_PASSWORD }),
+        )
+        .await;
+
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    for session in [phone, laptop] {
+        let me = app.call("GET", "/auth/me", None, Some(&session)).await;
+        assert_eq!(me.status, StatusCode::UNAUTHORIZED);
+    }
+    let details: serde_json::Value = sqlx::query_scalar(
+        "SELECT details FROM audit_entries WHERE action = 'access_link.use' ORDER BY id DESC LIMIT 1",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(details, json!({ "sessionsRevoked": 2 }));
+}
