@@ -1,0 +1,191 @@
+@import "tailwindcss" source("./");
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* One self-hosted file: Geist's Latin subset covers Indonesian. */
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/geist/files/geist-latin-wght-normal.woff2") format("woff2");
+}
+
+/* The design prototype's tokens. Light theme only, as the prototype has no dark mode. */
+:root {
+  --pri: #006d4b;
+  --pri-d: #00513a;
+  --pri-dd: #06281d;
+  --pri-50: #e8f3ee;
+  --fg: #0a0a0a;
+  --muted-fg: #636363; /* the prototype's --muted, a text colour */
+  --bg-muted: #f5f5f5;
+  --gold: #9a6412;
+  --gold-50: #fbf1df;
+  --red: #b42318;
+  --red-50: #fdecea;
+  --on-dark: #cfe3d9;
+  --on-dark-2: #8fb5a5;
+  --r: 4px;
+  --pad: 1rem;
+  --sec: 3rem;
+
+  --glass: rgb(255 255 255 / 0.55);
+  --glass-edge: rgb(255 255 255 / 0.9);
+  --glass-dark: rgb(255 255 255 / 0.12);
+  --glass-dark-edge: rgb(255 255 255 / 0.3);
+  --blur: blur(20px) saturate(160%);
+  --lift: 0 10px 30px rgb(11 59 42 / 0.08), inset 0 1px 0 rgb(255 255 255 / 0.9);
+  --lift-dark: 0 8px 24px rgb(0 0 0 / 0.2), inset 0 1px 0 rgb(255 255 255 / 0.25);
+
+  /* shadcn's variables, drawn from the tokens above */
+  --radius: var(--r);
+  --background: #fff;
+  --foreground: var(--fg);
+  --card: #fff;
+  --card-foreground: var(--fg);
+  --popover: #fff;
+  --popover-foreground: var(--fg);
+  --primary: var(--pri);
+  --primary-foreground: #fff;
+  --secondary: var(--pri-50);
+  --secondary-foreground: var(--pri);
+  --muted: var(--bg-muted);
+  --muted-foreground: var(--muted-fg);
+  --accent: var(--bg-muted);
+  --accent-foreground: var(--fg);
+  --destructive: var(--red);
+  --border: #dedede;
+  --input: #dedede;
+  --ring: var(--pri);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --pad: 2rem;
+    --sec: 4rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  :root {
+    --sec: 5rem;
+  }
+}
+
+@theme inline {
+  /* Only the prototype's palette: no stray Tailwind colours. */
+  --color-*: initial;
+  --color-white: #fff;
+  --color-black: #000;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-pri: var(--pri);
+  --color-pri-d: var(--pri-d);
+  --color-pri-dd: var(--pri-dd);
+  --color-pri-50: var(--pri-50);
+  --color-gold: var(--gold);
+  --color-gold-50: var(--gold-50);
+  --color-red: var(--red);
+  --color-red-50: var(--red-50);
+  --color-on-dark: var(--on-dark);
+  --color-on-dark-2: var(--on-dark-2);
+
+  --radius-sm: var(--radius);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+  --radius-2xl: var(--radius);
+  --radius-3xl: var(--radius);
+  --radius-4xl: var(--radius);
+
+  --spacing-pad: var(--pad);
+  --spacing-sec: var(--sec);
+  --shadow-lift: var(--lift);
+  --shadow-lift-dark: var(--lift-dark);
+  --breakpoint-xl: 75rem;
+  --font-sans: "Geist", system-ui, sans-serif;
+}
+
+/* The public site's page width. */
+@utility site-container {
+  width: min(100% - 2 * var(--pad), 75rem);
+  margin-inline: auto;
+}
+
+/* A frosted surface over the backdrop. */
+@utility glass {
+  background-color: var(--glass);
+  border: 1px solid var(--glass-edge);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--lift);
+}
+
+/* The public site's single fixed scene of soft colour fields. */
+@utility backdrop {
+  background-color: #f3f6f2;
+  isolation: isolate; /* keeps the scene above this background, below the content */
+  &::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(42rem 32rem at 6% 18%, rgb(127 209 174 / 0.5), transparent 62%),
+      radial-gradient(38rem 30rem at 94% 10%, rgb(242 198 109 / 0.42), transparent 62%),
+      radial-gradient(40rem 30rem at 62% 100%, rgb(142 197 232 / 0.45), transparent 62%),
+      radial-gradient(30rem 24rem at 28% 72%, rgb(127 209 174 / 0.25), transparent 62%);
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --glass: rgb(255 255 255 / 0.96);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass: #fff;
+    --blur: none;
+  }
+  .backdrop::before {
+    display: none;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans antialiased;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Unlayered, so it outranks the components' faint focus rings: 2px of primary passes 3:1. */
+:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 2px;
+}

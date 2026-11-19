@@ -1,6 +1,7 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { getVillage, type Village } from '../api/generated';
+import '../styles.css';
 
 // Server-only, like every API call; null until the vendor sets the Village Code.
 const fetchVillage = createServerFn({ method: 'GET' }).handler(
