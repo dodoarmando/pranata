@@ -1,0 +1,23 @@
+pre-commit:
+  parallel: true
+  jobs:
+    - name: biome
+      glob: "*.{js,ts,tsx,json,jsonc,css}"
+      run: bunx biome check --write --no-errors-on-unmatched {staged_files}
+      stage_fixed: true
+    - name: cargo fmt
+      glob: "*.rs"
+      run: cargo fmt --all
+      stage_fixed: true
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: bunx commitlint --edit {1}
+
+prepare-commit-msg:
+  jobs:
+    - name: sign-off
+      run: >-
+        git interpret-trailers --in-place --if-exists doNothing
+        --trailer "Signed-off-by: $(git config user.name) <$(git config user.email)>" {1}
