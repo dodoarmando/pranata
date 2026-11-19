@@ -11,6 +11,7 @@ import { createServerFn, useServerFn } from '@tanstack/react-start';
 import {
   ChevronRight,
   House,
+  Landmark,
   LogOut,
   PanelLeft,
   ScrollText,
@@ -38,6 +39,7 @@ const signOutFn = createServerFn({ method: 'POST' }).handler(async () => {
 // Only pages that exist; each module adds its own entries.
 const pages = [
   { group: '', to: '/admin', label: 'Beranda', icon: House },
+  { group: 'Desa', to: '/admin/profil-desa', label: 'Profil desa', icon: Landmark },
   { group: 'Sistem', to: '/admin/pengguna', label: 'Pengguna', icon: Users },
   { group: 'Sistem', to: '/admin/peran', label: 'Peran', icon: ShieldCheck },
   { group: 'Sistem', to: '/admin/log-audit', label: 'Log audit', icon: ScrollText },
