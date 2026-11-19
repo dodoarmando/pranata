@@ -1,11 +1,18 @@
 use std::fmt::Write;
 
+use axum::{Json, extract::State, http::StatusCode};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use sqlx::PgConnection;
+use sqlx::{PgConnection, PgPool};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::audit::{self, Actor};
+use crate::{
+    ApiError,
+    audit::{self, Actor},
+    password::{self, PasswordProblem},
+};
 
 /// A random 256-bit token as 64 hex digits, and the SHA-256 hash that is stored instead.
 fn new_token() -> (String, Vec<u8>) {
@@ -51,4 +58,75 @@ pub async fn create_access_link(
     )
     .await?;
     Ok(token)
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct UseAccessLink {
+    /// The token after `#` in the Access Link.
+    token: String,
+    password: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct PasswordRejected {
+    pub(crate) problem: PasswordProblem,
+}
+
+/// Sets the User's password from their Access Link, which is then used up.
+///
+/// # Errors
+/// `404` for an unknown, used or expired link, `422` for a refused password.
+#[utoipa::path(
+    post,
+    path = "/auth/access-link",
+    operation_id = "useAccessLink",
+    tag = "auth",
+    request_body = UseAccessLink,
+    responses(
+        (status = NO_CONTENT, description = "The password is set"),
+        (status = NOT_FOUND, description = "The Access Link is unknown, used or expired"),
+        (status = UNPROCESSABLE_ENTITY, description = "The password is refused", body = PasswordRejected),
+    ),
+)]
+pub async fn use_access_link(
+    State(pool): State<PgPool>,
+    Json(body): Json<UseAccessLink>,
+) -> Result<StatusCode, ApiError> {
+    let hash = token_hash(&body.token);
+    let mut tx = pool.begin().await?;
+    let user = sqlx::query!(
+        "SELECT users.id, users.username FROM access_links JOIN users ON users.id = access_links.user_id
+         WHERE token_hash = $1 AND expires_at > now() FOR UPDATE OF access_links",
+        hash,
+    )
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or(ApiError::Status(StatusCode::NOT_FOUND))?;
+    let village = sqlx::query_scalar!("SELECT name FROM village")
+        .fetch_optional(&mut *tx)
+        .await?;
+    password::check(&body.password, &user.username, village.as_deref())
+        .map_err(ApiError::PasswordRejected)?;
+
+    let password_hash = password::hash(body.password).await?;
+    sqlx::query!(
+        "UPDATE users SET password_hash = $1 WHERE id = $2",
+        password_hash,
+        user.id,
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query!("DELETE FROM access_links WHERE token_hash = $1", hash)
+        .execute(&mut *tx)
+        .await?;
+    audit::record(
+        &mut tx,
+        Actor::User(user.id),
+        "access_link.use",
+        ("user", Some(&user.id.to_string())),
+        json!({}),
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
 }

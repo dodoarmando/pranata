@@ -14,3 +14,18 @@ Regenerate from a newer `wilayah.sql` (CRLF stripped, SQL quotes unescaped, trai
 tr -d '\r' < wilayah.sql | grep -E "^\('" \
   | sed -E "s/^\('([0-9.]+)','(.*)'\)[,;]$/\1\t\2/; s/''/'/g; s/ +$//" > regions.tsv
 ```
+
+# Common and breached passwords
+
+`common-passwords.txt` is the list a new password is checked against. It is embedded in the `pranata` binary.
+
+- **Content**: the entries of 12–128 characters, lowercased (ASCII) and deduplicated, from the top million breached passwords plus the Indonesian top 150; shorter ones can never pass the length rule. One per line, sorted.
+- **Source**: [`danielmiessler/SecLists`](https://github.com/danielmiessler/SecLists) at commit `abe37a24be7dd50d676840c9f63dca87de5117f8`: `Passwords/Common-Credentials/Pwdb_top-1000000.txt` and `Passwords/Common-Credentials/Language-Specific/Indonesian_Pwdb_common-password-list-top-150.txt`.
+- **Licence**: MIT, see `common-passwords.LICENSE`. MIT is compatible with AGPL-3.0-only.
+
+Regenerate:
+
+```sh
+cat Pwdb_top-1000000.txt Indonesian_Pwdb_common-password-list-top-150.txt | tr -d '\r' \
+  | awk 'length($0) >= 12 && length($0) <= 128' | LC_ALL=C tr 'A-Z' 'a-z' | LC_ALL=C sort -u > common-passwords.txt
+```

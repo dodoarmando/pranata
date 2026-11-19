@@ -10,6 +10,44 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/auth/access-link": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Sets the User's password from their Access Link, which is then used up.",
+        "description": "# Errors\n`404` for an unknown, used or expired link, `422` for a refused password.",
+        "operationId": "useAccessLink",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UseAccessLink"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The password is set"
+          },
+          "404": {
+            "description": "The Access Link is unknown, used or expired"
+          },
+          "422": {
+            "description": "The password is refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordRejected"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/healthz": {
       "get": {
         "tags": [
@@ -87,6 +125,28 @@
           "unavailable"
         ]
       },
+      "PasswordProblem": {
+        "type": "string",
+        "description": "Why a new password is refused.",
+        "enum": [
+          "tooShort",
+          "tooLong",
+          "common",
+          "containsUsername",
+          "containsVillageName"
+        ]
+      },
+      "PasswordRejected": {
+        "type": "object",
+        "required": [
+          "problem"
+        ],
+        "properties": {
+          "problem": {
+            "$ref": "#/components/schemas/PasswordProblem"
+          }
+        }
+      },
       "TimeZone": {
         "type": "string",
         "description": "Indonesia's three time zones; the Village's drives every date-only rule.",
@@ -95,6 +155,22 @@
           "WITA",
           "WIT"
         ]
+      },
+      "UseAccessLink": {
+        "type": "object",
+        "required": [
+          "token",
+          "password"
+        ],
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string",
+            "description": "The token after `#` in the Access Link."
+          }
+        }
       },
       "Village": {
         "type": "object",
