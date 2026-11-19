@@ -60,6 +60,21 @@ impl Storage {
     }
 }
 
+/// Starts the 24 h before a file its owner no longer references is swept; call it in the
+/// transaction that drops the reference.
+///
+/// # Errors
+/// When the update fails, which must abort the change.
+pub(crate) async fn release(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<()> {
+    sqlx::query!(
+        "UPDATE files SET sweep_after = now() + interval '24 hours' WHERE id = $1",
+        id
+    )
+    .execute(conn)
+    .await?;
+    Ok(())
+}
+
 /// Writes the master and variants beside each other, then moves them into place at once;
 /// the move fails rather than replace an existing file.
 fn write_image(dir: &Path, id: Uuid, image: &DynamicImage) -> anyhow::Result<()> {

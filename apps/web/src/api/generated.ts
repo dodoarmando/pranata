@@ -281,7 +281,44 @@ export interface UserChange {
   roleId?: string | null;
 }
 
-export interface Village {
+/**
+ * What the Village edits about itself; its identity stays fixed by the Village Code.
+ */
+export interface VillageProfile {
+  /**
+     * The office address.
+     * @nullable
+     */
+  address?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /**
+     * The office's coordinates, both or neither, for the maps link.
+     * @nullable
+     */
+  latitude?: number | null;
+  /**
+     * The logo's file, served at `/media/{logo}/{variant}`.
+     * @nullable
+     */
+  logo?: string | null;
+  /** @nullable */
+  longitude?: number | null;
+  /** @nullable */
+  phone?: string | null;
+  /**
+     * Five digits.
+     * @nullable
+     */
+  postalCode?: string | null;
+  /**
+     * The "Nomor Tanda Daftar PSE", shown in the public footer.
+     * @nullable
+     */
+  pseNumber?: string | null;
+}
+
+export type Village = VillageProfile & {
   /** The 10-digit Village Code. */
   code: string;
   district: string;
@@ -289,7 +326,7 @@ export interface Village {
   province: string;
   regency: string;
   timeZone: TimeZone;
-}
+};
 
 export type ListAuditEntriesParams = {
   objectType?: string;
@@ -1987,5 +2024,66 @@ export const uploadVillageLogo = async (uploadVillageLogoBody: Blob, options?: P
     method: 'POST',
     headers: getHeaders({ 'Content-Type': 'application/octet-stream' }, options?.headers),
     body: uploadVillageLogoBody
+  }
+);}
+
+
+
+export type updateVillageProfileResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateVillageProfileResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateVillageProfileResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateVillageProfileResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateVillageProfileResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateVillageProfileResponseSuccess = (updateVillageProfileResponse204) & {
+  headers: Headers;
+};
+export type updateVillageProfileResponseError = (updateVillageProfileResponse401 | updateVillageProfileResponse403 | updateVillageProfileResponse404 | updateVillageProfileResponse422) & {
+  headers: Headers;
+};
+
+export type updateVillageProfileResponse = (updateVillageProfileResponseSuccess | updateVillageProfileResponseError)
+
+export const getUpdateVillageProfileUrl = () => {
+
+
+
+
+  return `/village/profile`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `404` before the Village
+ * Code is set, `422` for a malformed field or an unknown logo.
+ * @summary Replaces the Village's profile and its "Nomor Tanda Daftar PSE".
+ */
+export const updateVillageProfile = async (villageProfile: VillageProfile, options?: Parameters<typeof apiFetch>[1]): Promise<updateVillageProfileResponse> => {
+
+  return apiFetch<updateVillageProfileResponse>(getUpdateVillageProfileUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(villageProfile)
   }
 );}

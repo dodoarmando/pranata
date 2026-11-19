@@ -1196,6 +1196,43 @@
           }
         }
       }
+    },
+    "/village/profile": {
+      "put": {
+        "tags": [
+          "village"
+        ],
+        "summary": "Replaces the Village's profile and its \"Nomor Tanda Daftar PSE\".",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `404` before the Village\nCode is set, `422` for a malformed field or an unknown logo.",
+        "operationId": "updateVillageProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VillageProfile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The profile is saved"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "404": {
+            "description": "The Village Code is not set yet"
+          },
+          "422": {
+            "description": "A field is malformed or the logo is unknown"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1766,34 +1803,103 @@
         }
       },
       "Village": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/VillageProfile"
+          },
+          {
+            "type": "object",
+            "required": [
+              "code",
+              "name",
+              "district",
+              "regency",
+              "province",
+              "timeZone"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "The 10-digit Village Code."
+              },
+              "district": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "province": {
+                "type": "string"
+              },
+              "regency": {
+                "type": "string"
+              },
+              "timeZone": {
+                "$ref": "#/components/schemas/TimeZone"
+              }
+            }
+          }
+        ]
+      },
+      "VillageProfile": {
         "type": "object",
-        "required": [
-          "code",
-          "name",
-          "district",
-          "regency",
-          "province",
-          "timeZone"
-        ],
+        "description": "What the Village edits about itself; its identity stays fixed by the Village Code.",
         "properties": {
-          "code": {
-            "type": "string",
-            "description": "The 10-digit Village Code."
+          "address": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The office address."
           },
-          "district": {
-            "type": "string"
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
-          "name": {
-            "type": "string"
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "The office's coordinates, both or neither, for the maps link."
           },
-          "province": {
-            "type": "string"
+          "logo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The logo's file, served at `/media/{logo}/{variant}`."
           },
-          "regency": {
-            "type": "string"
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
           },
-          "timeZone": {
-            "$ref": "#/components/schemas/TimeZone"
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "postalCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Five digits."
+          },
+          "pseNumber": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The \"Nomor Tanda Daftar PSE\", shown in the public footer."
           }
         }
       }

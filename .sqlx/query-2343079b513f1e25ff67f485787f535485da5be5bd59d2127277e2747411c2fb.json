@@ -1,0 +1,112 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT code, address, postal_code, phone, email, latitude, longitude, logo_file_id,\n         pse_number FROM village FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "code"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "address",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "address"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "postal_code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "postal_code"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "phone",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "phone"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "email",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "email"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "latitude",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "latitude"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "longitude",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "longitude"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "logo_file_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "logo_file_id"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "pse_number",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "pse_number"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, true, true, true, true, true, true, true, true]
+  },
+  "hash": "2343079b513f1e25ff67f485787f535485da5be5bd59d2127277e2747411c2fb"
+}
