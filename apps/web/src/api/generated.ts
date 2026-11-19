@@ -236,6 +236,8 @@ export interface User {
   /** False once deactivated: the User can neither sign in nor keep a session. */
   active: boolean;
   id: string;
+  /** How many passkeys the User has. */
+  passkeys: number;
   /** The name of the User's Role. */
   role: string;
   roleId: string;
@@ -1579,6 +1581,67 @@ export const createAccessLink = async (id: string, options?: Parameters<typeof a
   {
     ...options,
     method: 'POST'
+
+
+  }
+);}
+
+
+
+export type removePasskeysResponse204 = {
+  data: void
+  status: 204
+}
+
+export type removePasskeysResponse401 = {
+  data: void
+  status: 401
+}
+
+export type removePasskeysResponse403 = {
+  data: void
+  status: 403
+}
+
+export type removePasskeysResponse404 = {
+  data: void
+  status: 404
+}
+
+export type removePasskeysResponse428 = {
+  data: void
+  status: 428
+}
+
+export type removePasskeysResponseSuccess = (removePasskeysResponse204) & {
+  headers: Headers;
+};
+export type removePasskeysResponseError = (removePasskeysResponse401 | removePasskeysResponse403 | removePasskeysResponse404 | removePasskeysResponse428) & {
+  headers: Headers;
+};
+
+export type removePasskeysResponse = (removePasskeysResponseSuccess | removePasskeysResponseError)
+
+export const getRemovePasskeysUrl = (id: string,) => {
+
+
+
+
+  return `/users/${id}/passkeys`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` outside the Administrator Role, `404` for an unknown
+ * User, `428` outside sudo mode.
+ * @summary Removes every passkey of a User, who can still sign in with their password.
+ */
+export const removePasskeys = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<removePasskeysResponse> => {
+
+  return apiFetch<removePasskeysResponse>(getRemovePasskeysUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
 
 
   }
