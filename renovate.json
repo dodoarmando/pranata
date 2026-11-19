@@ -14,7 +14,12 @@
     { "matchManagers": ["cargo"], "groupName": "cargo" },
     { "matchManagers": ["bun"], "groupName": "bun" },
     { "matchManagers": ["github-actions"], "groupName": "actions" },
-    { "matchDatasources": ["docker"], "groupName": "container" },
+    {
+      "description": "Some registries (gcr.io, GHCR) publish no release timestamps; without this their updates are held forever.",
+      "matchDatasources": ["docker"],
+      "groupName": "container",
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
+    },
     {
       "description": "A group automerges only if every update in it does, so dev patch/minor gets its own.",
       "matchManagers": ["cargo"],
