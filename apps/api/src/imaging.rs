@@ -129,8 +129,15 @@ fn decode_raster(bytes: &[u8]) -> Result<DynamicImage, Rejected> {
 
 /// Draws an SVG at [`MASTER_EDGE`] on its longest edge, without fonts or linked files.
 fn rasterise_svg(bytes: &[u8]) -> Result<DynamicImage, Rejected> {
-    let tree = usvg::Tree::from_data(bytes, &usvg::Options::default())
-        .map_err(|_| Rejected::UnsupportedType)?;
+    // The default resolver reads any path an `<image href>` names from the server's disk.
+    let options = usvg::Options {
+        image_href_resolver: usvg::ImageHrefResolver {
+            resolve_string: Box::new(|_, _| None),
+            ..usvg::ImageHrefResolver::default()
+        },
+        ..usvg::Options::default()
+    };
+    let tree = usvg::Tree::from_data(bytes, &options).map_err(|_| Rejected::UnsupportedType)?;
     let size = tree.size();
     let scale = f64::from(MASTER_EDGE) / f64::from(size.width().max(size.height()));
     #[expect(
@@ -342,5 +349,24 @@ mod tests {
                 .iter()
                 .all(|&c| c > 250)
         );
+    }
+
+    #[test]
+    fn an_svg_logo_cannot_pull_in_files_from_the_server() {
+        let dir = tempfile::tempdir().unwrap();
+        let local = dir.path().join("secret.svg");
+        std::fs::write(
+            &local,
+            r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><rect width="1" height="1" fill="red"/></svg>"#,
+        )
+        .unwrap();
+        let svg = format!(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><image href="{}" width="10" height="10"/></svg>"#,
+            local.display()
+        );
+
+        let image = decode(Kind::Logo, svg.as_bytes()).unwrap();
+
+        assert_eq!(image.to_rgba8().get_pixel(1280, 1280).0[3], 0);
     }
 }
