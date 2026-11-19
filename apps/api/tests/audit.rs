@@ -36,6 +36,18 @@ async fn entries(app: &TestApp, cookie: &str) -> Vec<Value> {
 }
 
 #[sqlx::test]
+async fn reading_the_audit_log_needs_audit_read(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    let cookie = app
+        .user_with(&pool, "operator", &["village.manage", "content.write"])
+        .await;
+
+    let reply = app.call("GET", "/audit-entries", None, Some(&cookie)).await;
+
+    assert_eq!(reply.status, StatusCode::FORBIDDEN);
+}
+
+#[sqlx::test]
 async fn the_audit_log_needs_a_session(pool: PgPool) {
     let app = TestApp::new(pool);
 
