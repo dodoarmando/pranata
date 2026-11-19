@@ -163,7 +163,7 @@
         "tags": [
           "auth"
         ],
-        "summary": "Changes the signed-in User's password, under the same policy as at set-up.",
+        "summary": "Changes the signed-in User's password, under the same policy as at set-up, and ends every\nother session of theirs.",
         "description": "# Errors\n`401` without a live session, `422` for a refused password, `428` outside sudo mode.",
         "operationId": "changePassword",
         "requestBody": {
@@ -178,7 +178,7 @@
         },
         "responses": {
           "204": {
-            "description": "The password is changed"
+            "description": "The password is changed and every other session ended"
           },
           "401": {
             "description": "There is no live session"

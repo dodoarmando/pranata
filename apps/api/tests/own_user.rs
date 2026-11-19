@@ -141,6 +141,36 @@ async fn a_user_changes_their_password_in_sudo_mode(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn changing_the_password_signs_out_every_other_device(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    app.administrator(&pool, "admin").await;
+    let laptop = app.sign_in("admin", false).await;
+    let phone = app.sign_in("admin", true).await;
+
+    let reply = app
+        .call(
+            "PUT",
+            "/auth/password",
+            Some(&json!({ "password": "teh manis sore hari" })),
+            Some(&laptop),
+        )
+        .await;
+
+    assert_eq!(reply.status, StatusCode::NO_CONTENT);
+    let me = app.call("GET", "/auth/me", None, Some(&phone)).await;
+    assert_eq!(me.status, StatusCode::UNAUTHORIZED);
+    let me = app.call("GET", "/auth/me", None, Some(&laptop)).await;
+    assert_eq!(me.status, StatusCode::OK);
+    assert_eq!(
+        last_entry(&pool).await,
+        (
+            "user.password_change".to_owned(),
+            json!({ "sessionsRevoked": 1 })
+        )
+    );
+}
+
+#[sqlx::test]
 async fn akun_saya_needs_a_session(pool: PgPool) {
     let app = TestApp::new(pool);
     let body = json!({ "password": "teh manis sore hari" });

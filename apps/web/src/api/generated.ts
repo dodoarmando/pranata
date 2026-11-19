@@ -441,7 +441,8 @@ export const getChangePasswordUrl = () => {
 /**
  * # Errors
  * `401` without a live session, `422` for a refused password, `428` outside sudo mode.
- * @summary Changes the signed-in User's password, under the same policy as at set-up.
+ * @summary Changes the signed-in User's password, under the same policy as at set-up, and ends every
+other session of theirs.
  */
 export const changePassword = async (newPassword: NewPassword, options?: Parameters<typeof apiFetch>[1]): Promise<changePasswordResponse> => {
 

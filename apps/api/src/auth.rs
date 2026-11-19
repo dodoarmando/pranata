@@ -577,7 +577,8 @@ pub struct NewPassword {
     password: String,
 }
 
-/// Changes the signed-in User's password, under the same policy as at set-up.
+/// Changes the signed-in User's password, under the same policy as at set-up, and ends every
+/// other session of theirs.
 ///
 /// # Errors
 /// `401` without a live session, `422` for a refused password, `428` outside sudo mode.
@@ -588,7 +589,7 @@ pub struct NewPassword {
     tag = "auth",
     request_body = NewPassword,
     responses(
-        (status = NO_CONTENT, description = "The password is changed"),
+        (status = NO_CONTENT, description = "The password is changed and every other session ended"),
         (status = UNAUTHORIZED, description = "There is no live session"),
         (status = UNPROCESSABLE_ENTITY, description = "The password is refused", body = PasswordRejected),
         (status = PRECONDITION_REQUIRED, description = "The User must re-authenticate first"),
@@ -614,12 +615,21 @@ pub async fn change_password(
     )
     .execute(&mut *tx)
     .await?;
+    // Whoever holds a session with the old password is signed out; this one stays.
+    let revoked = sqlx::query!(
+        "DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2",
+        session.user_id,
+        session.token_hash,
+    )
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
     audit::record(
         &mut tx,
         Actor::User(session.user_id),
         "user.password_change",
         ("user", Some(&session.user_id.to_string())),
-        json!({}),
+        json!({ "sessionsRevoked": revoked }),
     )
     .await?;
     tx.commit().await?;
