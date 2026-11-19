@@ -4,11 +4,25 @@
  * Pranata API
  */
 import { apiFetch } from './fetch';
+/**
+ * One field's change in an Audit Entry.
+ */
+export interface FieldChange {
+  field: string;
+  from: unknown;
+  /** Whether `from` and `to` are shown as `•••` to readers without `resident.sensitive`. */
+  sensitive?: boolean;
+  to: unknown;
+}
+
 export interface AuditEntry {
   action: string;
   /** `user`, `system` (the CLI) or `anonymous` (not identified). */
   actor: string;
   at: string;
+  /** The per-field diff of a data change. */
+  changes: FieldChange[];
+  /** Context for the action; never sensitive values, which go in `changes` to be masked. */
   details: unknown;
   id: string;
   /** @nullable */

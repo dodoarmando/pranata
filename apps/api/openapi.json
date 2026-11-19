@@ -271,7 +271,8 @@
           "actor",
           "action",
           "objectType",
-          "details"
+          "details",
+          "changes"
         ],
         "properties": {
           "action": {
@@ -285,7 +286,16 @@
             "type": "string",
             "format": "date-time"
           },
-          "details": {},
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldChange"
+            },
+            "description": "The per-field diff of a data change."
+          },
+          "details": {
+            "description": "Context for the action; never sensitive values, which go in `changes` to be masked."
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -329,6 +339,26 @@
             "format": "uuid",
             "description": "Pass as `before` for the next, older page; null on the last page."
           }
+        }
+      },
+      "FieldChange": {
+        "type": "object",
+        "description": "One field's change in an Audit Entry.",
+        "required": [
+          "field",
+          "from",
+          "to"
+        ],
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "from": {},
+          "sensitive": {
+            "type": "boolean",
+            "description": "Whether `from` and `to` are shown as `•••` to readers without `resident.sensitive`."
+          },
+          "to": {}
         }
       },
       "Health": {
