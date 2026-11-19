@@ -326,14 +326,7 @@ pub(crate) async fn update_profile(
         logo: old.logo_file_id,
         pse_number: old.pse_number,
     })?;
-    let to = serde_json::to_value(&new)?;
-    let changes: Vec<Value> = to
-        .as_object()
-        .into_iter()
-        .flatten()
-        .filter(|(field, value)| from[field.as_str()] != **value)
-        .map(|(field, value)| json!({ "field": field, "from": from[field.as_str()], "to": value }))
-        .collect();
+    let changes = diff(&from, &serde_json::to_value(&new)?);
     if !changes.is_empty() {
         audit::record_change(
             &mut tx,
@@ -346,6 +339,16 @@ pub(crate) async fn update_profile(
     }
     tx.commit().await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// The `{ field, from, to }` of every field of `to` whose value differs in `from`.
+fn diff(from: &Value, to: &Value) -> Vec<Value> {
+    to.as_object()
+        .into_iter()
+        .flatten()
+        .filter(|(field, value)| from[field.as_str()] != **value)
+        .map(|(field, value)| json!({ "field": field, "from": from[field.as_str()], "to": value }))
+        .collect()
 }
 
 #[derive(Serialize, ToSchema)]
