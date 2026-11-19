@@ -19,7 +19,7 @@ function PublicLayout() {
     />
   );
   const navItem =
-    'rounded-md px-3 py-1 text-[0.9375rem] font-medium data-[status=active]:text-primary';
+    'rounded-md px-2 py-1 text-[0.9375rem] font-medium data-[status=active]:text-primary md:px-3';
   return (
     <div className="backdrop flex min-h-dvh flex-col">
       <a
@@ -34,7 +34,7 @@ function PublicLayout() {
         </div>
       )}
       <header className="sticky top-3 z-50 my-3">
-        <div className="site-container glass flex min-h-16 items-center justify-between gap-4 rounded-md px-4 md:min-h-19">
+        <div className="site-container glass flex min-h-16 flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-md px-4 py-2 md:min-h-19">
           <Link to="/" className="flex items-center gap-3">
             {logo}
             {village ? (
@@ -53,6 +53,9 @@ function PublicLayout() {
           <nav aria-label="Menu utama" className="flex">
             <Link to="/" className={navItem}>
               Beranda
+            </Link>
+            <Link to="/profil" className={navItem}>
+              Profil
             </Link>
             <Link to="/kontak" className={navItem}>
               Kontak

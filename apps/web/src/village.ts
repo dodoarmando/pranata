@@ -7,6 +7,10 @@ export const villageTitle = (village: Village) =>
 /** The letter on the placeholder logo until the Village uploads its own. */
 export const villageInitial = (village: Village | null) => village?.name.charAt(0) ?? 'P';
 
+/** The Village Code as the ministry writes it, `11.01.01.2001`. */
+export const villageCodeDotted = (code: string) =>
+  `${code.slice(0, 2)}.${code.slice(2, 4)}.${code.slice(4, 6)}.${code.slice(6)}`;
+
 export const regencyShort = (village: Village) => village.regency.replace(/^Kabupaten /, 'Kab. ');
 
 /** The IANA zone of each Indonesian time zone, for formatting times as the Village reads them. */

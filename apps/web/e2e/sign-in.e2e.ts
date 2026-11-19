@@ -162,6 +162,34 @@ test('the Audit Log is exported as a ZIP with its one-time password shown once',
   await expect(page.getByRole('table')).toContainText('"reason":"Uji ekspor"');
 });
 
+test('the Vision and Mission saved on Profil desa shows on the public Profil page', async ({
+  page,
+}) => {
+  await page.goto('/masuk');
+  await page.getByLabel('Nama pengguna').fill(username);
+  await page.getByLabel('Kata sandi', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Beranda' })).toBeVisible();
+
+  // A unique vision each run, since the local database outlives runs.
+  const vision = `Desa yang mandiri ${Date.now()}`;
+  await page.goto('/admin/profil-desa');
+  const form = page.getByRole('form', { name: 'Visi dan misi' });
+  await form.getByLabel('Visi').fill(vision);
+  await form.getByLabel('Misi').fill('Melayani warga\n\nMembangun irigasi');
+  await form.getByLabel('RPJMDes dari tahun').fill('2025');
+  await form.getByLabel('Sampai tahun').fill('2031');
+  await form.getByRole('button', { name: 'Simpan visi dan misi' }).click();
+  await expect(page.getByText('Visi dan misi tersimpan.')).toBeVisible();
+
+  await page.goto('/profil');
+  const section = page.getByRole('region', { name: 'Visi dan misi' });
+  await expect(section).toContainText('RPJMDes 2025–2031');
+  await expect(section).toContainText(vision);
+  await expect(section.getByRole('listitem')).toHaveText(['Melayani warga', 'Membangun irigasi']);
+  await expect(page.getByRole('region', { name: /^Profil Desa / })).toContainText('11.01.01.2001');
+});
+
 test('every page has the stylesheet, and the public site stays light', async ({ page }) => {
   // Admin code is split into route chunks the public home page never fetches.
   const scripts: Promise<string>[] = [];
