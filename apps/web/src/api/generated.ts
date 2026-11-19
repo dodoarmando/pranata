@@ -320,7 +320,8 @@ export const getUseAccessLinkUrl = () => {
 /**
  * # Errors
  * `404` for an unknown, used or expired link, `422` for a refused password.
- * @summary Sets the User's password from their Access Link, which is then used up.
+ * @summary Sets the User's password from their Access Link, which is then used up, and revokes every
+session of theirs.
  */
 export const useAccessLink = async (useAccessLinkBody: UseAccessLink, options?: Parameters<typeof apiFetch>[1]): Promise<useAccessLinkResponse> => {
 
