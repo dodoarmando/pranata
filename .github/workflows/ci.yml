@@ -113,5 +113,6 @@ jobs:
         with:
           tool: just
       - run: bun install --frozen-lockfile
+      # Browser system libraries need sudo, so they stay out of `just e2e`.
       - run: cd apps/web && bunx playwright install-deps chromium
       - run: just e2e
