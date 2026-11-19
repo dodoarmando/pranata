@@ -3,6 +3,7 @@ mod auth;
 mod dashboard;
 pub mod db;
 mod health;
+mod passkey;
 mod password;
 mod role;
 pub mod user;
@@ -10,9 +11,11 @@ pub mod village;
 
 pub use auth::purge_expired;
 
+use std::sync::Arc;
+
 use axum::{
     Router,
-    extract::{Request, State},
+    extract::{FromRef, Request, State},
     http::{StatusCode, header},
     middleware::{self, Next},
     response::{IntoResponse, Response},
@@ -25,7 +28,26 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 #[openapi(info(title = "Pranata API"))]
 struct ApiDoc;
 
-fn api() -> OpenApiRouter<PgPool> {
+/// What every handler can reach: the database and the passkey ceremonies in flight.
+#[derive(Clone)]
+pub(crate) struct AppState {
+    pool: PgPool,
+    passkeys: Arc<passkey::Passkeys>,
+}
+
+impl FromRef<AppState> for PgPool {
+    fn from_ref(state: &AppState) -> Self {
+        state.pool.clone()
+    }
+}
+
+impl FromRef<AppState> for Arc<passkey::Passkeys> {
+    fn from_ref(state: &AppState) -> Self {
+        state.passkeys.clone()
+    }
+}
+
+fn api() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(health::healthz))
         .routes(routes!(village::get_village))
@@ -37,6 +59,9 @@ fn api() -> OpenApiRouter<PgPool> {
         .routes(routes!(auth::sessions))
         .routes(routes!(auth::sign_out_others))
         .routes(routes!(auth::change_password))
+        .routes(routes!(passkey::list, passkey::create))
+        .routes(routes!(passkey::start_registration))
+        .routes(routes!(passkey::delete))
         .routes(routes!(audit::list))
         .routes(routes!(dashboard::get))
         .routes(routes!(role::list, role::create))
@@ -48,15 +73,19 @@ fn api() -> OpenApiRouter<PgPool> {
 }
 
 /// The HTTP application, ready to serve at `public_origin` (`https://host`, no trailing slash).
-pub fn app(pool: PgPool, public_origin: String) -> Router {
-    api()
+///
+/// # Errors
+/// When `public_origin` is not a URL with a domain, which passkeys are bound to.
+pub fn app(pool: PgPool, public_origin: String) -> anyhow::Result<Router> {
+    let passkeys = Arc::new(passkey::Passkeys::new(&public_origin)?);
+    Ok(api()
         .split_for_parts()
         .0
         .layer(middleware::from_fn_with_state(
             public_origin,
             same_origin_only,
         ))
-        .with_state(pool)
+        .with_state(AppState { pool, passkeys }))
 }
 
 /// CSRF defence without tokens: an unsafe method needs `Sec-Fetch-Site: same-origin` or,

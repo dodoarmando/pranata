@@ -109,7 +109,7 @@ async fn main() -> anyhow::Result<()> {
             tokio::spawn(purge_expired_every_10_minutes(pool.clone()));
             tracing::info!(%listen, "serving");
             let public_origin = public_origin.trim_end_matches('/').to_owned();
-            axum::serve(listener, pranata::app(pool, public_origin))
+            axum::serve(listener, pranata::app(pool, public_origin)?)
                 .with_graceful_shutdown(async move {
                     tokio::select! {
                         _ = terminate.recv() => {}

@@ -2,6 +2,8 @@
 // Each test file compiles this module; not all of them use every helper.
 #![allow(dead_code)]
 
+pub mod authenticator;
+
 use axum::{
     Router,
     body::Body,
@@ -11,6 +13,8 @@ use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use tower::ServiceExt;
+
+use authenticator::Authenticator;
 
 pub const PASSWORD: &str = "kopi tubruk pagi hari";
 pub const ORIGIN: &str = "https://desa.example";
@@ -34,7 +38,7 @@ impl Reply {
 impl TestApp {
     pub fn new(pool: PgPool) -> Self {
         Self {
-            router: pranata::app(pool, ORIGIN.to_owned()),
+            router: pranata::app(pool, ORIGIN.to_owned()).unwrap(),
         }
     }
 
@@ -157,5 +161,20 @@ impl TestApp {
             .await;
         assert_eq!(reply.status, StatusCode::NO_CONTENT);
         reply.set_cookie().split(';').next().unwrap().to_owned()
+    }
+
+    /// Registers `passkey` under `name` for the signed-in User; the reply of finishing.
+    pub async fn add_passkey(&self, cookie: &str, name: &str, passkey: &Authenticator) -> Reply {
+        let challenge = self
+            .call("POST", "/auth/passkeys/registration", None, Some(cookie))
+            .await;
+        assert_eq!(challenge.status, StatusCode::OK, "{:?}", challenge.body);
+        let body = json!({
+            "ceremonyId": challenge.body["ceremonyId"],
+            "name": name,
+            "credential": passkey.register(&challenge.body["options"]),
+        });
+        self.call("POST", "/auth/passkeys", Some(&body), Some(cookie))
+            .await
     }
 }

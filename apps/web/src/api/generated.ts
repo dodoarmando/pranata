@@ -95,6 +95,19 @@ export interface Me {
   username: string;
 }
 
+/**
+ * `PublicKeyCredential.toJSON()` of the created credential.
+ */
+export type NewPasskeyCredential = { [key: string]: unknown };
+
+export interface NewPasskey {
+  ceremonyId: string;
+  /** `PublicKeyCredential.toJSON()` of the created credential. */
+  credential: NewPasskeyCredential;
+  /** 1–64 characters, such as the device it lives on. */
+  name: string;
+}
+
 export interface NewPassword {
   password: string;
 }
@@ -103,6 +116,26 @@ export interface NewUser {
   roleId: string;
   /** 3–32 lowercase letters, digits, dots, underscores or dashes; never changed or reused. */
   username: string;
+}
+
+/**
+ * A WebAuthn ceremony's options for the browser, and its id to finish it with.
+ */
+export interface PasskeyChallenge {
+  ceremonyId: string;
+  /** The ceremony options as JSON; `publicKey` goes to `PublicKeyCredential.parse…OptionsFromJSON`. */
+  options: unknown;
+}
+
+export interface PasskeySummary {
+  createdAt: string;
+  id: string;
+  /**
+     * When it last signed the User in; null if never.
+     * @nullable
+     */
+  lastUsedAt?: string | null;
+  name: string;
 }
 
 /**
@@ -394,6 +427,233 @@ export const getMe = async ( options?: Parameters<typeof apiFetch>[1]): Promise<
   {
     ...options,
     method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listPasskeysResponse200 = {
+  data: PasskeySummary[]
+  status: 200
+}
+
+export type listPasskeysResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listPasskeysResponseSuccess = (listPasskeysResponse200) & {
+  headers: Headers;
+};
+export type listPasskeysResponseError = (listPasskeysResponse401) & {
+  headers: Headers;
+};
+
+export type listPasskeysResponse = (listPasskeysResponseSuccess | listPasskeysResponseError)
+
+export const getListPasskeysUrl = () => {
+
+
+
+
+  return `/auth/passkeys`
+}
+
+/**
+ * # Errors
+ * `401` without a live session.
+ * @summary The signed-in User's passkeys, oldest first.
+ */
+export const listPasskeys = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listPasskeysResponse> => {
+
+  return apiFetch<listPasskeysResponse>(getListPasskeysUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createPasskeyResponse201 = {
+  data: PasskeySummary
+  status: 201
+}
+
+export type createPasskeyResponse400 = {
+  data: void
+  status: 400
+}
+
+export type createPasskeyResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createPasskeyResponse404 = {
+  data: void
+  status: 404
+}
+
+export type createPasskeyResponse409 = {
+  data: void
+  status: 409
+}
+
+export type createPasskeyResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createPasskeyResponse428 = {
+  data: void
+  status: 428
+}
+
+export type createPasskeyResponseSuccess = (createPasskeyResponse201) & {
+  headers: Headers;
+};
+export type createPasskeyResponseError = (createPasskeyResponse400 | createPasskeyResponse401 | createPasskeyResponse404 | createPasskeyResponse409 | createPasskeyResponse422 | createPasskeyResponse428) & {
+  headers: Headers;
+};
+
+export type createPasskeyResponse = (createPasskeyResponseSuccess | createPasskeyResponseError)
+
+export const getCreatePasskeyUrl = () => {
+
+
+
+
+  return `/auth/passkeys`
+}
+
+/**
+ * # Errors
+ * `400` for a credential that fails verification, `401` without a live session, `404` for an
+ * unknown, used or expired ceremony or one another User started, `409` for a credential
+ * already registered, `422` for a missing or over-long name, `428` outside sudo mode.
+ * @summary Finishes adding a passkey for the signed-in User.
+ */
+export const createPasskey = async (newPasskey: NewPasskey, options?: Parameters<typeof apiFetch>[1]): Promise<createPasskeyResponse> => {
+
+  return apiFetch<createPasskeyResponse>(getCreatePasskeyUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(newPasskey)
+  }
+);}
+
+
+
+export type startPasskeyRegistrationResponse200 = {
+  data: PasskeyChallenge
+  status: 200
+}
+
+export type startPasskeyRegistrationResponse401 = {
+  data: void
+  status: 401
+}
+
+export type startPasskeyRegistrationResponse428 = {
+  data: void
+  status: 428
+}
+
+export type startPasskeyRegistrationResponse503 = {
+  data: void
+  status: 503
+}
+
+export type startPasskeyRegistrationResponseSuccess = (startPasskeyRegistrationResponse200) & {
+  headers: Headers;
+};
+export type startPasskeyRegistrationResponseError = (startPasskeyRegistrationResponse401 | startPasskeyRegistrationResponse428 | startPasskeyRegistrationResponse503) & {
+  headers: Headers;
+};
+
+export type startPasskeyRegistrationResponse = (startPasskeyRegistrationResponseSuccess | startPasskeyRegistrationResponseError)
+
+export const getStartPasskeyRegistrationUrl = () => {
+
+
+
+
+  return `/auth/passkeys/registration`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `428` outside sudo mode, `503` with too many ceremonies in flight.
+ * @summary Starts adding a passkey for the signed-in User, excluding the ones they already have.
+ */
+export const startPasskeyRegistration = async ( options?: Parameters<typeof apiFetch>[1]): Promise<startPasskeyRegistrationResponse> => {
+
+  return apiFetch<startPasskeyRegistrationResponse>(getStartPasskeyRegistrationUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type deletePasskeyResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deletePasskeyResponse401 = {
+  data: void
+  status: 401
+}
+
+export type deletePasskeyResponse404 = {
+  data: void
+  status: 404
+}
+
+export type deletePasskeyResponse428 = {
+  data: void
+  status: 428
+}
+
+export type deletePasskeyResponseSuccess = (deletePasskeyResponse204) & {
+  headers: Headers;
+};
+export type deletePasskeyResponseError = (deletePasskeyResponse401 | deletePasskeyResponse404 | deletePasskeyResponse428) & {
+  headers: Headers;
+};
+
+export type deletePasskeyResponse = (deletePasskeyResponseSuccess | deletePasskeyResponseError)
+
+export const getDeletePasskeyUrl = (id: string,) => {
+
+
+
+
+  return `/auth/passkeys/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `404` for a passkey that is not theirs, `428` outside sudo mode.
+ * @summary Removes one of the signed-in User's passkeys.
+ */
+export const deletePasskey = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deletePasskeyResponse> => {
+
+  return apiFetch<deletePasskeyResponse>(getDeletePasskeyUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
 
 
   }
