@@ -394,6 +394,167 @@
         }
       }
     },
+    "/users": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Every User, oldest first.",
+        "description": "# Errors\n`401` without a live session, `403` outside the Administrator Role.",
+        "operationId": "listUsers",
+        "responses": {
+          "200": {
+            "description": "Every User",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User is not an Administrator"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Creates a User and their first Access Link.",
+        "description": "# Errors\n`401` without a live session, `403` outside the Administrator Role, `409` for a taken\nusername, `422` for a malformed username or an unknown Role, `428` outside sudo mode.",
+        "operationId": "createUser",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewUser"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The User and their Access Link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessLink"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User is not an Administrator"
+          },
+          "409": {
+            "description": "The username is taken"
+          },
+          "422": {
+            "description": "The username is malformed or the Role unknown"
+          },
+          "428": {
+            "description": "The User must re-authenticate first"
+          }
+        }
+      }
+    },
+    "/users/{id}/access-link": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Resets a User's access: a new Access Link that voids the previous one, and every session\nof theirs revoked.",
+        "description": "# Errors\n`401` without a live session, `403` outside the Administrator Role, `404` for an unknown\nUser, `428` outside sudo mode.",
+        "operationId": "createAccessLink",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The User",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The new Access Link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessLink"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User is not an Administrator"
+          },
+          "404": {
+            "description": "There is no such User"
+          },
+          "428": {
+            "description": "The User must re-authenticate first"
+          }
+        }
+      }
+    },
+    "/users/{id}/sessions": {
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Signs a User out everywhere by revoking every session of theirs.",
+        "description": "# Errors\n`401` without a live session, `403` outside the Administrator Role, `404` for an unknown\nUser, `428` outside sudo mode.",
+        "operationId": "revokeSessions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The User",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Every session of the User is revoked"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User is not an Administrator"
+          },
+          "404": {
+            "description": "There is no such User"
+          },
+          "428": {
+            "description": "The User must re-authenticate first"
+          }
+        }
+      }
+    },
     "/village": {
       "get": {
         "tags": [
@@ -422,6 +583,24 @@
   },
   "components": {
     "schemas": {
+      "AccessLink": {
+        "type": "object",
+        "description": "A fresh Access Link, shown once: the web app links to `/akses#<token>`.",
+        "required": [
+          "userId",
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Single-use and valid for 24 hours."
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "AuditEntry": {
         "type": "object",
         "required": [
@@ -551,6 +730,23 @@
           },
           "username": {
             "type": "string"
+          }
+        }
+      },
+      "NewUser": {
+        "type": "object",
+        "required": [
+          "username",
+          "roleId"
+        ],
+        "properties": {
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "username": {
+            "type": "string",
+            "description": "3–32 lowercase letters, digits, dots, underscores or dashes; never changed or reused."
           }
         }
       },
@@ -688,6 +884,32 @@
           "token": {
             "type": "string",
             "description": "The token after `#` in the Access Link."
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "roleId",
+          "role"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "description": "The name of the User's Role."
+          },
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "username": {
+            "type": "string"
           }
         }
       },

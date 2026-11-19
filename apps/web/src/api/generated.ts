@@ -5,6 +5,15 @@
  */
 import { apiFetch } from './fetch';
 /**
+ * A fresh Access Link, shown once: the web app links to `/akses#<token>`.
+ */
+export interface AccessLink {
+  /** Single-use and valid for 24 hours. */
+  token: string;
+  userId: string;
+}
+
+/**
  * One field's change in an Audit Entry.
  */
 export interface FieldChange {
@@ -60,6 +69,12 @@ export interface Health {
 export interface Me {
   /** The name of the User's Role. */
   role: string;
+  username: string;
+}
+
+export interface NewUser {
+  roleId: string;
+  /** 3–32 lowercase letters, digits, dots, underscores or dashes; never changed or reused. */
   username: string;
 }
 
@@ -138,6 +153,14 @@ export interface UseAccessLink {
   password: string;
   /** The token after `#` in the Access Link. */
   token: string;
+}
+
+export interface User {
+  id: string;
+  /** The name of the User's Role. */
+  role: string;
+  roleId: string;
+  username: string;
 }
 
 export interface Village {
@@ -697,6 +720,245 @@ export const updateRole = async (id: string,
     method: 'PUT',
     headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
     body: JSON.stringify(roleInput)
+  }
+);}
+
+
+
+export type listUsersResponse200 = {
+  data: User[]
+  status: 200
+}
+
+export type listUsersResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listUsersResponse403 = {
+  data: void
+  status: 403
+}
+
+export type listUsersResponseSuccess = (listUsersResponse200) & {
+  headers: Headers;
+};
+export type listUsersResponseError = (listUsersResponse401 | listUsersResponse403) & {
+  headers: Headers;
+};
+
+export type listUsersResponse = (listUsersResponseSuccess | listUsersResponseError)
+
+export const getListUsersUrl = () => {
+
+
+
+
+  return `/users`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` outside the Administrator Role.
+ * @summary Every User, oldest first.
+ */
+export const listUsers = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listUsersResponse> => {
+
+  return apiFetch<listUsersResponse>(getListUsersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createUserResponse201 = {
+  data: AccessLink
+  status: 201
+}
+
+export type createUserResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createUserResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createUserResponse409 = {
+  data: void
+  status: 409
+}
+
+export type createUserResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createUserResponse428 = {
+  data: void
+  status: 428
+}
+
+export type createUserResponseSuccess = (createUserResponse201) & {
+  headers: Headers;
+};
+export type createUserResponseError = (createUserResponse401 | createUserResponse403 | createUserResponse409 | createUserResponse422 | createUserResponse428) & {
+  headers: Headers;
+};
+
+export type createUserResponse = (createUserResponseSuccess | createUserResponseError)
+
+export const getCreateUserUrl = () => {
+
+
+
+
+  return `/users`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` outside the Administrator Role, `409` for a taken
+ * username, `422` for a malformed username or an unknown Role, `428` outside sudo mode.
+ * @summary Creates a User and their first Access Link.
+ */
+export const createUser = async (newUser: NewUser, options?: Parameters<typeof apiFetch>[1]): Promise<createUserResponse> => {
+
+  return apiFetch<createUserResponse>(getCreateUserUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(newUser)
+  }
+);}
+
+
+
+export type createAccessLinkResponse201 = {
+  data: AccessLink
+  status: 201
+}
+
+export type createAccessLinkResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createAccessLinkResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createAccessLinkResponse404 = {
+  data: void
+  status: 404
+}
+
+export type createAccessLinkResponse428 = {
+  data: void
+  status: 428
+}
+
+export type createAccessLinkResponseSuccess = (createAccessLinkResponse201) & {
+  headers: Headers;
+};
+export type createAccessLinkResponseError = (createAccessLinkResponse401 | createAccessLinkResponse403 | createAccessLinkResponse404 | createAccessLinkResponse428) & {
+  headers: Headers;
+};
+
+export type createAccessLinkResponse = (createAccessLinkResponseSuccess | createAccessLinkResponseError)
+
+export const getCreateAccessLinkUrl = (id: string,) => {
+
+
+
+
+  return `/users/${id}/access-link`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` outside the Administrator Role, `404` for an unknown
+ * User, `428` outside sudo mode.
+ * @summary Resets a User's access: a new Access Link that voids the previous one, and every session
+of theirs revoked.
+ */
+export const createAccessLink = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<createAccessLinkResponse> => {
+
+  return apiFetch<createAccessLinkResponse>(getCreateAccessLinkUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type revokeSessionsResponse204 = {
+  data: void
+  status: 204
+}
+
+export type revokeSessionsResponse401 = {
+  data: void
+  status: 401
+}
+
+export type revokeSessionsResponse403 = {
+  data: void
+  status: 403
+}
+
+export type revokeSessionsResponse404 = {
+  data: void
+  status: 404
+}
+
+export type revokeSessionsResponse428 = {
+  data: void
+  status: 428
+}
+
+export type revokeSessionsResponseSuccess = (revokeSessionsResponse204) & {
+  headers: Headers;
+};
+export type revokeSessionsResponseError = (revokeSessionsResponse401 | revokeSessionsResponse403 | revokeSessionsResponse404 | revokeSessionsResponse428) & {
+  headers: Headers;
+};
+
+export type revokeSessionsResponse = (revokeSessionsResponseSuccess | revokeSessionsResponseError)
+
+export const getRevokeSessionsUrl = (id: string,) => {
+
+
+
+
+  return `/users/${id}/sessions`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` outside the Administrator Role, `404` for an unknown
+ * User, `428` outside sudo mode.
+ * @summary Signs a User out everywhere by revoking every session of theirs.
+ */
+export const revokeSessions = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<revokeSessionsResponse> => {
+
+  return apiFetch<revokeSessionsResponse>(getRevokeSessionsUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
   }
 );}
 
