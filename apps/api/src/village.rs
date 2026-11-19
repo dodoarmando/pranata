@@ -36,6 +36,24 @@ impl TimeZone {
         }
     }
 
+    /// Hours ahead of UTC; none of the three keeps daylight saving.
+    pub(crate) fn utc_offset_hours(self) -> i32 {
+        match self {
+            Self::Wib => 7,
+            Self::Wita => 8,
+            Self::Wit => 9,
+        }
+    }
+
+    /// `WIB`, `WITA` or `WIT`.
+    pub(crate) fn abbreviation(self) -> &'static str {
+        match self {
+            Self::Wib => "WIB",
+            Self::Wita => "WITA",
+            Self::Wit => "WIT",
+        }
+    }
+
     /// The IANA name, for Postgres `AT TIME ZONE`.
     pub(crate) fn iana(self) -> &'static str {
         match self {

@@ -77,6 +77,25 @@ export interface Dashboard {
   activeUsers: number;
 }
 
+/**
+ * An exported file, encrypted; only `password` opens it.
+ */
+export interface EncryptedFile {
+  /** The AES-256 ZIP holding the one file, in base64. */
+  content: string;
+  /** The ZIP's name, such as `log-audit.zip`. */
+  fileName: string;
+  /** The one-time password, to show once; Pranata keeps no copy. */
+  password: string;
+}
+
+/**
+ * Why the User exports; required (Permenkomdigi 5/2025 Art. 93) and kept in the Audit Entry.
+ */
+export interface ExportReason {
+  reason: string;
+}
+
 export type HealthStatus = typeof HealthStatus[keyof typeof HealthStatus];
 
 
@@ -276,7 +295,20 @@ export type ListAuditEntriesParams = {
   from?: string;
   /** The last day, inclusive, in the Village's time zone. */
   to?: string;
-  /** The `next` of the previous page. */
+  /** Only entries older than this one, such as the `next` of the previous page. */
+  before?: string;
+};
+
+export type ExportAuditEntriesParams = {
+  objectType?: string;
+  objectId?: string;
+  /** The acting User's username. */
+  username?: string;
+  /** The first day, in the Village's time zone. */
+  from?: string;
+  /** The last day, inclusive, in the Village's time zone. */
+  to?: string;
+  /** Only entries older than this one, such as the `next` of the previous page. */
   before?: string;
 };
 
@@ -352,6 +384,76 @@ export const listAuditEntries = async (params?: ListAuditEntriesParams, options?
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type exportAuditEntriesResponse200 = {
+  data: EncryptedFile
+  status: 200
+}
+
+export type exportAuditEntriesResponse401 = {
+  data: void
+  status: 401
+}
+
+export type exportAuditEntriesResponse403 = {
+  data: void
+  status: 403
+}
+
+export type exportAuditEntriesResponse422 = {
+  data: void
+  status: 422
+}
+
+export type exportAuditEntriesResponse428 = {
+  data: void
+  status: 428
+}
+
+export type exportAuditEntriesResponseSuccess = (exportAuditEntriesResponse200) & {
+  headers: Headers;
+};
+export type exportAuditEntriesResponseError = (exportAuditEntriesResponse401 | exportAuditEntriesResponse403 | exportAuditEntriesResponse422 | exportAuditEntriesResponse428) & {
+  headers: Headers;
+};
+
+export type exportAuditEntriesResponse = (exportAuditEntriesResponseSuccess | exportAuditEntriesResponseError)
+
+export const getExportAuditEntriesUrl = (params?: ExportAuditEntriesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/audit-entries/export?${stringifiedParams}` : `/audit-entries/export`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `audit.read`, `422` without a reason, `428`
+ * outside sudo mode.
+ * @summary Exports every Audit Entry matching the filter as a CSV, masked like the Audit Log; see the
+export mechanism.
+ */
+export const exportAuditEntries = async (exportReason: ExportReason,
+    params?: ExportAuditEntriesParams, options?: Parameters<typeof apiFetch>[1]): Promise<exportAuditEntriesResponse> => {
+
+  return apiFetch<exportAuditEntriesResponse>(getExportAuditEntriesUrl(params),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(exportReason)
   }
 );}
 
