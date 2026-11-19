@@ -17,6 +17,7 @@ use crate::{
     ApiError,
     audit::{self, Actor},
     password::{self, PasswordProblem, Verdict},
+    role::Permission,
 };
 
 const COOKIE: &str = "__Host-session";
@@ -240,15 +241,23 @@ pub(crate) struct Session {
     user_id: Uuid,
     username: String,
     role: String,
-    administrator: bool,
-    permissions: Vec<String>,
+    pub(crate) administrator: bool,
+    permissions: Vec<Permission>,
 }
 
 impl Session {
     /// Whether the User's Role holds `permission`; the Administrator holds every one.
-    // shortcut: Permissions are unchecked strings until #34 fixes the catalog in code; then take its type.
-    pub(crate) fn holds(&self, permission: &str) -> bool {
-        self.administrator || self.permissions.iter().any(|held| held == permission)
+    pub(crate) fn holds(&self, permission: Permission) -> bool {
+        self.administrator || self.permissions.contains(&permission)
+    }
+
+    /// Refuses with `403` outside the Administrator Role, which alone manages Users and Roles.
+    pub(crate) fn ensure_administrator(&self) -> Result<(), ApiError> {
+        if self.administrator {
+            Ok(())
+        } else {
+            Err(ApiError::Status(StatusCode::FORBIDDEN))
+        }
     }
 }
 
@@ -274,7 +283,8 @@ impl FromRequestParts<PgPool> for Session {
                  WHERE token_hash = $1 AND expires_at > now() AND last_seen_at + idle_timeout > now()
                  RETURNING user_id
              )
-             SELECT users.id, users.username, roles.name AS role, roles.administrator, roles.permissions
+             SELECT users.id, users.username, roles.name AS role, roles.administrator,
+                    roles.permissions AS \"permissions: Vec<Permission>\"
              FROM live JOIN users ON users.id = live.user_id JOIN roles ON roles.id = users.role_id",
             token_hash,
         )

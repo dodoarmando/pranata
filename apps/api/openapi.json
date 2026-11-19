@@ -235,6 +235,37 @@
         }
       }
     },
+    "/roles": {
+      "get": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Every Role, the Administrator first.",
+        "description": "# Errors\n`401` without a live session, `403` outside the Administrator Role.",
+        "operationId": "listRoles",
+        "responses": {
+          "200": {
+            "description": "Every Role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Role"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User is not an Administrator"
+          }
+        }
+      }
+    },
     "/village": {
       "get": {
         "tags": [
@@ -414,6 +445,46 @@
         "properties": {
           "problem": {
             "$ref": "#/components/schemas/PasswordProblem"
+          }
+        }
+      },
+      "Permission": {
+        "type": "string",
+        "description": "The fixed catalog of Permissions a Role can hold. Managing Users and Roles is not one:\nit belongs to the Administrator Role alone.",
+        "enum": [
+          "village.manage",
+          "content.write",
+          "content.publish",
+          "complaint.read",
+          "complaint.handle",
+          "audit.read"
+        ]
+      },
+      "Role": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "administrator",
+          "permissions"
+        ],
+        "properties": {
+          "administrator": {
+            "type": "boolean",
+            "description": "The built-in, locked Administrator Role, which holds every Permission whatever `permissions` says."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Permission"
+            }
           }
         }
       },
