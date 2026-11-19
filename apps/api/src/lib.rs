@@ -72,6 +72,10 @@ fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(village::get_village))
         .routes(routes!(village::update_profile))
         .routes(routes!(village::upload_logo))
+        .routes(routes!(
+            village::get_vision_mission,
+            village::update_vision_mission
+        ))
         .routes(routes!(storage::get_media))
         .routes(routes!(auth::use_access_link))
         .routes(routes!(auth::sign_in))

@@ -328,6 +328,19 @@ export type Village = VillageProfile & {
   timeZone: TimeZone;
 };
 
+/**
+ * The Village's one current Vision and Mission, with the `RPJMDes` period it belongs to.
+ */
+export interface VisionMission {
+  /** The last year of the `RPJMDes` period. */
+  endYear: number;
+  /** In order; blank ones are dropped. */
+  missions: string[];
+  /** The first year of the `RPJMDes` period. */
+  startYear: number;
+  vision: string;
+}
+
 export type ListAuditEntriesParams = {
   objectType?: string;
   objectId?: string;
@@ -2085,5 +2098,112 @@ export const updateVillageProfile = async (villageProfile: VillageProfile, optio
     method: 'PUT',
     headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
     body: JSON.stringify(villageProfile)
+  }
+);}
+
+
+
+export type getVisionMissionResponse200 = {
+  data: VisionMission
+  status: 200
+}
+
+export type getVisionMissionResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getVisionMissionResponseSuccess = (getVisionMissionResponse200) & {
+  headers: Headers;
+};
+export type getVisionMissionResponseError = (getVisionMissionResponse404) & {
+  headers: Headers;
+};
+
+export type getVisionMissionResponse = (getVisionMissionResponseSuccess | getVisionMissionResponseError)
+
+export const getGetVisionMissionUrl = () => {
+
+
+
+
+  return `/village/vision-mission`
+}
+
+/**
+ * # Errors
+ * `404` before it is first saved, `500` when the database is unreachable.
+ * @summary The Village's current Vision and Mission, for the public profile page.
+ */
+export const getVisionMission = async ( options?: Parameters<typeof apiFetch>[1]): Promise<getVisionMissionResponse> => {
+
+  return apiFetch<getVisionMissionResponse>(getGetVisionMissionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type updateVisionMissionResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateVisionMissionResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateVisionMissionResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateVisionMissionResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateVisionMissionResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateVisionMissionResponseSuccess = (updateVisionMissionResponse204) & {
+  headers: Headers;
+};
+export type updateVisionMissionResponseError = (updateVisionMissionResponse401 | updateVisionMissionResponse403 | updateVisionMissionResponse404 | updateVisionMissionResponse422) & {
+  headers: Headers;
+};
+
+export type updateVisionMissionResponse = (updateVisionMissionResponseSuccess | updateVisionMissionResponseError)
+
+export const getUpdateVisionMissionUrl = () => {
+
+
+
+
+  return `/village/vision-mission`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `404` before the Village
+ * Code is set, `422` for a blank or overlong text, no mission, over 20 missions, or a period
+ * outside 2000–2100 or not ending after it starts.
+ * @summary Replaces the Village's Vision and Mission; the one replaced lives on in the Audit Log.
+ */
+export const updateVisionMission = async (visionMission: VisionMission, options?: Parameters<typeof apiFetch>[1]): Promise<updateVisionMissionResponse> => {
+
+  return apiFetch<updateVisionMissionResponse>(getUpdateVisionMissionUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(visionMission)
   }
 );}

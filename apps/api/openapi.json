@@ -1233,6 +1233,66 @@
           }
         }
       }
+    },
+    "/village/vision-mission": {
+      "get": {
+        "tags": [
+          "village"
+        ],
+        "summary": "The Village's current Vision and Mission, for the public profile page.",
+        "description": "# Errors\n`404` before it is first saved, `500` when the database is unreachable.",
+        "operationId": "getVisionMission",
+        "responses": {
+          "200": {
+            "description": "The current Vision and Mission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisionMission"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Vision and Mission is saved yet"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "village"
+        ],
+        "summary": "Replaces the Village's Vision and Mission; the one replaced lives on in the Audit Log.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `404` before the Village\nCode is set, `422` for a blank or overlong text, no mission, over 20 missions, or a period\noutside 2000–2100 or not ending after it starts.",
+        "operationId": "updateVisionMission",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisionMission"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Vision and Mission is saved"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "404": {
+            "description": "The Village Code is not set yet"
+          },
+          "422": {
+            "description": "A field is blank, too long or out of range"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1900,6 +1960,38 @@
               "null"
             ],
             "description": "The \"Nomor Tanda Daftar PSE\", shown in the public footer."
+          }
+        }
+      },
+      "VisionMission": {
+        "type": "object",
+        "description": "The Village's one current Vision and Mission, with the `RPJMDes` period it belongs to.",
+        "required": [
+          "vision",
+          "missions",
+          "startYear",
+          "endYear"
+        ],
+        "properties": {
+          "endYear": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The last year of the `RPJMDes` period."
+          },
+          "missions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "In order; blank ones are dropped."
+          },
+          "startYear": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The first year of the `RPJMDes` period."
+          },
+          "vision": {
+            "type": "string"
           }
         }
       }
