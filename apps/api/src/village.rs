@@ -127,12 +127,7 @@ impl VillageProfile {
             .postal_code
             .as_ref()
             .is_none_or(|code| code.len() == 5 && code.bytes().all(|b| b.is_ascii_digit()));
-        let phone_ok = profile.phone.as_ref().is_none_or(|phone| {
-            phone.bytes().filter(u8::is_ascii_digit).count() >= 5
-                && phone
-                    .bytes()
-                    .all(|b| b.is_ascii_digit() || b" +-()".contains(&b))
-        });
+        let phone_ok = profile.phone.as_deref().is_none_or(phone_ok);
         let email_ok = profile.email.as_ref().is_none_or(|email| {
             email.split_once('@').is_some_and(|(local, domain)| {
                 !local.is_empty() && domain.contains('.') && !domain.contains('@')
@@ -151,6 +146,14 @@ impl VillageProfile {
             Err(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY))
         }
     }
+}
+
+/// Whether a phone number has at least five digits and only digits, spaces and `+-()`.
+pub(crate) fn phone_ok(phone: &str) -> bool {
+    phone.bytes().filter(u8::is_ascii_digit).count() >= 5
+        && phone
+            .bytes()
+            .all(|b| b.is_ascii_digit() || b" +-()".contains(&b))
 }
 
 /// The name of a dotted region code (`11`, `11.01`, `11.01.01` or `11.01.01.2001`) in the national list.
@@ -484,7 +487,7 @@ pub(crate) async fn update_vision_mission(
 }
 
 /// The `{ field, from, to }` of every field of `to` whose value differs in `from`.
-fn diff(from: &Value, to: &Value) -> Vec<Value> {
+pub(crate) fn diff(from: &Value, to: &Value) -> Vec<Value> {
     to.as_object()
         .into_iter()
         .flatten()
