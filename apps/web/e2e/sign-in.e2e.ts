@@ -48,3 +48,46 @@ test('a wrong password is refused and the forgotten-password hint names the Admi
   await page.getByText('Lupa kata sandi?').click();
   await expect(page.getByText(/Hubungi Administrator desa/)).toBeVisible();
 });
+
+test('the Administrator creates a User from an Access Link, composes a Role and deactivates the User', async ({
+  page,
+  browser,
+}) => {
+  const newcomer = `${username}k`;
+  await page.goto('/masuk');
+  await page.getByLabel('Nama pengguna').fill(username);
+  await page.getByLabel('Kata sandi', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Masuk' }).click();
+  await expect(page.getByRole('region', { name: 'Pengguna aktif' })).toBeVisible();
+
+  await page.goto('/admin/pengguna');
+  await page.getByLabel('Nama pengguna').fill(newcomer);
+  await page
+    .getByRole('combobox', { name: 'Peran', exact: true })
+    .selectOption({ label: 'Kontributor Web' });
+  await page.getByRole('button', { name: 'Buat pengguna' }).click();
+  const link = page.getByRole('textbox', { name: 'Tautan Akses' });
+  await expect(link).toHaveValue(/\/akses#[0-9a-f]{64}$/);
+
+  const newcomerPage = await (await browser.newContext()).newPage();
+  await newcomerPage.goto(await link.inputValue());
+  await newcomerPage.getByLabel('Kata sandi baru').fill(password);
+  await newcomerPage.getByRole('button', { name: 'Simpan kata sandi' }).click();
+  await expect(newcomerPage.getByRole('heading', { name: 'Kata sandi tersimpan' })).toBeVisible();
+
+  const row = page.getByRole('row').filter({ hasText: newcomer });
+  await expect(row.getByRole('combobox')).toHaveValue(/.+/);
+  page.once('dialog', (dialog) => dialog.accept());
+  await row.getByRole('button', { name: 'Nonaktifkan' }).click();
+  await expect(row).toContainText('Nonaktif');
+  await expect(row.getByRole('button', { name: 'Aktifkan' })).toBeVisible();
+
+  await page.goto('/admin/peran');
+  const newRole = page.getByRole('form', { name: 'Peran baru' });
+  await newRole.getByLabel('Nama peran').fill(`Peran ${username}`);
+  await newRole.getByLabel('Baca pengaduan').check();
+  await newRole.getByRole('button', { name: 'Buat peran' }).click();
+  const saved = page.getByRole('form', { name: `Peran ${username}` });
+  await expect(saved.getByLabel('Baca pengaduan')).toBeChecked();
+  await expect(saved.getByLabel('Baca log audit')).not.toBeChecked();
+});
