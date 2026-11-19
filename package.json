@@ -5,6 +5,9 @@
   "workspaces": [
     "apps/web"
   ],
+  "scripts": {
+    "prepare": "lefthook install"
+  },
   "devDependencies": {
     "@biomejs/biome": "2.6.8",
     "@commitlint/cli": "21.2.4",
