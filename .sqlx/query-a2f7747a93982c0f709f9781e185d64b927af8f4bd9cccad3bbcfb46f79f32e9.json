@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE region_units SET sort_order = ordered.sort_order\n         FROM unnest($1::uuid[]) WITH ORDINALITY AS ordered (id, sort_order)\n         WHERE region_units.id = ordered.id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["UuidArray"]
+    },
+    "nullable": []
+  },
+  "hash": "a2f7747a93982c0f709f9781e185d64b927af8f4bd9cccad3bbcfb46f79f32e9"
+}

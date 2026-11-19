@@ -1,0 +1,97 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT kind AS \"kind: RegionKind\", parent_id, name, number, head_name, head_phone,\n           active FROM region_units WHERE id = $1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "kind: RegionKind",
+        "type_info": {
+          "Custom": {
+            "name": "region_kind",
+            "kind": {
+              "Enum": ["hamlet", "rw", "rt"]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "region_units",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "parent_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "region_units",
+            "name": "parent_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "region_units",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "number",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "region_units",
+            "name": "number"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "head_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "region_units",
+            "name": "head_name"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "head_phone",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "region_units",
+            "name": "head_phone"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "active",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "region_units",
+            "name": "active"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": [false, true, true, true, true, true, false]
+  },
+  "hash": "40c4f84e9ab0905ae66c3547d64e3899fdac8a76689092debd82c6e6f2b0f7bc"
+}

@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE region_units SET name = $1, number = $2, head_name = $3, head_phone = $4,\n             active = $5 WHERE id = $6 RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "region_units",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Text", "Int4", "Text", "Text", "Bool", "Uuid"]
+    },
+    "nullable": [false]
+  },
+  "hash": "00fda7f01005e9d32c8f22dbb871e792344fe40f5ef085441dad53274c4f0021"
+}

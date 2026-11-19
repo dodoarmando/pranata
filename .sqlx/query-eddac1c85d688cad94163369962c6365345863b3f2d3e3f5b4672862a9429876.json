@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT code, hamlet_label, has_rw FROM village FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "code"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "hamlet_label",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "hamlet_label"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "has_rw",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "has_rw"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, false, false]
+  },
+  "hash": "eddac1c85d688cad94163369962c6365345863b3f2d3e3f5b4672862a9429876"
+}

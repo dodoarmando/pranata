@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT kind AS \"kind: RegionKind\", active FROM region_units WHERE id = $1\n               FOR SHARE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "kind: RegionKind",
+        "type_info": {
+          "Custom": {
+            "name": "region_kind",
+            "kind": {
+              "Enum": ["hamlet", "rw", "rt"]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "region_units",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "active",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "region_units",
+            "name": "active"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": [false, false]
+  },
+  "hash": "0639b61bed9d096b5042de50ca16bfefd8e2e631136ffb87f725a4985905f6c5"
+}
