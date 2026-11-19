@@ -22,10 +22,13 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["json", "env-filter"] }
 utoipa = { version = "6.0.0", features = ["uuid", "chrono"] }
 utoipa-axum = "0.3.0"
-uuid = { version = "1.29.3", features = ["serde"] }
+uuid = { version = "1.29.3", features = ["serde", "v4"] }
+webauthn-rs = "0.6.2"
 
 [dev-dependencies]
+base64 = "0.22.1"
 http-body-util = "0.1.5"
+p256 = "0.14.0"
 tower = { version = "0.5.3", features = ["util"] }
 
 [lints]

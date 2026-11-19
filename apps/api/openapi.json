@@ -158,6 +158,149 @@
         }
       }
     },
+    "/auth/passkeys": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "The signed-in User's passkeys, oldest first.",
+        "description": "# Errors\n`401` without a live session.",
+        "operationId": "listPasskeys",
+        "responses": {
+          "200": {
+            "description": "The User's passkeys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PasskeySummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Finishes adding a passkey for the signed-in User.",
+        "description": "# Errors\n`400` for a credential that fails verification, `401` without a live session, `404` for an\nunknown, used or expired ceremony or one another User started, `409` for a credential\nalready registered, `422` for a missing or over-long name, `428` outside sudo mode.",
+        "operationId": "createPasskey",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewPasskey"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The passkey is added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeySummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The credential fails verification"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "404": {
+            "description": "The ceremony is unknown, used or expired"
+          },
+          "409": {
+            "description": "The credential is already registered"
+          },
+          "422": {
+            "description": "The name is missing or too long"
+          },
+          "428": {
+            "description": "The User must re-authenticate first"
+          }
+        }
+      }
+    },
+    "/auth/passkeys/registration": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Starts adding a passkey for the signed-in User, excluding the ones they already have.",
+        "description": "# Errors\n`401` without a live session, `428` outside sudo mode, `503` with too many ceremonies in flight.",
+        "operationId": "startPasskeyRegistration",
+        "responses": {
+          "200": {
+            "description": "The options for `navigator.credentials.create`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyChallenge"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "428": {
+            "description": "The User must re-authenticate first"
+          },
+          "503": {
+            "description": "Too many ceremonies are in flight; try again"
+          }
+        }
+      }
+    },
+    "/auth/passkeys/{id}": {
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Removes one of the signed-in User's passkeys.",
+        "description": "# Errors\n`401` without a live session, `404` for a passkey that is not theirs, `428` outside sudo mode.",
+        "operationId": "deletePasskey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The passkey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The passkey is removed"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "404": {
+            "description": "The User has no such passkey"
+          },
+          "428": {
+            "description": "The User must re-authenticate first"
+          }
+        }
+      }
+    },
     "/auth/password": {
       "put": {
         "tags": [
@@ -947,6 +1090,28 @@
           }
         }
       },
+      "NewPasskey": {
+        "type": "object",
+        "required": [
+          "ceremonyId",
+          "name",
+          "credential"
+        ],
+        "properties": {
+          "ceremonyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "credential": {
+            "type": "object",
+            "description": "`PublicKeyCredential.toJSON()` of the created credential."
+          },
+          "name": {
+            "type": "string",
+            "description": "1–64 characters, such as the device it lives on."
+          }
+        }
+      },
       "NewPassword": {
         "type": "object",
         "required": [
@@ -972,6 +1137,52 @@
           "username": {
             "type": "string",
             "description": "3–32 lowercase letters, digits, dots, underscores or dashes; never changed or reused."
+          }
+        }
+      },
+      "PasskeyChallenge": {
+        "type": "object",
+        "description": "A WebAuthn ceremony's options for the browser, and its id to finish it with.",
+        "required": [
+          "ceremonyId",
+          "options"
+        ],
+        "properties": {
+          "ceremonyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "options": {
+            "description": "The ceremony options as JSON; `publicKey` goes to `PublicKeyCredential.parse…OptionsFromJSON`."
+          }
+        }
+      },
+      "PasskeySummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "createdAt"
+        ],
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lastUsedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When it last signed the User in; null if never."
+          },
+          "name": {
+            "type": "string"
           }
         }
       },

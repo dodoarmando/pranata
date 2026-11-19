@@ -2,7 +2,7 @@ use std::{fmt::Write, net::IpAddr};
 
 use axum::{
     Json,
-    extract::{FromRequestParts, State},
+    extract::{FromRef, FromRequestParts, State},
     http::{HeaderMap, StatusCode, header, request::Parts},
     response::{AppendHeaders, IntoResponse},
 };
@@ -271,7 +271,7 @@ fn client(headers: &HeaderMap) -> (Option<String>, Option<String>) {
 pub(crate) struct Session {
     token_hash: Vec<u8>,
     pub(crate) user_id: Uuid,
-    username: String,
+    pub(crate) username: String,
     role: String,
     pub(crate) administrator: bool,
     permissions: Vec<Permission>,
@@ -313,10 +313,14 @@ fn session_token(headers: &HeaderMap) -> Option<&str> {
         .find_map(|cookie| cookie.trim().strip_prefix(COOKIE)?.strip_prefix('='))
 }
 
-impl FromRequestParts<PgPool> for Session {
+impl<S: Send + Sync> FromRequestParts<S> for Session
+where
+    PgPool: FromRef<S>,
+{
     type Rejection = ApiError;
 
-    async fn from_request_parts(parts: &mut Parts, pool: &PgPool) -> Result<Self, ApiError> {
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, ApiError> {
+        let pool = &PgPool::from_ref(state);
         let token =
             session_token(&parts.headers).ok_or(ApiError::Status(StatusCode::UNAUTHORIZED))?;
         let token_hash = token_hash(token);
