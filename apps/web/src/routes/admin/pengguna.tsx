@@ -7,6 +7,7 @@ import {
   listRoles,
   listUsers,
   type NewUser,
+  removePasskeys,
   revokeSessions,
   type UserChange,
   updateUser,
@@ -47,6 +48,10 @@ const revokeSessionsFn = createServerFn({ method: 'POST' })
   .validator((id: string) => id)
   .handler(async ({ data }) => (await revokeSessions(data)).status);
 
+const removePasskeysFn = createServerFn({ method: 'POST' })
+  .validator((id: string) => id)
+  .handler(async ({ data }) => (await removePasskeys(data)).status);
+
 export const Route = createFileRoute('/admin/pengguna')({
   loader: () => fetchUsers(),
   head: () => ({ meta: [{ title: 'Pengguna · Pranata' }] }),
@@ -70,6 +75,7 @@ function Users() {
   const submitReset = useServerFn(resetFn);
   const submitUpdate = useServerFn(updateUserFn);
   const submitRevoke = useServerFn(revokeSessionsFn);
+  const submitRemovePasskeys = useServerFn(removePasskeysFn);
   const [link, setLink] = useState<{ username: string; url: string } | null>(null);
   const [message, setMessage] = useState('');
 
@@ -199,6 +205,22 @@ function Users() {
                   )}
                 >
                   Cabut semua sesi
+                </button>{' '}
+                <button
+                  type="button"
+                  disabled={user.passkeys === 0}
+                  onClick={() =>
+                    window.confirm(
+                      `Hapus semua passkey ${user.username}? Kata sandinya tetap berlaku.`,
+                    ) &&
+                    act(
+                      {},
+                      () => submitRemovePasskeys({ data: user.id }),
+                      `Semua passkey ${user.username} telah dihapus.`,
+                    )()
+                  }
+                >
+                  Hapus passkey ({user.passkeys})
                 </button>{' '}
                 {user.active ? (
                   <button
