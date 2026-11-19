@@ -3,3 +3,6 @@
 
 # Claude Code agent worktrees, local only
 .claude/worktrees/
+
+# Build output
+/target/
