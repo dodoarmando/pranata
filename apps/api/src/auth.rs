@@ -240,6 +240,7 @@ pub(crate) struct Session {
     user_id: Uuid,
     username: String,
     role: String,
+    pub(crate) administrator: bool,
 }
 
 fn session_token(headers: &HeaderMap) -> Option<&str> {
@@ -264,7 +265,7 @@ impl FromRequestParts<PgPool> for Session {
                  WHERE token_hash = $1 AND expires_at > now() AND last_seen_at + idle_timeout > now()
                  RETURNING user_id
              )
-             SELECT users.id, users.username, roles.name AS role
+             SELECT users.id, users.username, roles.name AS role, roles.administrator
              FROM live JOIN users ON users.id = live.user_id JOIN roles ON roles.id = users.role_id",
             token_hash,
         )
@@ -276,6 +277,7 @@ impl FromRequestParts<PgPool> for Session {
             user_id: row.id,
             username: row.username,
             role: row.role,
+            administrator: row.administrator,
         })
     }
 }

@@ -1,0 +1,101 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT audit_entries.id, at, actor, users.username AS \"username?\", action, object_type, object_id, details\n         FROM audit_entries LEFT JOIN users ON users.id = actor_id\n         ORDER BY at DESC, audit_entries.id DESC LIMIT 100",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "at"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "actor",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "actor"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "username?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "username"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "action",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "action"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "object_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "object_type"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "object_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "object_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "details",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "details"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, false, false, false, false, false, true, false]
+  },
+  "hash": "6d56162505de9312f1a7a844e854a50595273a6ca63e8104d682295cafbf853d"
+}

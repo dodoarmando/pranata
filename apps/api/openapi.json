@@ -10,6 +10,37 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/audit-entries": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "The latest Audit Entries, newest first.",
+        "description": "# Errors\n`401` without a live session, `403` without `audit.read`.",
+        "operationId": "listAuditEntries",
+        "responses": {
+          "200": {
+            "description": "The latest 100 Audit Entries, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEntry"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not read the Audit Log"
+          }
+        }
+      }
+    },
     "/auth/access-link": {
       "post": {
         "tags": [
@@ -178,6 +209,51 @@
   },
   "components": {
     "schemas": {
+      "AuditEntry": {
+        "type": "object",
+        "required": [
+          "id",
+          "at",
+          "actor",
+          "action",
+          "objectType",
+          "details"
+        ],
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string",
+            "description": "`user`, `system` (the CLI) or `visitor` (not identified)."
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "details": {},
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "objectId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "objectType": {
+            "type": "string"
+          },
+          "username": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The acting User's username, when the actor is a User."
+          }
+        }
+      },
       "Health": {
         "type": "object",
         "required": [
