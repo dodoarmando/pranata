@@ -32,6 +32,25 @@ enum Command {
     /// Provision the Installation's Village.
     #[command(subcommand)]
     Village(VillageCommand),
+    /// Manage Users.
+    #[command(subcommand)]
+    User(UserCommand),
+}
+
+#[derive(Subcommand)]
+enum UserCommand {
+    /// Create a User with the Administrator Role and print their Access Link.
+    Create {
+        username: String,
+        /// Give the User the Administrator Role; the only kind the CLI creates.
+        #[arg(long, required = true)]
+        admin: bool,
+        #[arg(long, env = "DATABASE_URL", hide_env_values = true)]
+        database_url: String,
+        /// The Installation's public origin, which the Access Link points to.
+        #[arg(long, env = "PRANATA_PUBLIC_ORIGIN")]
+        public_origin: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -86,6 +105,18 @@ async fn main() -> anyhow::Result<()> {
             pranata::db::ensure_schema(&pool).await?;
             pranata::village::set_code(&pool, &code).await?;
             tracing::info!(%code, "village set");
+        }
+        Command::User(UserCommand::Create {
+            username,
+            admin: _,
+            database_url,
+            public_origin,
+        }) => {
+            let pool = PgPool::connect(&database_url).await?;
+            pranata::db::ensure_schema(&pool).await?;
+            let token = pranata::user::create_admin(&pool, &username).await?;
+            tracing::info!(%username, "administrator created");
+            println!("{public_origin}/akses#{token}");
         }
     }
     Ok(())

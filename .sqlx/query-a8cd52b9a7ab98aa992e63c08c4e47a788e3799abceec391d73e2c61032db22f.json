@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO audit_entries (actor, actor_id, action, object_type, object_id, details)\n         VALUES ($1, $2, $3, $4, $5, $6)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Text", "Uuid", "Text", "Text", "Text", "Jsonb"]
+    },
+    "nullable": []
+  },
+  "hash": "a8cd52b9a7ab98aa992e63c08c4e47a788e3799abceec391d73e2c61032db22f"
+}
