@@ -76,8 +76,11 @@ images:
     podman build --platform linux/amd64 -f apps/api/Containerfile -t pranata-api:local .
     podman build --platform linux/amd64 -f apps/web/Containerfile -t pranata-web:local .
 
-# CI job `e2e`: Playwright against the production images and Postgres 18
-e2e: images db-up
+# Playwright against the production images and Postgres 18
+e2e: images e2e-run
+
+# CI job `e2e`: run the e2e tests on images already built (CI loads them from `images`)
+e2e-run: db-up
     #!/usr/bin/env bash
     set -euo pipefail
     # Host network reaches the database on 127.0.0.1; ports differ from `just dev`.
