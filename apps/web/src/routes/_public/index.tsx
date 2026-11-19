@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import { getHealth, type Health } from '../api/generated';
+import { getHealth, type Health } from '../../api/generated';
 
 // Server-only so the browser never needs to reach the API directly.
 const fetchHealth = createServerFn({ method: 'GET' }).handler(async (): Promise<Health> => {
@@ -11,7 +11,7 @@ const fetchHealth = createServerFn({ method: 'GET' }).handler(async (): Promise<
   }
 });
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute('/_public/')({
   loader: () => fetchHealth(),
   component: HomePage,
 });
