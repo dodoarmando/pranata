@@ -156,11 +156,26 @@ export interface UseAccessLink {
 }
 
 export interface User {
+  /** False once deactivated: the User can neither sign in nor keep a session. */
+  active: boolean;
   id: string;
   /** The name of the User's Role. */
   role: string;
   roleId: string;
   username: string;
+}
+
+export interface UserChange {
+  /**
+     * `false` deactivates the User, revoking every session of theirs at once; `true` reactivates.
+     * @nullable
+     */
+  active?: boolean | null;
+  /**
+     * The User's new Role, held from their next request.
+     * @nullable
+     */
+  roleId?: string | null;
 }
 
 export interface Village {
@@ -841,6 +856,80 @@ export const createUser = async (newUser: NewUser, options?: Parameters<typeof a
 
 
 
+export type updateUserResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateUserResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateUserResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateUserResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateUserResponse409 = {
+  data: void
+  status: 409
+}
+
+export type updateUserResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateUserResponse428 = {
+  data: void
+  status: 428
+}
+
+export type updateUserResponseSuccess = (updateUserResponse204) & {
+  headers: Headers;
+};
+export type updateUserResponseError = (updateUserResponse401 | updateUserResponse403 | updateUserResponse404 | updateUserResponse409 | updateUserResponse422 | updateUserResponse428) & {
+  headers: Headers;
+};
+
+export type updateUserResponse = (updateUserResponseSuccess | updateUserResponseError)
+
+export const getUpdateUserUrl = (id: string,) => {
+
+
+
+
+  return `/users/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` outside the Administrator Role, `404` for an unknown
+ * User, `409` when no active Administrator would remain, `422` for an unknown Role, `428`
+ * outside sudo mode.
+ * @summary Changes a User's Role or deactivates or reactivates them, never leaving the Village without
+an active Administrator.
+ */
+export const updateUser = async (id: string,
+    userChange: UserChange, options?: Parameters<typeof apiFetch>[1]): Promise<updateUserResponse> => {
+
+  return apiFetch<updateUserResponse>(getUpdateUserUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(userChange)
+  }
+);}
+
+
+
 export type createAccessLinkResponse201 = {
   data: AccessLink
   status: 201
@@ -861,6 +950,11 @@ export type createAccessLinkResponse404 = {
   status: 404
 }
 
+export type createAccessLinkResponse409 = {
+  data: void
+  status: 409
+}
+
 export type createAccessLinkResponse428 = {
   data: void
   status: 428
@@ -869,7 +963,7 @@ export type createAccessLinkResponse428 = {
 export type createAccessLinkResponseSuccess = (createAccessLinkResponse201) & {
   headers: Headers;
 };
-export type createAccessLinkResponseError = (createAccessLinkResponse401 | createAccessLinkResponse403 | createAccessLinkResponse404 | createAccessLinkResponse428) & {
+export type createAccessLinkResponseError = (createAccessLinkResponse401 | createAccessLinkResponse403 | createAccessLinkResponse404 | createAccessLinkResponse409 | createAccessLinkResponse428) & {
   headers: Headers;
 };
 
@@ -886,7 +980,7 @@ export const getCreateAccessLinkUrl = (id: string,) => {
 /**
  * # Errors
  * `401` without a live session, `403` outside the Administrator Role, `404` for an unknown
- * User, `428` outside sudo mode.
+ * User, `409` for an inactive User, `428` outside sudo mode.
  * @summary Resets a User's access: a new Access Link that voids the previous one, and every session
 of theirs revoked.
  */

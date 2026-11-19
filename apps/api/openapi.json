@@ -470,13 +470,68 @@
         }
       }
     },
+    "/users/{id}": {
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Changes a User's Role or deactivates or reactivates them, never leaving the Village without\nan active Administrator.",
+        "description": "# Errors\n`401` without a live session, `403` outside the Administrator Role, `404` for an unknown\nUser, `409` when no active Administrator would remain, `422` for an unknown Role, `428`\noutside sudo mode.",
+        "operationId": "updateUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The User",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The User is changed"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User is not an Administrator"
+          },
+          "404": {
+            "description": "There is no such User"
+          },
+          "409": {
+            "description": "It would leave no active Administrator"
+          },
+          "422": {
+            "description": "The Role is unknown"
+          },
+          "428": {
+            "description": "The User must re-authenticate first"
+          }
+        }
+      }
+    },
     "/users/{id}/access-link": {
       "post": {
         "tags": [
           "users"
         ],
         "summary": "Resets a User's access: a new Access Link that voids the previous one, and every session\nof theirs revoked.",
-        "description": "# Errors\n`401` without a live session, `403` outside the Administrator Role, `404` for an unknown\nUser, `428` outside sudo mode.",
+        "description": "# Errors\n`401` without a live session, `403` outside the Administrator Role, `404` for an unknown\nUser, `409` for an inactive User, `428` outside sudo mode.",
         "operationId": "createAccessLink",
         "parameters": [
           {
@@ -509,6 +564,9 @@
           },
           "404": {
             "description": "There is no such User"
+          },
+          "409": {
+            "description": "The User is inactive"
           },
           "428": {
             "description": "The User must re-authenticate first"
@@ -893,9 +951,14 @@
           "id",
           "username",
           "roleId",
-          "role"
+          "role",
+          "active"
         ],
         "properties": {
+          "active": {
+            "type": "boolean",
+            "description": "False once deactivated: the User can neither sign in nor keep a session."
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -910,6 +973,26 @@
           },
           "username": {
             "type": "string"
+          }
+        }
+      },
+      "UserChange": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "`false` deactivates the User, revoking every session of theirs at once; `true` reactivates."
+          },
+          "roleId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The User's new Role, held from their next request."
           }
         }
       },

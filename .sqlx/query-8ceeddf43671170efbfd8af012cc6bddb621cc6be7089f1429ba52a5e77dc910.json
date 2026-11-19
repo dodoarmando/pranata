@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS (SELECT FROM users JOIN roles ON roles.id = role_id WHERE administrator AND active) AS \"remains!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "remains!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [null]
+  },
+  "hash": "8ceeddf43671170efbfd8af012cc6bddb621cc6be7089f1429ba52a5e77dc910"
+}

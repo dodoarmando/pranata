@@ -85,6 +85,8 @@ pub struct User {
     role_id: Uuid,
     /// The name of the User's Role.
     role: String,
+    /// False once deactivated: the User can neither sign in nor keep a session.
+    active: bool,
 }
 
 /// Every User, oldest first.
@@ -109,7 +111,7 @@ pub(crate) async fn list(
     session.ensure_administrator()?;
     let users = sqlx::query_as!(
         User,
-        "SELECT users.id, username, role_id, roles.name AS role
+        "SELECT users.id, username, role_id, roles.name AS role, active
          FROM users JOIN roles ON roles.id = role_id ORDER BY users.id",
     )
     .fetch_all(&pool)
@@ -182,13 +184,14 @@ pub(crate) async fn create(
     Ok((StatusCode::CREATED, Json(AccessLink { user_id, token })))
 }
 
-/// Locks the User's row for the transaction, refusing an unknown User with `404`.
-async fn lock(conn: &mut PgConnection, id: Uuid) -> Result<(), ApiError> {
-    sqlx::query_scalar!("SELECT id FROM users WHERE id = $1 FOR UPDATE", id)
+/// Locks the User's row for the transaction and tells whether they are active, refusing an
+/// unknown User with `404`.
+async fn lock(conn: &mut PgConnection, id: Uuid) -> Result<bool, ApiError> {
+    let active = sqlx::query_scalar!("SELECT active FROM users WHERE id = $1 FOR UPDATE", id)
         .fetch_optional(conn)
         .await?
         .ok_or(ApiError::Status(StatusCode::NOT_FOUND))?;
-    Ok(())
+    Ok(active)
 }
 
 /// Revokes every session of the User and records it.
@@ -211,7 +214,7 @@ async fn end_sessions(conn: &mut PgConnection, actor: Actor, id: Uuid) -> sqlx::
 ///
 /// # Errors
 /// `401` without a live session, `403` outside the Administrator Role, `404` for an unknown
-/// User, `428` outside sudo mode.
+/// User, `409` for an inactive User, `428` outside sudo mode.
 #[utoipa::path(
     post,
     path = "/users/{id}/access-link",
@@ -223,6 +226,7 @@ async fn end_sessions(conn: &mut PgConnection, actor: Actor, id: Uuid) -> sqlx::
         (status = UNAUTHORIZED, description = "There is no live session"),
         (status = FORBIDDEN, description = "The User is not an Administrator"),
         (status = NOT_FOUND, description = "There is no such User"),
+        (status = CONFLICT, description = "The User is inactive"),
         (status = PRECONDITION_REQUIRED, description = "The User must re-authenticate first"),
     ),
 )]
@@ -234,7 +238,10 @@ pub(crate) async fn reset(
     session.ensure_administrator()?;
     session.ensure_sudo()?;
     let mut tx = pool.begin().await?;
-    lock(&mut tx, id).await?;
+    // Deactivation voids the Access Link; reactivate first.
+    if !lock(&mut tx, id).await? {
+        return Err(ApiError::Status(StatusCode::CONFLICT));
+    }
     let actor = Actor::User(session.user_id);
     end_sessions(&mut tx, actor, id).await?;
     let token = auth::create_access_link(&mut tx, actor, id).await?;
@@ -271,6 +278,112 @@ pub(crate) async fn revoke_sessions(
     let mut tx = pool.begin().await?;
     lock(&mut tx, id).await?;
     end_sessions(&mut tx, Actor::User(session.user_id), id).await?;
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UserChange {
+    /// The User's new Role, held from their next request.
+    role_id: Option<Uuid>,
+    /// `false` deactivates the User, revoking every session of theirs at once; `true` reactivates.
+    active: Option<bool>,
+}
+
+/// Changes a User's Role or deactivates or reactivates them, never leaving the Village without
+/// an active Administrator.
+///
+/// # Errors
+/// `401` without a live session, `403` outside the Administrator Role, `404` for an unknown
+/// User, `409` when no active Administrator would remain, `422` for an unknown Role, `428`
+/// outside sudo mode.
+#[utoipa::path(
+    patch,
+    path = "/users/{id}",
+    operation_id = "updateUser",
+    tag = "users",
+    params(("id" = Uuid, Path, description = "The User")),
+    request_body = UserChange,
+    responses(
+        (status = NO_CONTENT, description = "The User is changed"),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User is not an Administrator"),
+        (status = NOT_FOUND, description = "There is no such User"),
+        (status = CONFLICT, description = "It would leave no active Administrator"),
+        (status = UNPROCESSABLE_ENTITY, description = "The Role is unknown"),
+        (status = PRECONDITION_REQUIRED, description = "The User must re-authenticate first"),
+    ),
+)]
+pub(crate) async fn update(
+    State(pool): State<PgPool>,
+    session: Session,
+    Path(id): Path<Uuid>,
+    Json(body): Json<UserChange>,
+) -> Result<StatusCode, ApiError> {
+    session.ensure_administrator()?;
+    session.ensure_sudo()?;
+    let mut tx = pool.begin().await?;
+    // Serializes every change that could remove the last active Administrator.
+    sqlx::query!("SELECT id FROM roles WHERE administrator FOR UPDATE")
+        .fetch_one(&mut *tx)
+        .await?;
+    let old = sqlx::query!(
+        "SELECT users.active, roles.name AS role FROM users JOIN roles ON roles.id = role_id
+         WHERE users.id = $1 FOR UPDATE OF users",
+        id,
+    )
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or(ApiError::Status(StatusCode::NOT_FOUND))?;
+    let new = sqlx::query!(
+        r#"UPDATE users SET role_id = coalesce($2, role_id), active = coalesce($3, active) WHERE id = $1
+           RETURNING active, (SELECT name FROM roles WHERE roles.id = users.role_id) AS "role!""#,
+        id,
+        body.role_id,
+        body.active,
+    )
+    .fetch_one(&mut *tx)
+    .await;
+    let new = match new {
+        Err(sqlx::Error::Database(error)) if error.is_foreign_key_violation() => {
+            return Err(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY));
+        }
+        new => new?,
+    };
+    let administrator_remains = sqlx::query_scalar!(
+        r#"SELECT EXISTS (SELECT FROM users JOIN roles ON roles.id = role_id WHERE administrator AND active) AS "remains!""#
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    if !administrator_remains {
+        return Err(ApiError::Status(StatusCode::CONFLICT));
+    }
+    if old.active && !new.active {
+        sqlx::query!("DELETE FROM sessions WHERE user_id = $1", id)
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query!("DELETE FROM access_links WHERE user_id = $1", id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    let mut changes = Vec::new();
+    if old.role != new.role {
+        changes.push(json!({ "field": "role", "from": old.role, "to": new.role }));
+    }
+    if old.active != new.active {
+        changes.push(json!({ "field": "active", "from": old.active, "to": new.active }));
+    }
+    if !changes.is_empty() {
+        audit::record_change(
+            &mut tx,
+            Actor::User(session.user_id),
+            "user.update",
+            ("user", Some(&id.to_string())),
+            changes.into(),
+        )
+        .await?;
+    }
     tx.commit().await?;
     Ok(StatusCode::NO_CONTENT)
 }
