@@ -1,4 +1,4 @@
-pub mod audit;
+mod audit;
 mod auth;
 pub mod db;
 mod health;
@@ -29,6 +29,7 @@ fn api() -> OpenApiRouter<PgPool> {
         .routes(routes!(auth::sign_in))
         .routes(routes!(auth::sign_out))
         .routes(routes!(auth::me))
+        .routes(routes!(audit::list))
 }
 
 /// The HTTP application, ready to serve.

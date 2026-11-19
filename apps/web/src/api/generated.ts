@@ -4,6 +4,23 @@
  * Pranata API
  */
 import { apiFetch } from './fetch';
+export interface AuditEntry {
+  action: string;
+  /** `user`, `system` (the CLI) or `visitor` (not identified). */
+  actor: string;
+  at: string;
+  details: unknown;
+  id: string;
+  /** @nullable */
+  objectId?: string | null;
+  objectType: string;
+  /**
+     * The acting User's username, when the actor is a User.
+     * @nullable
+     */
+  username?: string | null;
+}
+
 export type HealthStatus = typeof HealthStatus[keyof typeof HealthStatus];
 
 
@@ -94,6 +111,56 @@ const getHeaders = (...sources: (RequestInit['headers'] | Record<string, string 
   }
   return Object.fromEntries(layers.reverse().flat()) as Extract<RequestInit['headers'], Record<string, unknown>>;
 };
+
+export type listAuditEntriesResponse200 = {
+  data: AuditEntry[]
+  status: 200
+}
+
+export type listAuditEntriesResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listAuditEntriesResponse403 = {
+  data: void
+  status: 403
+}
+
+export type listAuditEntriesResponseSuccess = (listAuditEntriesResponse200) & {
+  headers: Headers;
+};
+export type listAuditEntriesResponseError = (listAuditEntriesResponse401 | listAuditEntriesResponse403) & {
+  headers: Headers;
+};
+
+export type listAuditEntriesResponse = (listAuditEntriesResponseSuccess | listAuditEntriesResponseError)
+
+export const getListAuditEntriesUrl = () => {
+
+
+
+
+  return `/audit-entries`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `audit.read`.
+ * @summary The latest Audit Entries, newest first.
+ */
+export const listAuditEntries = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listAuditEntriesResponse> => {
+
+  return apiFetch<listAuditEntriesResponse>(getListAuditEntriesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
 
 export type useAccessLinkResponse204 = {
   data: void
