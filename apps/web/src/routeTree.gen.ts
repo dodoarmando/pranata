@@ -10,10 +10,29 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PublicRouteImport } from './routes/_public'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
+import { Route as AksesRouteImport } from './routes/akses'
+import { Route as MasukRouteImport } from './routes/masuk'
 import { Route as PublicIndexRouteImport } from './routes/_public/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
 
 const PublicRoute = PublicRouteImport.update({
   id: '/_public',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AksesRoute = AksesRouteImport.update({
+  id: '/akses',
+  path: '/akses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MasukRoute = MasukRouteImport.update({
+  id: '/masuk',
+  path: '/masuk',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PublicIndexRoute = PublicIndexRouteImport.update({
@@ -21,28 +40,54 @@ const PublicIndexRoute = PublicIndexRouteImport.update({
   path: '/',
   getParentRoute: () => PublicRoute,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
+  '/admin': typeof AdminRouteRouteWithChildren
   '/': typeof PublicIndexRoute
+  '/akses': typeof AksesRoute
+  '/masuk': typeof MasukRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
+  '/akses': typeof AksesRoute
+  '/masuk': typeof MasukRoute
   '/': typeof PublicIndexRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/admin': typeof AdminRouteRouteWithChildren
   '/_public': typeof PublicRouteWithChildren
+  '/akses': typeof AksesRoute
+  '/masuk': typeof MasukRoute
   '/_public/': typeof PublicIndexRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/admin' | '/' | '/akses' | '/masuk' | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/_public' | '/_public/'
+  to: '/akses' | '/masuk' | '/' | '/admin'
+  id:
+    | '__root__'
+    | '/admin'
+    | '/_public'
+    | '/akses'
+    | '/masuk'
+    | '/_public/'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   PublicRoute: typeof PublicRouteWithChildren
+  AksesRoute: typeof AksesRoute
+  MasukRoute: typeof MasukRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -54,6 +99,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/akses': {
+      id: '/akses'
+      path: '/akses'
+      fullPath: '/akses'
+      preLoaderRoute: typeof AksesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/masuk': {
+      id: '/masuk'
+      path: '/masuk'
+      fullPath: '/masuk'
+      preLoaderRoute: typeof MasukRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_public/': {
       id: '/_public/'
       path: '/'
@@ -61,8 +127,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicIndexRouteImport
       parentRoute: typeof PublicRoute
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
   }
 }
+
+interface AdminRouteRouteChildren {
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
 
 interface PublicRouteChildren {
   PublicIndexRoute: typeof PublicIndexRoute
@@ -76,7 +161,10 @@ const PublicRouteWithChildren =
   PublicRoute._addFileChildren(PublicRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   PublicRoute: PublicRouteWithChildren,
+  AksesRoute: AksesRoute,
+  MasukRoute: MasukRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
