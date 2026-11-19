@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT audit_entries.id, at, actor, users.username AS \"username?\", action, object_type, object_id, details\n         FROM audit_entries LEFT JOIN users ON users.id = actor_id\n         ORDER BY at DESC, audit_entries.id DESC LIMIT 100",
+  "query": "SELECT audit_entries.id, at, actor, users.username AS \"username?\", action, object_type, object_id, details\n         FROM audit_entries LEFT JOIN users ON users.id = actor_id\n         WHERE ($1::text IS NULL OR object_type = $1)\n           AND ($2::text IS NULL OR object_id = $2)\n           AND ($3::text IS NULL OR users.username = $3)\n           AND ($4::date IS NULL OR at >= $4::date::timestamp AT TIME ZONE $7)\n           AND ($5::date IS NULL OR at < ($5::date + 1)::timestamp AT TIME ZONE $7)\n           AND ($6::uuid IS NULL OR (at, audit_entries.id) < (SELECT at, id FROM audit_entries WHERE id = $6))\n         ORDER BY at DESC, audit_entries.id DESC LIMIT $8",
   "describe": {
     "columns": [
       {
@@ -93,9 +93,9 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": ["Text", "Text", "Text", "Date", "Date", "Uuid", "Text", "Int8"]
     },
     "nullable": [false, false, false, false, false, false, true, false]
   },
-  "hash": "6d56162505de9312f1a7a844e854a50595273a6ca63e8104d682295cafbf853d"
+  "hash": "4822a73a053158c5c473c253a535541aad5faa82ad8412d118ebf1ed8eec3344"
 }

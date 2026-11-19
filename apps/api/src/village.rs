@@ -35,6 +35,15 @@ impl TimeZone {
             _ => Self::Wib,
         }
     }
+
+    /// The IANA name, for Postgres `AT TIME ZONE`.
+    pub(crate) fn iana(self) -> &'static str {
+        match self {
+            Self::Wib => "Asia/Jakarta",
+            Self::Wita => "Asia/Makassar",
+            Self::Wit => "Asia/Jayapura",
+        }
+    }
 }
 
 #[derive(Serialize, ToSchema)]
