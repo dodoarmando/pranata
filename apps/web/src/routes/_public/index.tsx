@@ -19,9 +19,13 @@ export const Route = createFileRoute('/_public/')({
 function HomePage() {
   const health = Route.useLoaderData();
   return (
-    <main>
-      <h1>Pranata</h1>
-      <p>Status API: {health.status === 'ok' ? 'sehat' : 'tidak tersedia'}</p>
+    <main className="site-container grid gap-3 pt-10 pb-sec md:pt-16">
+      <h1 className="text-[2rem] leading-tight font-semibold tracking-tight md:text-[2.5rem] xl:text-5xl">
+        Pranata
+      </h1>
+      <p className="text-muted-foreground md:text-lg">
+        Status API: {health.status === 'ok' ? 'sehat' : 'tidak tersedia'}
+      </p>
     </main>
   );
 }
