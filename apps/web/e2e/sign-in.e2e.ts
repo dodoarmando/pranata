@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { gzipSync } from 'node:zlib';
+import { expect, type Page, type Response, test } from '@playwright/test';
 
 // `just e2e-run` creates an Administrator from the CLI and passes on the username and link.
 const username = process.env.PRANATA_E2E_USERNAME ?? '';
@@ -134,4 +135,46 @@ test('a User adds a passkey on Akun saya and signs in with it instead of the pas
   await page.goto(`/admin/log-audit?username=${username}`);
   await expect(page.getByRole('table')).toContainText('passkey.create');
   await expect(page.getByRole('table')).toContainText('"passkey":"Laptop uji"');
+});
+
+test('every page has the stylesheet, and the public site stays light', async ({ page }) => {
+  // Admin code is split into route chunks the public home page never fetches.
+  const scripts: Promise<string>[] = [];
+  const collect = (response: Response) => {
+    if (response.ok() && response.request().resourceType() === 'script') {
+      scripts.push(response.text());
+    }
+  };
+  page.on('response', collect);
+  await page.goto('/');
+  await page.waitForLoadState('networkidle');
+  page.off('response', collect);
+  for (const script of await Promise.all(scripts)) expect(script).not.toContain('Menu admin');
+
+  const href = await page.locator('link[rel="stylesheet"]').first().getAttribute('href');
+  const css = await (await page.request.get(href ?? '')).body();
+  expect(gzipSync(css).length, 'gzipped CSS bytes').toBeLessThanOrEqual(30 * 1024);
+
+  // Geist reaches the page only through the stylesheet.
+  const expectStyled = async (path: string) => {
+    await page.goto(path);
+    const font = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
+    expect(font, path).toContain('Geist');
+  };
+  await expectStyled('/');
+  await expectStyled('/akses');
+  await expectStyled('/masuk');
+  await page.getByLabel('Nama pengguna').fill(username);
+  await page.getByLabel('Kata sandi', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Beranda' })).toBeVisible();
+  for (const path of [
+    '/admin',
+    '/admin/akun',
+    '/admin/pengguna',
+    '/admin/peran',
+    '/admin/log-audit',
+  ]) {
+    await expectStyled(path);
+  }
 });
