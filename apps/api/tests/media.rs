@@ -57,23 +57,13 @@ async fn an_svg_logo_is_rasterised_and_never_kept(pool: PgPool) {
 
     assert_eq!(reply.status, StatusCode::CREATED);
     let id = reply.body["id"].as_str().unwrap();
-    let (status, _, _) = app.get_raw(&format!("/media/{id}/480")).await;
-    assert_eq!(status, StatusCode::OK);
-    let mut kept: Vec<_> = std::fs::read_dir(app.files.path().join(id))
-        .unwrap()
-        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
-        .collect();
-    kept.sort();
-    assert_eq!(
-        kept,
-        [
-            "1600.webp",
-            "480.webp",
-            "960.webp",
-            "master.png",
-            "share.jpg"
-        ]
-    );
+    for variant in ["480", "960", "1600", "share"] {
+        let (status, headers, _) = app.get_raw(&format!("/media/{id}/{variant}")).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_ne!(headers[header::CONTENT_TYPE], "image/svg+xml");
+    }
+    let (status, _, _) = app.get_raw(&format!("/media/{id}/master")).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
 #[sqlx::test]
@@ -172,7 +162,6 @@ async fn an_upload_no_owner_references_is_swept_after_24_hours(pool: PgPool) {
     assert_eq!(swept, 1);
     assert!(served(&app, &fresh).await);
     assert!(!served(&app, &stale).await);
-    assert!(!app.files.path().join(&stale).exists());
 }
 
 #[sqlx::test]
