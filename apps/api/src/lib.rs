@@ -70,6 +70,7 @@ fn api() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(health::healthz))
         .routes(routes!(village::get_village))
+        .routes(routes!(village::update_profile))
         .routes(routes!(village::upload_logo))
         .routes(routes!(storage::get_media))
         .routes(routes!(auth::use_access_link))

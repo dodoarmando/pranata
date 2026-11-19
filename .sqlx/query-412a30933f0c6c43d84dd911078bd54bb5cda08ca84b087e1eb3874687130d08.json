@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE files SET sweep_after = now() + interval '24 hours' WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "412a30933f0c6c43d84dd911078bd54bb5cda08ca84b087e1eb3874687130d08"
+}

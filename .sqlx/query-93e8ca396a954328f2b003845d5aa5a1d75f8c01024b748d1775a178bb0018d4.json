@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE village SET address = $1, postal_code = $2, phone = $3, email = $4,\n         latitude = $5, longitude = $6, logo_file_id = $7, pse_number = $8",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Text", "Text", "Text", "Text", "Float8", "Float8", "Uuid", "Text"]
+    },
+    "nullable": []
+  },
+  "hash": "93e8ca396a954328f2b003845d5aa5a1d75f8c01024b748d1775a178bb0018d4"
+}
