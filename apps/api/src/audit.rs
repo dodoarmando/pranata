@@ -6,7 +6,7 @@ use axum::{
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::{PgConnection, PgPool};
+use sqlx::{PgConnection, PgPool, types::Json as Jsonb};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
@@ -54,6 +54,17 @@ pub async fn record(
     Ok(())
 }
 
+/// One field's change in an Audit Entry.
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct FieldChange {
+    field: String,
+    from: Value,
+    to: Value,
+    /// Whether `from` and `to` are shown as `•••` to readers without `resident.sensitive`.
+    #[serde(default)]
+    sensitive: bool,
+}
+
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AuditEntry {
@@ -66,7 +77,11 @@ pub struct AuditEntry {
     action: String,
     object_type: String,
     object_id: Option<String>,
+    /// Context for the action; never sensitive values, which go in `changes` to be masked.
     details: Value,
+    /// The per-field diff of a data change.
+    #[schema(value_type = Vec<FieldChange>)]
+    changes: Jsonb<Vec<FieldChange>>,
 }
 
 const PAGE: usize = 50;
@@ -127,7 +142,8 @@ pub async fn list(
     let zone = code.map_or(TimeZone::Wib, |code| TimeZone::of_province(&code));
     let mut entries = sqlx::query_as!(
         AuditEntry,
-        "SELECT audit_entries.id, at, actor, users.username AS \"username?\", action, object_type, object_id, details
+        "SELECT audit_entries.id, at, actor, users.username AS \"username?\", action, object_type, object_id, details,
+                changes AS \"changes: Jsonb<Vec<FieldChange>>\"
          FROM audit_entries LEFT JOIN users ON users.id = actor_id
          WHERE ($1::text IS NULL OR object_type = $1)
            AND ($2::text IS NULL OR object_id = $2)
@@ -147,6 +163,16 @@ pub async fn list(
     )
     .fetch_all(&pool)
     .await?;
+    if !session.holds("resident.sensitive") {
+        let sensitive = entries
+            .iter_mut()
+            .flat_map(|entry| entry.changes.iter_mut())
+            .filter(|change| change.sensitive);
+        for change in sensitive {
+            change.from = "•••".into();
+            change.to = "•••".into();
+        }
+    }
     let next = (entries.len() > PAGE).then(|| {
         entries.truncate(PAGE);
         entries[PAGE - 1].id

@@ -51,15 +51,17 @@ async fn seed(
     at: &str,
     actor_id: Option<Uuid>,
     (object_type, object_id): (&str, &str),
+    changes: Value,
 ) {
     sqlx::query(
-        "INSERT INTO audit_entries (at, actor, actor_id, action, object_type, object_id)
-         VALUES ($1::timestamptz, CASE WHEN $2::uuid IS NULL THEN 'system' ELSE 'user' END, $2, 'test.change', $3, $4)",
+        "INSERT INTO audit_entries (at, actor, actor_id, action, object_type, object_id, changes)
+         VALUES ($1::timestamptz, CASE WHEN $2::uuid IS NULL THEN 'system' ELSE 'user' END, $2, 'test.change', $3, $4, $5)",
     )
     .bind(at)
     .bind(actor_id)
     .bind(object_type)
     .bind(object_id)
+    .bind(changes)
     .execute(pool)
     .await
     .unwrap();
@@ -112,10 +114,31 @@ async fn filters_by_object_user_and_village_date_combine(pool: PgPool) {
     let cookie = app.sign_in("admin", false).await;
     let (admin, kaur) = (user_id(&pool, "admin").await, user_id(&pool, "kaur").await);
     // 2026-01-01 23:30 and 2026-01-02 00:30 in the Village.
-    seed(&pool, "2026-01-01T14:30:00Z", Some(admin), ("hamlet", "1")).await;
-    seed(&pool, "2026-01-01T15:30:00Z", Some(admin), ("hamlet", "2")).await;
-    seed(&pool, "2026-01-01T16:00:00Z", Some(kaur), ("hamlet", "1")).await;
-    seed(&pool, "2026-01-03T01:00:00Z", None, ("rt", "1")).await;
+    seed(
+        &pool,
+        "2026-01-01T14:30:00Z",
+        Some(admin),
+        ("hamlet", "1"),
+        json!([]),
+    )
+    .await;
+    seed(
+        &pool,
+        "2026-01-01T15:30:00Z",
+        Some(admin),
+        ("hamlet", "2"),
+        json!([]),
+    )
+    .await;
+    seed(
+        &pool,
+        "2026-01-01T16:00:00Z",
+        Some(kaur),
+        ("hamlet", "1"),
+        json!([]),
+    )
+    .await;
+    seed(&pool, "2026-01-03T01:00:00Z", None, ("rt", "1"), json!([])).await;
 
     for (query, expected) in [
         (
@@ -149,8 +172,8 @@ async fn pages_hold_50_entries_newest_first_and_keep_the_filters(pool: PgPool) {
     let cookie = app.sign_in("admin", false).await;
     for i in 0..60 {
         let at = format!("2026-01-01T00:{i:02}:00Z");
-        seed(&pool, &at, None, ("rt", &format!("{i:02}"))).await;
-        seed(&pool, &at, None, ("hamlet", "1")).await;
+        seed(&pool, &at, None, ("rt", &format!("{i:02}")), json!([])).await;
+        seed(&pool, &at, None, ("hamlet", "1"), json!([])).await;
     }
 
     let first = page(&app, &cookie, "?objectType=rt").await;
@@ -161,6 +184,39 @@ async fn pages_hold_50_entries_newest_first_and_keep_the_filters(pool: PgPool) {
     assert_eq!(objects(&first), expected[..50]);
     assert_eq!(objects(&second), expected[50..]);
     assert_eq!(second["next"], Value::Null);
+}
+
+#[sqlx::test]
+async fn sensitive_values_are_masked_without_resident_sensitive(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    app.administrator(&pool, "admin").await;
+    let admin = app.sign_in("admin", false).await;
+    let kades = app.user_with(&pool, "kades", &["audit.read"]).await;
+    seed(
+        &pool,
+        "2026-01-01T00:00:00Z",
+        None,
+        ("resident", "1"),
+        json!([
+            { "field": "name", "from": "Budi", "to": "Budi Santoso" },
+            { "field": "bloodType", "from": null, "to": "O", "sensitive": true },
+        ]),
+    )
+    .await;
+    let changes = |page: Value| page["entries"][0]["changes"].clone();
+
+    assert_eq!(
+        changes(page(&app, &kades, "?objectType=resident").await),
+        json!([
+            { "field": "name", "from": "Budi", "to": "Budi Santoso", "sensitive": false },
+            { "field": "bloodType", "from": "•••", "to": "•••", "sensitive": true },
+        ])
+    );
+    // The Administrator holds every Permission, `resident.sensitive` included.
+    assert_eq!(
+        changes(page(&app, &admin, "?objectType=resident").await)[1],
+        json!({ "field": "bloodType", "from": null, "to": "O", "sensitive": true })
+    );
 }
 
 #[sqlx::test]
