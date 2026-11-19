@@ -77,6 +77,31 @@ pub async fn create_administrator(pool: &PgPool, username: &str) -> anyhow::Resu
     Ok(token)
 }
 
+/// Resets an active User's access from the CLI, as the system: every session of theirs revoked
+/// and a new Access Link, whose token it returns; how the vendor recovers a locked-out
+/// Administrator.
+///
+/// # Errors
+/// When there is no such User, they are inactive, or the database write fails.
+pub async fn reset_access_link(pool: &PgPool, username: &str) -> anyhow::Result<String> {
+    let mut tx = pool.begin().await?;
+    let user = sqlx::query!(
+        "SELECT id, active FROM users WHERE username = $1 FOR UPDATE",
+        username
+    )
+    .fetch_optional(&mut *tx)
+    .await?
+    .with_context(|| format!("there is no User {username:?}"))?;
+    anyhow::ensure!(
+        user.active,
+        "the User {username:?} is inactive; reactivate them first"
+    );
+    end_sessions(&mut tx, Actor::System, user.id).await?;
+    let token = auth::create_access_link(&mut tx, Actor::System, user.id).await?;
+    tx.commit().await?;
+    Ok(token)
+}
+
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct User {

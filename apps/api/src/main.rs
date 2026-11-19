@@ -54,6 +54,15 @@ enum UserCommand {
         #[arg(long, env = "PRANATA_PUBLIC_ORIGIN")]
         public_origin: String,
     },
+    /// Revoke a User's sessions and print a new Access Link, such as for a locked-out Administrator.
+    Reset {
+        username: String,
+        #[arg(long, env = "DATABASE_URL", hide_env_values = true)]
+        database_url: String,
+        /// The Installation's public origin, which the Access Link points to.
+        #[arg(long, env = "PRANATA_PUBLIC_ORIGIN")]
+        public_origin: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -132,6 +141,17 @@ async fn main() -> anyhow::Result<()> {
             pranata::db::ensure_schema(&pool).await?;
             let token = pranata::user::create_administrator(&pool, &username).await?;
             tracing::info!(%username, "administrator created");
+            println!("{}/akses#{token}", public_origin.trim_end_matches('/'));
+        }
+        Command::User(UserCommand::Reset {
+            username,
+            database_url,
+            public_origin,
+        }) => {
+            let pool = PgPool::connect(&database_url).await?;
+            pranata::db::ensure_schema(&pool).await?;
+            let token = pranata::user::reset_access_link(&pool, &username).await?;
+            tracing::info!(%username, "access reset");
             println!("{}/akses#{token}", public_origin.trim_end_matches('/'));
         }
     }
