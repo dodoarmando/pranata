@@ -1,4 +1,4 @@
-use std::{fmt::Write, net::IpAddr};
+use std::{fmt::Write, net::IpAddr, sync::Arc};
 
 use axum::{
     Json,
@@ -19,6 +19,7 @@ use crate::{
     audit::{self, Actor},
     password::{self, PasswordProblem, Verdict},
     role::Permission,
+    throttle::Throttle,
 };
 
 const COOKIE: &str = "__Host-session";
@@ -157,7 +158,8 @@ pub struct SignIn {
 /// Signs in with a username and password, starting a session held in the `__Host-session` cookie.
 ///
 /// # Errors
-/// `401`, the same for every wrong username or password.
+/// `401`, the same for every wrong username or password; `429` without checking them, after 5
+/// failures for the username or 20 attempts a minute from the address.
 #[utoipa::path(
     post,
     path = "/auth/sign-in",
@@ -167,13 +169,18 @@ pub struct SignIn {
     responses(
         (status = NO_CONTENT, description = "Signed in; the response sets the session cookie"),
         (status = UNAUTHORIZED, description = "The username or password is wrong"),
+        (status = TOO_MANY_REQUESTS, description = "Too many attempts for the username or from the address; try again later"),
     ),
 )]
 pub async fn sign_in(
     State(pool): State<PgPool>,
+    State(throttle): State<Arc<Throttle>>,
     headers: HeaderMap,
     Json(body): Json<SignIn>,
 ) -> Result<impl IntoResponse, ApiError> {
+    if !throttle.admit_password(client_ip(&headers), &body.username) {
+        return Err(ApiError::Status(StatusCode::TOO_MANY_REQUESTS));
+    }
     let user = sqlx::query!(
         "SELECT id, password_hash, active FROM users WHERE username = $1",
         body.username,
@@ -220,6 +227,7 @@ pub async fn sign_in(
     )
     .await?;
     tx.commit().await?;
+    throttle.succeeded(&body.username);
     Ok((
         StatusCode::NO_CONTENT,
         AppendHeaders([(header::SET_COOKIE, cookie)]),
@@ -236,7 +244,11 @@ pub(crate) async fn start_session(
     details: serde_json::Value,
 ) -> sqlx::Result<String> {
     let (token, hash) = new_token();
-    let (user_agent, ip) = client(headers);
+    let user_agent = headers
+        .get(header::USER_AGENT)
+        .and_then(|value| value.to_str().ok())
+        .map(|value| value.chars().take(512).collect::<String>());
+    let ip = client_ip(headers).map(|ip| ip.to_string());
     sqlx::query!(
         "INSERT INTO sessions (token_hash, user_id, idle_timeout, expires_at, user_agent, ip) VALUES ($1, $2,
          CASE WHEN $3::boolean THEN interval '7 days' ELSE interval '30 minutes' END,
@@ -264,21 +276,14 @@ pub(crate) async fn start_session(
     ))
 }
 
-/// The browser's user agent and the client's address, as the web app forwards them; shown to
-/// the User only, so a forged value misleads no one else.
-fn client(headers: &HeaderMap) -> (Option<String>, Option<String>) {
-    let user_agent = headers
-        .get(header::USER_AGENT)
-        .and_then(|value| value.to_str().ok())
-        .map(|value| value.chars().take(512).collect());
+/// The client's address as the web app forwards it, which it takes from Caddy alone.
+pub(crate) fn client_ip(headers: &HeaderMap) -> Option<IpAddr> {
     // The last entry is the one the nearest proxy, the web app, vouches for.
-    let ip = headers
+    headers
         .get("x-forwarded-for")
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.rsplit(',').next())
-        .and_then(|value| value.trim().parse::<IpAddr>().ok())
-        .map(|ip| ip.to_string());
-    (user_agent, ip)
+        .and_then(|value| value.trim().parse().ok())
 }
 
 /// The User of a live session, which each use keeps from going idle.
