@@ -130,7 +130,7 @@ async fn main() -> anyhow::Result<()> {
         }) => {
             let pool = PgPool::connect(&database_url).await?;
             pranata::db::ensure_schema(&pool).await?;
-            let token = pranata::user::create_admin(&pool, &username).await?;
+            let token = pranata::user::create_administrator(&pool, &username).await?;
             tracing::info!(%username, "administrator created");
             println!("{}/akses#{token}", public_origin.trim_end_matches('/'));
         }

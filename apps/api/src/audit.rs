@@ -16,7 +16,7 @@ pub enum Actor {
     /// The `pranata` CLI, run by the vendor.
     System,
     /// Someone not (yet) identified, such as a failed sign-in.
-    Visitor,
+    Anonymous,
 }
 
 /// Appends an Audit Entry; call it in the transaction of the change it records.
@@ -33,7 +33,7 @@ pub async fn record(
     let (kind, actor_id) = match actor {
         Actor::User(id) => ("user", Some(id)),
         Actor::System => ("system", None),
-        Actor::Visitor => ("visitor", None),
+        Actor::Anonymous => ("anonymous", None),
     };
     sqlx::query!(
         "INSERT INTO audit_entries (actor, actor_id, action, object_type, object_id, details)
@@ -55,7 +55,7 @@ pub async fn record(
 pub struct AuditEntry {
     id: Uuid,
     at: DateTime<Utc>,
-    /// `user`, `system` (the CLI) or `visitor` (not identified).
+    /// `user`, `system` (the CLI) or `anonymous` (not identified).
     actor: String,
     /// The acting User's username, when the actor is a User.
     username: Option<String>,

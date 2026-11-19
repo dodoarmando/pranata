@@ -8,7 +8,7 @@ use sqlx::PgPool;
 #[sqlx::test]
 async fn signing_in_starts_a_session_that_signing_out_ends(pool: PgPool) {
     let app = TestApp::new(pool.clone());
-    app.admin(&pool, "admin").await;
+    app.administrator(&pool, "admin").await;
 
     let sign_in = app
         .call(
@@ -43,7 +43,7 @@ async fn signing_in_starts_a_session_that_signing_out_ends(pool: PgPool) {
 #[sqlx::test]
 async fn ingat_saya_keeps_the_cookie_for_the_30_day_absolute_lifetime(pool: PgPool) {
     let app = TestApp::new(pool.clone());
-    app.admin(&pool, "admin").await;
+    app.administrator(&pool, "admin").await;
 
     let sign_in = app
         .call(
@@ -60,9 +60,11 @@ async fn ingat_saya_keeps_the_cookie_for_the_30_day_absolute_lifetime(pool: PgPo
 #[sqlx::test]
 async fn wrong_credentials_get_one_generic_answer(pool: PgPool) {
     let app = TestApp::new(pool.clone());
-    app.admin(&pool, "admin").await;
+    app.administrator(&pool, "admin").await;
     // Created, but the Access Link was never used, so there is no password yet.
-    pranata::user::create_admin(&pool, "pending").await.unwrap();
+    pranata::user::create_administrator(&pool, "pending")
+        .await
+        .unwrap();
 
     for (username, password) in [
         ("admin", "not the password at all"),
@@ -87,7 +89,7 @@ async fn wrong_credentials_get_one_generic_answer(pool: PgPool) {
 #[sqlx::test]
 async fn sessions_time_out_when_idle_and_at_their_absolute_limit(pool: PgPool) {
     let app = TestApp::new(pool.clone());
-    app.admin(&pool, "admin").await;
+    app.administrator(&pool, "admin").await;
     let shift = |column: &'static str, by: &'static str| {
         let pool = pool.clone();
         async move {
@@ -155,7 +157,7 @@ async fn a_hash_with_old_parameters_is_replaced_on_sign_in(pool: PgPool) {
     use argon2::{Argon2, Params, password_hash::PasswordHasher};
 
     let app = TestApp::new(pool.clone());
-    app.admin(&pool, "admin").await;
+    app.administrator(&pool, "admin").await;
     let weak = Argon2::from(Params::new(8, 1, 1, None).unwrap())
         .hash_password(PASSWORD.as_bytes())
         .unwrap()

@@ -6,7 +6,7 @@
 import { apiFetch } from './fetch';
 export interface AuditEntry {
   action: string;
-  /** `user`, `system` (the CLI) or `visitor` (not identified). */
+  /** `user`, `system` (the CLI) or `anonymous` (not identified). */
   actor: string;
   at: string;
   details: unknown;

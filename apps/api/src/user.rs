@@ -19,7 +19,7 @@ fn is_valid_username(username: &str) -> bool {
 ///
 /// # Errors
 /// When the username is malformed or already taken, or the database write fails.
-pub async fn create_admin(pool: &PgPool, username: &str) -> anyhow::Result<String> {
+pub async fn create_administrator(pool: &PgPool, username: &str) -> anyhow::Result<String> {
     anyhow::ensure!(
         is_valid_username(username),
         "a username is 3–32 lowercase letters, digits, dots, underscores or dashes, got {username:?}"
