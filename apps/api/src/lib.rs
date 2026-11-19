@@ -72,6 +72,7 @@ fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(user::update))
         .routes(routes!(user::reset))
         .routes(routes!(user::revoke_sessions))
+        .routes(routes!(user::remove_passkeys))
 }
 
 /// The HTTP application, ready to serve at `public_origin` (`https://host`, no trailing slash).

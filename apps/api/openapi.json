@@ -892,6 +892,45 @@
         }
       }
     },
+    "/users/{id}/passkeys": {
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Removes every passkey of a User, who can still sign in with their password.",
+        "description": "# Errors\n`401` without a live session, `403` outside the Administrator Role, `404` for an unknown\nUser, `428` outside sudo mode.",
+        "operationId": "removePasskeys",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The User",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Every passkey of the User is removed"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User is not an Administrator"
+          },
+          "404": {
+            "description": "There is no such User"
+          },
+          "428": {
+            "description": "The User must re-authenticate first"
+          }
+        }
+      }
+    },
     "/users/{id}/sessions": {
       "delete": {
         "tags": [
@@ -1426,7 +1465,8 @@
           "username",
           "roleId",
           "role",
-          "active"
+          "active",
+          "passkeys"
         ],
         "properties": {
           "active": {
@@ -1436,6 +1476,11 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "passkeys": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many passkeys the User has."
           },
           "role": {
             "type": "string",

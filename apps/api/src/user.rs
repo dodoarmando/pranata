@@ -112,6 +112,8 @@ pub struct User {
     role: String,
     /// False once deactivated: the User can neither sign in nor keep a session.
     active: bool,
+    /// How many passkeys the User has.
+    passkeys: i64,
 }
 
 /// Every User, oldest first.
@@ -136,8 +138,9 @@ pub(crate) async fn list(
     session.ensure_administrator()?;
     let users = sqlx::query_as!(
         User,
-        "SELECT users.id, username, role_id, roles.name AS role, active
-         FROM users JOIN roles ON roles.id = role_id ORDER BY users.id",
+        r#"SELECT users.id, username, role_id, roles.name AS role, active,
+                  (SELECT count(*) FROM passkeys WHERE user_id = users.id) AS "passkeys!"
+           FROM users JOIN roles ON roles.id = role_id ORDER BY users.id"#,
     )
     .fetch_all(&pool)
     .await?;
@@ -303,6 +306,50 @@ pub(crate) async fn revoke_sessions(
     let mut tx = pool.begin().await?;
     lock(&mut tx, id).await?;
     end_sessions(&mut tx, Actor::User(session.user_id), id).await?;
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Removes every passkey of a User, who can still sign in with their password.
+///
+/// # Errors
+/// `401` without a live session, `403` outside the Administrator Role, `404` for an unknown
+/// User, `428` outside sudo mode.
+#[utoipa::path(
+    delete,
+    path = "/users/{id}/passkeys",
+    operation_id = "removePasskeys",
+    tag = "users",
+    params(("id" = Uuid, Path, description = "The User")),
+    responses(
+        (status = NO_CONTENT, description = "Every passkey of the User is removed"),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User is not an Administrator"),
+        (status = NOT_FOUND, description = "There is no such User"),
+        (status = PRECONDITION_REQUIRED, description = "The User must re-authenticate first"),
+    ),
+)]
+pub(crate) async fn remove_passkeys(
+    State(pool): State<PgPool>,
+    session: Session,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, ApiError> {
+    session.ensure_administrator()?;
+    session.ensure_sudo()?;
+    let mut tx = pool.begin().await?;
+    lock(&mut tx, id).await?;
+    let removed = sqlx::query!("DELETE FROM passkeys WHERE user_id = $1", id)
+        .execute(&mut *tx)
+        .await?
+        .rows_affected();
+    audit::record(
+        &mut tx,
+        Actor::User(session.user_id),
+        "user.passkeys_remove",
+        ("user", Some(&id.to_string())),
+        json!({ "passkeysRemoved": removed }),
+    )
+    .await?;
     tx.commit().await?;
     Ok(StatusCode::NO_CONTENT)
 }

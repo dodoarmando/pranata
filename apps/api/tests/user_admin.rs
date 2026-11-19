@@ -1,7 +1,7 @@
 mod common;
 
 use axum::http::StatusCode;
-use common::{PASSWORD, TestApp};
+use common::{PASSWORD, TestApp, authenticator::Authenticator};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -194,6 +194,54 @@ async fn the_administrator_revokes_all_of_a_users_sessions(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn the_administrator_removes_all_of_a_users_passkeys(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    let cookie = admin(&app, &pool).await;
+    let (id, token) = create_user(&app, &cookie, "kaur", role_id(&pool, "Operator").await).await;
+    use_link(&app, &token).await;
+    let kaur = app.sign_in("kaur", false).await;
+    app.add_passkey(&kaur, "Laptop", &Authenticator::new(1))
+        .await;
+    app.add_passkey(&kaur, "Ponsel", &Authenticator::new(2))
+        .await;
+    app.add_passkey(&cookie, "Milik admin", &Authenticator::new(3))
+        .await;
+    let listed = app.call("GET", "/users", None, Some(&cookie)).await;
+    let counts: Vec<_> = listed
+        .body
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|user| user["passkeys"].clone())
+        .collect();
+    assert_eq!(counts, [json!(1), json!(2)]);
+
+    let reply = app
+        .call(
+            "DELETE",
+            &format!("/users/{id}/passkeys"),
+            None,
+            Some(&cookie),
+        )
+        .await;
+
+    assert_eq!(reply.status, StatusCode::NO_CONTENT);
+    let own = app.call("GET", "/auth/passkeys", None, Some(&kaur)).await;
+    assert_eq!(own.body, json!([]));
+    let details: Value = sqlx::query_scalar(
+        "SELECT details FROM audit_entries WHERE action = 'user.passkeys_remove' AND object_id = $1",
+    )
+    .bind(&id)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(details, json!({ "passkeysRemoved": 2 }));
+    // The Administrator's own passkey stays.
+    let mine = app.call("GET", "/auth/passkeys", None, Some(&cookie)).await;
+    assert_eq!(mine.body.as_array().unwrap().len(), 1);
+}
+
+#[sqlx::test]
 async fn acting_on_an_unknown_user_is_not_found(pool: PgPool) {
     let app = TestApp::new(pool.clone());
     let cookie = admin(&app, &pool).await;
@@ -202,6 +250,7 @@ async fn acting_on_an_unknown_user_is_not_found(pool: PgPool) {
     for (method, path) in [
         ("POST", format!("/users/{id}/access-link")),
         ("DELETE", format!("/users/{id}/sessions")),
+        ("DELETE", format!("/users/{id}/passkeys")),
     ] {
         let reply = app.call(method, &path, None, Some(&cookie)).await;
         assert_eq!(reply.status, StatusCode::NOT_FOUND, "{method} {path}");
@@ -228,6 +277,7 @@ async fn only_the_administrator_role_manages_users(pool: PgPool) {
         ("POST", "/users".to_owned(), Some(&body)),
         ("POST", format!("/users/{id}/access-link"), None),
         ("DELETE", format!("/users/{id}/sessions"), None),
+        ("DELETE", format!("/users/{id}/passkeys"), None),
     ] {
         let reply = app.call(method, &path, body, Some(&cookie)).await;
         assert_eq!(reply.status, StatusCode::FORBIDDEN, "{method} {path}");
@@ -249,6 +299,7 @@ async fn actions_on_users_need_sudo_mode(pool: PgPool) {
         ("POST", "/users".to_owned(), Some(&body)),
         ("POST", format!("/users/{id}/access-link"), None),
         ("DELETE", format!("/users/{id}/sessions"), None),
+        ("DELETE", format!("/users/{id}/passkeys"), None),
     ] {
         let reply = app.call(method, &path, body, Some(&cookie)).await;
         assert_eq!(
