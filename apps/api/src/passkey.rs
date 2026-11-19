@@ -8,7 +8,8 @@ use anyhow::Context;
 use axum::{
     Json,
     extract::{Path, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode, header},
+    response::{AppendHeaders, IntoResponse},
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -18,13 +19,18 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use webauthn_rs::{
     DEFAULT_AUTHENTICATOR_TIMEOUT, Webauthn, WebauthnBuilder,
-    prelude::{Passkey, PasskeyRegistration, RegisterPublicKeyCredential, Url},
+    fake::{FakePasskeyDistribution, WebauthnFakeCredentialGenerator},
+    prelude::{
+        Passkey, PasskeyAuthentication, PasskeyRegistration, PublicKeyCredential,
+        RegisterPublicKeyCredential, Url,
+    },
 };
+use webauthn_rs_proto::AllowCredentials;
 
 use crate::{
     ApiError,
     audit::{self, Actor},
-    auth::Session,
+    auth::{self, Session},
 };
 
 /// Ceremonies in flight; more are refused, so a flood of challenges cannot exhaust memory.
@@ -66,6 +72,12 @@ pub(crate) struct Passkeys {
     webauthn: Webauthn,
     /// Each registration with the User who started it.
     registrations: Ceremonies<(Uuid, PasskeyRegistration)>,
+    /// Each sign-in with the User it is for, or `None` for a decoy.
+    sign_ins: Ceremonies<Option<(Uuid, PasskeyAuthentication)>>,
+    /// The same believable credentials for each username without passkeys, every time.
+    // shortcut: the key is drawn at start-up, so decoys change on a restart while real
+    // credentials do not; persist it if that ever matters.
+    decoys: WebauthnFakeCredentialGenerator<FakePasskeyDistribution>,
 }
 
 impl Passkeys {
@@ -79,9 +91,13 @@ impl Passkeys {
         let webauthn = WebauthnBuilder::new(rp_id, &origin)
             .and_then(WebauthnBuilder::build)
             .context("cannot set up passkeys")?;
+        let mut key = [0u8; 32];
+        getrandom::fill(&mut key).context("the OS random number generator is unavailable")?;
         Ok(Self {
             webauthn,
             registrations: Ceremonies::new(),
+            sign_ins: Ceremonies::new(),
+            decoys: WebauthnFakeCredentialGenerator::new(&key)?,
         })
     }
 }
@@ -312,4 +328,165 @@ pub(crate) async fn delete(
     .await?;
     tx.commit().await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct PasskeySignInStart {
+    username: String,
+}
+
+/// Starts signing in with a passkey for a username. A username that is unknown, inactive or
+/// without passkeys gets a decoy challenge, so the answer never tells whether it exists.
+///
+/// # Errors
+/// `503` with too many ceremonies in flight.
+#[utoipa::path(
+    post,
+    path = "/auth/passkey-sign-in/challenge",
+    operation_id = "startPasskeySignIn",
+    tag = "auth",
+    request_body = PasskeySignInStart,
+    responses(
+        (status = OK, description = "The options for `navigator.credentials.get`", body = PasskeyChallenge),
+        (status = SERVICE_UNAVAILABLE, description = "Too many ceremonies are in flight; try again"),
+    ),
+)]
+pub(crate) async fn start_sign_in(
+    State(pool): State<PgPool>,
+    State(passkeys): State<Arc<Passkeys>>,
+    Json(body): Json<PasskeySignInStart>,
+) -> Result<Json<PasskeyChallenge>, ApiError> {
+    let rows = sqlx::query!(
+        r#"SELECT user_id, passkey AS "passkey: Jsonb<Passkey>" FROM passkeys
+           JOIN users ON users.id = user_id WHERE username = $1 AND active"#,
+        body.username,
+    )
+    .fetch_all(&pool)
+    .await?;
+    let user_id = rows.first().map(|row| row.user_id);
+    let credentials: Vec<Passkey> = rows.into_iter().map(|row| row.passkey.0).collect();
+    let (mut options, state) = passkeys
+        .webauthn
+        .start_passkey_authentication(&credentials)?;
+    let state = if let Some(user_id) = user_id {
+        Some((user_id, state))
+    } else {
+        options.public_key.allow_credentials = passkeys
+            .decoys
+            .generate(body.username.as_bytes())?
+            .into_iter()
+            .map(|id| AllowCredentials {
+                type_: "public-key".to_owned(),
+                id,
+                // As webauthn-rs sends real ones.
+                transports: None,
+            })
+            .collect();
+        None
+    };
+    let ceremony_id = passkeys
+        .sign_ins
+        .start(state)
+        .ok_or(ApiError::Status(StatusCode::SERVICE_UNAVAILABLE))?;
+    Ok(Json(PasskeyChallenge {
+        ceremony_id,
+        options: serde_json::to_value(options)?,
+    }))
+}
+
+#[derive(Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PasskeySignIn {
+    ceremony_id: Uuid,
+    /// `PublicKeyCredential.toJSON()` of the assertion.
+    #[schema(value_type = Object)]
+    credential: PublicKeyCredential,
+    /// "Ingat saya", as for a password sign-in.
+    remember: bool,
+}
+
+/// Signs in with a passkey instead of the password, starting a session held in the
+/// `__Host-session` cookie.
+///
+/// # Errors
+/// `401`, the same for a decoy, an unknown, used or expired ceremony, a failed assertion and an
+/// inactive User.
+#[utoipa::path(
+    post,
+    path = "/auth/passkey-sign-in",
+    operation_id = "signInWithPasskey",
+    tag = "auth",
+    request_body = PasskeySignIn,
+    responses(
+        (status = NO_CONTENT, description = "Signed in; the response sets the session cookie"),
+        (status = UNAUTHORIZED, description = "The passkey does not sign this User in"),
+    ),
+)]
+pub(crate) async fn finish_sign_in(
+    State(pool): State<PgPool>,
+    State(passkeys): State<Arc<Passkeys>>,
+    headers: HeaderMap,
+    Json(body): Json<PasskeySignIn>,
+) -> Result<impl IntoResponse, ApiError> {
+    let ceremony = passkeys.sign_ins.finish(body.ceremony_id).flatten();
+    let attempted = ceremony.as_ref().map(|(user_id, _)| user_id.to_string());
+    let verified = ceremony.and_then(|(user_id, state)| {
+        let result = passkeys
+            .webauthn
+            .finish_passkey_authentication(&body.credential, &state)
+            .ok()?;
+        Some((user_id, result))
+    });
+    let mut tx = pool.begin().await?;
+    let stored = match &verified {
+        // The User may have been deactivated, or the passkey removed, since the challenge.
+        Some((user_id, result)) => {
+            sqlx::query!(
+                r#"SELECT passkeys.id, name, passkey AS "passkey: Jsonb<Passkey>" FROM passkeys
+                   JOIN users ON users.id = user_id
+                   WHERE user_id = $1 AND credential_id = $2 AND active FOR UPDATE OF passkeys"#,
+                user_id,
+                result.cred_id().as_slice(),
+            )
+            .fetch_optional(&mut *tx)
+            .await?
+        }
+        None => None,
+    };
+    let (Some((user_id, result)), Some(stored)) = (verified, stored) else {
+        audit::record(
+            &mut tx,
+            Actor::Anonymous,
+            "session.sign_in_failed",
+            ("user", attempted.as_deref()),
+            json!({}),
+        )
+        .await?;
+        tx.commit().await?;
+        return Err(ApiError::Status(StatusCode::UNAUTHORIZED));
+    };
+
+    // Keeps the signature counter, which flags a cloned authenticator next time.
+    let mut passkey = stored.passkey.0;
+    passkey.update_credential(&result);
+    sqlx::query!(
+        "UPDATE passkeys SET passkey = $2, last_used_at = now() WHERE id = $1",
+        stored.id,
+        Jsonb(&passkey) as _,
+    )
+    .execute(&mut *tx)
+    .await?;
+    let cookie = auth::start_session(
+        &mut tx,
+        user_id,
+        body.remember,
+        &headers,
+        json!({ "remember": body.remember, "passkey": stored.name }),
+    )
+    .await?;
+    tx.commit().await?;
+    Ok((
+        StatusCode::NO_CONTENT,
+        AppendHeaders([(header::SET_COOKIE, cookie)]),
+    ))
 }

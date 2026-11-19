@@ -62,6 +62,8 @@ fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(passkey::list, passkey::create))
         .routes(routes!(passkey::start_registration))
         .routes(routes!(passkey::delete))
+        .routes(routes!(passkey::start_sign_in))
+        .routes(routes!(passkey::finish_sign_in))
         .routes(routes!(audit::list))
         .routes(routes!(dashboard::get))
         .routes(routes!(role::list, role::create))

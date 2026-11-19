@@ -158,6 +158,69 @@
         }
       }
     },
+    "/auth/passkey-sign-in": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Signs in with a passkey instead of the password, starting a session held in the\n`__Host-session` cookie.",
+        "description": "# Errors\n`401`, the same for a decoy, an unknown, used or expired ceremony, a failed assertion and an\ninactive User.",
+        "operationId": "signInWithPasskey",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeySignIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Signed in; the response sets the session cookie"
+          },
+          "401": {
+            "description": "The passkey does not sign this User in"
+          }
+        }
+      }
+    },
+    "/auth/passkey-sign-in/challenge": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Starts signing in with a passkey for a username. A username that is unknown, inactive or\nwithout passkeys gets a decoy challenge, so the answer never tells whether it exists.",
+        "description": "# Errors\n`503` with too many ceremonies in flight.",
+        "operationId": "startPasskeySignIn",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeySignInStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The options for `navigator.credentials.get`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyChallenge"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Too many ceremonies are in flight; try again"
+          }
+        }
+      }
+    },
     "/auth/passkeys": {
       "get": {
         "tags": [
@@ -1154,6 +1217,39 @@
           },
           "options": {
             "description": "The ceremony options as JSON; `publicKey` goes to `PublicKeyCredential.parse…OptionsFromJSON`."
+          }
+        }
+      },
+      "PasskeySignIn": {
+        "type": "object",
+        "required": [
+          "ceremonyId",
+          "credential",
+          "remember"
+        ],
+        "properties": {
+          "ceremonyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "credential": {
+            "type": "object",
+            "description": "`PublicKeyCredential.toJSON()` of the assertion."
+          },
+          "remember": {
+            "type": "boolean",
+            "description": "\"Ingat saya\", as for a password sign-in."
+          }
+        }
+      },
+      "PasskeySignInStart": {
+        "type": "object",
+        "required": [
+          "username"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
           }
         }
       },

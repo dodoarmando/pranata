@@ -168,3 +168,155 @@ async fn a_user_removes_their_own_passkeys_only(pool: PgPool) {
     let gone = app.call("DELETE", &path, None, Some(&cookie)).await;
     assert_eq!(gone.status, StatusCode::NOT_FOUND);
 }
+
+async fn challenge(app: &TestApp, username: &str) -> Value {
+    let body = json!({ "username": username });
+    let reply = app
+        .call("POST", "/auth/passkey-sign-in/challenge", Some(&body), None)
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{:?}", reply.body);
+    reply.body
+}
+
+async fn finish_sign_in(app: &TestApp, challenge: &Value, credential: Value) -> common::Reply {
+    let body = json!({ "ceremonyId": challenge["ceremonyId"], "credential": credential, "remember": true });
+    app.call("POST", "/auth/passkey-sign-in", Some(&body), None)
+        .await
+}
+
+#[sqlx::test]
+async fn a_passkey_signs_the_user_in_without_their_password(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    app.administrator(&pool, "admin").await;
+    let cookie = app.sign_in("admin", false).await;
+    let mut passkey = Authenticator::new(1);
+    app.add_passkey(&cookie, "Laptop", &passkey).await;
+
+    let challenge = challenge(&app, "admin").await;
+    let reply = finish_sign_in(&app, &challenge, passkey.sign_in(&challenge["options"])).await;
+
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{:?}", reply.body);
+    assert!(reply.set_cookie().contains("Max-Age=2592000"));
+    let session = reply.set_cookie().split(';').next().unwrap().to_owned();
+    let me = app.call("GET", "/auth/me", None, Some(&session)).await;
+    assert_eq!(me.body["username"], "admin");
+    assert_eq!(
+        last_entry(&pool).await,
+        (
+            "session.sign_in".to_owned(),
+            Some(user_id(&pool, "admin").await),
+            json!({ "remember": true, "passkey": "Laptop" })
+        )
+    );
+    assert!(list(&app, &session).await[0]["lastUsedAt"].is_string());
+    // A passkey sign-in is a fresh authentication, so sudo mode holds.
+    let start = app
+        .call("POST", "/auth/passkeys/registration", None, Some(&session))
+        .await;
+    assert_eq!(start.status, StatusCode::OK);
+}
+
+#[sqlx::test]
+async fn a_forged_or_replayed_assertion_is_refused_and_audited(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    app.administrator(&pool, "admin").await;
+    let cookie = app.sign_in("admin", false).await;
+    let mut passkey = Authenticator::new(1);
+    app.add_passkey(&cookie, "Laptop", &passkey).await;
+    let admin = user_id(&pool, "admin").await;
+
+    let first = challenge(&app, "admin").await;
+    let forged = finish_sign_in(&app, &first, passkey.forged().sign_in(&first["options"])).await;
+    assert_eq!(forged.status, StatusCode::UNAUTHORIZED);
+    assert_eq!(
+        last_entry(&pool).await,
+        (
+            "session.sign_in_failed".to_owned(),
+            Some(admin.clone()),
+            json!({})
+        )
+    );
+
+    let second = challenge(&app, "admin").await;
+    let credential = passkey.sign_in(&second["options"]);
+    let signed_in = finish_sign_in(&app, &second, credential.clone()).await;
+    assert_eq!(signed_in.status, StatusCode::NO_CONTENT);
+    let replayed = finish_sign_in(&app, &second, credential).await;
+    assert_eq!(replayed.status, StatusCode::UNAUTHORIZED);
+}
+
+#[sqlx::test]
+async fn unknown_users_get_a_decoy_challenge_shaped_like_a_real_one(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    app.administrator(&pool, "admin").await;
+    app.administrator(&pool, "nopasskey").await;
+    let cookie = app.sign_in("admin", false).await;
+    app.add_passkey(&cookie, "Laptop", &Authenticator::new(1))
+        .await;
+
+    let real = challenge(&app, "admin").await;
+    // The option keys, and each allowed credential's without its id, whose number and lengths
+    // a decoy draws from those of real passkeys.
+    let shape = |challenge: &Value| {
+        let options = challenge["options"]["publicKey"].as_object().unwrap();
+        let mut keys: Vec<_> = options.keys().cloned().collect();
+        keys.sort();
+        let credentials: Vec<_> = options["allowCredentials"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|credential| (credential["type"].clone(), credential["transports"].clone()))
+            .collect();
+        (keys, credentials)
+    };
+    let (real_keys, real_credentials) = shape(&real);
+    for username in ["nobody", "nopasskey"] {
+        let decoy = challenge(&app, username).await;
+        let (keys, credentials) = shape(&decoy);
+        assert_eq!(keys, real_keys, "{username}");
+        assert!(
+            credentials
+                .iter()
+                .all(|credential| *credential == real_credentials[0])
+        );
+        assert_ne!(
+            decoy["options"]["publicKey"]["challenge"],
+            real["options"]["publicKey"]["challenge"]
+        );
+        // The same decoy credential each time, as a real User's would be.
+        let again = challenge(&app, username).await;
+        assert_eq!(
+            again["options"]["publicKey"]["allowCredentials"],
+            decoy["options"]["publicKey"]["allowCredentials"]
+        );
+        let reply = finish_sign_in(
+            &app,
+            &decoy,
+            Authenticator::new(1).sign_in(&decoy["options"]),
+        )
+        .await;
+        assert_eq!(reply.status, StatusCode::UNAUTHORIZED, "{username}");
+        assert_eq!(last_entry(&pool).await.0, "session.sign_in_failed");
+    }
+}
+
+#[sqlx::test]
+async fn a_deactivated_user_cannot_sign_in_with_a_passkey(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    app.administrator(&pool, "admin").await;
+    let cookie = app.sign_in("admin", false).await;
+    let mut passkey = Authenticator::new(1);
+    app.add_passkey(&cookie, "Laptop", &passkey).await;
+    let started = challenge(&app, "admin").await;
+    sqlx::query("UPDATE users SET active = false")
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    // Deactivated mid-ceremony, and before it starts.
+    let reply = finish_sign_in(&app, &started, passkey.sign_in(&started["options"])).await;
+    assert_eq!(reply.status, StatusCode::UNAUTHORIZED);
+    let decoy = challenge(&app, "admin").await;
+    let reply = finish_sign_in(&app, &decoy, passkey.sign_in(&decoy["options"])).await;
+    assert_eq!(reply.status, StatusCode::UNAUTHORIZED);
+}

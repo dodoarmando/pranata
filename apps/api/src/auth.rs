@@ -211,42 +211,56 @@ pub async fn sign_in(
         .execute(&mut *tx)
         .await?;
     }
+    let cookie = start_session(
+        &mut tx,
+        user.id,
+        body.remember,
+        &headers,
+        json!({ "remember": body.remember }),
+    )
+    .await?;
+    tx.commit().await?;
+    Ok((
+        StatusCode::NO_CONTENT,
+        AppendHeaders([(header::SET_COOKIE, cookie)]),
+    ))
+}
+
+/// Starts a session for a User who just signed in and records it with `details`, returning
+/// the `Set-Cookie` value that carries it.
+pub(crate) async fn start_session(
+    conn: &mut PgConnection,
+    user_id: Uuid,
+    remember: bool,
+    headers: &HeaderMap,
+    details: serde_json::Value,
+) -> sqlx::Result<String> {
     let (token, hash) = new_token();
-    let (user_agent, ip) = client(&headers);
+    let (user_agent, ip) = client(headers);
     sqlx::query!(
         "INSERT INTO sessions (token_hash, user_id, idle_timeout, expires_at, user_agent, ip) VALUES ($1, $2,
          CASE WHEN $3::boolean THEN interval '7 days' ELSE interval '30 minutes' END,
          now() + CASE WHEN $3::boolean THEN interval '30 days' ELSE interval '12 hours' END, $4, $5)",
         hash,
-        user.id,
-        body.remember,
+        user_id,
+        remember,
         user_agent,
         ip,
     )
-    .execute(&mut *tx)
+    .execute(&mut *conn)
     .await?;
     audit::record(
-        &mut tx,
-        Actor::User(user.id),
+        conn,
+        Actor::User(user_id),
         "session.sign_in",
-        ("user", Some(&user.id.to_string())),
-        json!({ "remember": body.remember }),
+        ("user", Some(&user_id.to_string())),
+        details,
     )
     .await?;
-    tx.commit().await?;
-
     // Max-Age only with "Ingat saya", set to the absolute lifetime; otherwise it dies with the browser.
-    let max_age = if body.remember {
-        "; Max-Age=2592000"
-    } else {
-        ""
-    };
-    Ok((
-        StatusCode::NO_CONTENT,
-        AppendHeaders([(
-            header::SET_COOKIE,
-            format!("{COOKIE}={token}; Path=/; Secure; HttpOnly; SameSite=Lax{max_age}"),
-        )]),
+    let max_age = if remember { "; Max-Age=2592000" } else { "" };
+    Ok(format!(
+        "{COOKIE}={token}; Path=/; Secure; HttpOnly; SameSite=Lax{max_age}"
     ))
 }
 
