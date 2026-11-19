@@ -97,6 +97,10 @@ export const Permission = {
   auditread: 'audit.read',
 } as const;
 
+export interface Reauthenticate {
+  password: string;
+}
+
 export interface Role {
   /** The built-in, locked Administrator Role, which holds every Permission whatever `permissions` says. */
   administrator: boolean;
@@ -331,6 +335,51 @@ export const getMe = async ( options?: Parameters<typeof apiFetch>[1]): Promise<
 
 
 
+export type reauthenticateResponse204 = {
+  data: void
+  status: 204
+}
+
+export type reauthenticateResponse401 = {
+  data: void
+  status: 401
+}
+
+export type reauthenticateResponseSuccess = (reauthenticateResponse204) & {
+  headers: Headers;
+};
+export type reauthenticateResponseError = (reauthenticateResponse401) & {
+  headers: Headers;
+};
+
+export type reauthenticateResponse = (reauthenticateResponseSuccess | reauthenticateResponseError)
+
+export const getReauthenticateUrl = () => {
+
+
+
+
+  return `/auth/reauthenticate`
+}
+
+/**
+ * # Errors
+ * `401` without a live session or for a wrong password.
+ * @summary Confirms the signed-in User's password, entering sudo mode for 15 minutes.
+ */
+export const reauthenticate = async (reauthenticateBody: Reauthenticate, options?: Parameters<typeof apiFetch>[1]): Promise<reauthenticateResponse> => {
+
+  return apiFetch<reauthenticateResponse>(getReauthenticateUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(reauthenticateBody)
+  }
+);}
+
+
+
 export type signInResponse204 = {
   data: void
   status: 204
@@ -539,10 +588,15 @@ export type createRoleResponse422 = {
   status: 422
 }
 
+export type createRoleResponse428 = {
+  data: void
+  status: 428
+}
+
 export type createRoleResponseSuccess = (createRoleResponse201) & {
   headers: Headers;
 };
-export type createRoleResponseError = (createRoleResponse401 | createRoleResponse403 | createRoleResponse409 | createRoleResponse422) & {
+export type createRoleResponseError = (createRoleResponse401 | createRoleResponse403 | createRoleResponse409 | createRoleResponse422 | createRoleResponse428) & {
   headers: Headers;
 };
 
@@ -559,7 +613,7 @@ export const getCreateRoleUrl = () => {
 /**
  * # Errors
  * `401` without a live session, `403` outside the Administrator Role, `409` for a taken
- * name, `422` for a blank name or a Permission outside the catalog.
+ * name, `428` outside sudo mode, `422` for a blank name or a Permission outside the catalog.
  * @summary Creates a Role from the Permission catalog.
  */
 export const createRole = async (roleInput: RoleInput, options?: Parameters<typeof apiFetch>[1]): Promise<createRoleResponse> => {
@@ -605,10 +659,15 @@ export type updateRoleResponse422 = {
   status: 422
 }
 
+export type updateRoleResponse428 = {
+  data: void
+  status: 428
+}
+
 export type updateRoleResponseSuccess = (updateRoleResponse204) & {
   headers: Headers;
 };
-export type updateRoleResponseError = (updateRoleResponse401 | updateRoleResponse403 | updateRoleResponse404 | updateRoleResponse409 | updateRoleResponse422) & {
+export type updateRoleResponseError = (updateRoleResponse401 | updateRoleResponse403 | updateRoleResponse404 | updateRoleResponse409 | updateRoleResponse422 | updateRoleResponse428) & {
   headers: Headers;
 };
 
@@ -625,7 +684,8 @@ export const getUpdateRoleUrl = (id: string,) => {
 /**
  * # Errors
  * `401` without a live session, `403` outside the Administrator Role, `404` for an unknown
- * Role, `409` for the locked Administrator Role or a taken name, `422` as for creating.
+ * Role, `409` for the locked Administrator Role or a taken name, `428` outside sudo mode,
+ * `422` as for creating.
  * @summary Renames a Role and replaces its Permissions; its Users hold them from their next request.
  */
 export const updateRole = async (id: string,
