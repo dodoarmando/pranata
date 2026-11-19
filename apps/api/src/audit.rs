@@ -1,16 +1,24 @@
+use std::fmt::Write;
+
 use axum::{
     Json,
     extract::{Query, State},
     http::StatusCode,
 };
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, FixedOffset, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{PgConnection, PgPool, types::Json as Jsonb};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use crate::{ApiError, auth::Session, role::Permission, village::TimeZone};
+use crate::{
+    ApiError,
+    auth::Session,
+    export::{self, EncryptedFile, ExportReason},
+    role::Permission,
+    village::TimeZone,
+};
 
 /// Who an Audit Entry says acted.
 #[derive(Clone, Copy)]
@@ -130,19 +138,25 @@ pub struct AuditEntry {
 const PAGE: usize = 50;
 
 /// Filters on the Audit Log; they all apply together.
-#[derive(Deserialize, IntoParams)]
+#[derive(Deserialize, Serialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 #[into_params(parameter_in = Query, rename_all = "camelCase")]
 pub struct AuditFilter {
+    #[serde(skip_serializing_if = "Option::is_none")]
     object_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     object_id: Option<String>,
     /// The acting User's username.
+    #[serde(skip_serializing_if = "Option::is_none")]
     username: Option<String>,
     /// The first day, in the Village's time zone.
+    #[serde(skip_serializing_if = "Option::is_none")]
     from: Option<NaiveDate>,
     /// The last day, inclusive, in the Village's time zone.
+    #[serde(skip_serializing_if = "Option::is_none")]
     to: Option<NaiveDate>,
-    /// The `next` of the previous page.
+    /// Only entries older than this one, such as the `next` of the previous page.
+    #[serde(skip_serializing_if = "Option::is_none")]
     before: Option<Uuid>,
 }
 
@@ -178,9 +192,25 @@ pub async fn list(
     if !session.holds(Permission::AuditRead) {
         return Err(ApiError::Status(StatusCode::FORBIDDEN));
     }
+    let (mut entries, _) = matching(&pool, &session, &filter, Some(PAGE + 1)).await?;
+    let next = (entries.len() > PAGE).then(|| {
+        entries.truncate(PAGE);
+        entries[PAGE - 1].id
+    });
+    Ok(Json(AuditPage { entries, next }))
+}
+
+/// The Audit Entries matching `filter`, newest first and at most `limit`, masked for `session`;
+/// and the Village's time zone their days are taken in.
+async fn matching(
+    pool: &PgPool,
+    session: &Session,
+    filter: &AuditFilter,
+    limit: Option<usize>,
+) -> Result<(Vec<AuditEntry>, TimeZone), ApiError> {
     // Before the Village Code is set, its days are taken as WIB.
     let code = sqlx::query_scalar!("SELECT code FROM village")
-        .fetch_optional(&pool)
+        .fetch_optional(pool)
         .await?;
     let zone = code.map_or(TimeZone::Wib, |code| TimeZone::of_province(&code));
     let mut entries = sqlx::query_as!(
@@ -202,9 +232,9 @@ pub async fn list(
         filter.to,
         filter.before,
         zone.iana(),
-        i64::try_from(PAGE + 1)?,
+        limit.map(i64::try_from).transpose()?,
     )
-    .fetch_all(&pool)
+    .fetch_all(pool)
     .await?;
     // shortcut: only the Administrator sees sensitive values until R2 adds `resident.sensitive` to the catalog.
     if !session.administrator {
@@ -217,9 +247,127 @@ pub async fn list(
             change.to = "•••".into();
         }
     }
-    let next = (entries.len() > PAGE).then(|| {
-        entries.truncate(PAGE);
-        entries[PAGE - 1].id
-    });
-    Ok(Json(AuditPage { entries, next }))
+    Ok((entries, zone))
+}
+
+/// Exports every Audit Entry matching the filter as a CSV, masked like the Audit Log; see the
+/// export mechanism.
+///
+/// # Errors
+/// `401` without a live session, `403` without `audit.read`, `422` without a reason, `428`
+/// outside sudo mode.
+#[utoipa::path(
+    post,
+    path = "/audit-entries/export",
+    operation_id = "exportAuditEntries",
+    tag = "audit",
+    params(AuditFilter),
+    request_body = ExportReason,
+    responses(
+        (status = OK, description = "The matching Audit Entries as `log-audit.csv`, encrypted", body = EncryptedFile),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User may not read the Audit Log"),
+        (status = UNPROCESSABLE_ENTITY, description = "The reason is missing"),
+        (status = PRECONDITION_REQUIRED, description = "The User must re-authenticate first"),
+    ),
+)]
+pub async fn export(
+    State(pool): State<PgPool>,
+    session: Session,
+    Query(filter): Query<AuditFilter>,
+    Json(reason): Json<ExportReason>,
+) -> Result<Json<EncryptedFile>, ApiError> {
+    if !session.holds(Permission::AuditRead) {
+        return Err(ApiError::Status(StatusCode::FORBIDDEN));
+    }
+    let details = serde_json::json!({ "filter": filter });
+    let csv = async {
+        let (entries, zone) = matching(&pool, &session, &filter, None).await?;
+        Ok(csv(&entries, zone).into_bytes())
+    };
+    let file = export::encrypted(
+        &pool,
+        &session,
+        reason,
+        ("audit_log", details),
+        "log-audit.csv",
+        csv,
+    )
+    .await?;
+    Ok(Json(file))
+}
+
+/// The entries as the Audit Log page shows them, in UTF-8 with a BOM so spreadsheets read `•••`.
+fn csv(entries: &[AuditEntry], zone: TimeZone) -> String {
+    let offset = FixedOffset::east_opt(zone.utc_offset_hours() * 3600).expect("within a day");
+    let header = [
+        &format!("Waktu ({})", zone.abbreviation()),
+        "Pelaku",
+        "Tindakan",
+        "Jenis objek",
+        "ID objek",
+        "Perubahan",
+        "Keterangan",
+    ];
+    let mut out = String::from("\u{feff}");
+    row(&mut out, &header);
+    for entry in entries {
+        let changes = entry
+            .changes
+            .iter()
+            .map(|change| {
+                format!(
+                    "{}: {} → {}",
+                    change.field,
+                    shown(&change.from),
+                    shown(&change.to)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("; ");
+        let details = if entry.details == Value::Object(serde_json::Map::new()) {
+            String::new()
+        } else {
+            entry.details.to_string()
+        };
+        let at = entry.at.with_timezone(&offset).format("%Y-%m-%d %H:%M:%S");
+        let actor = match (&entry.username, entry.actor.as_str()) {
+            (Some(username), _) => username,
+            (None, "system") => "Sistem",
+            (None, _) => "Tidak dikenal",
+        };
+        row(
+            &mut out,
+            &[
+                &at.to_string(),
+                actor,
+                &entry.action,
+                &entry.object_type,
+                entry.object_id.as_deref().unwrap_or_default(),
+                &changes,
+                &details,
+            ],
+        );
+    }
+    out
+}
+
+fn shown(value: &Value) -> String {
+    match value {
+        Value::Null => "(kosong)".to_owned(),
+        Value::String(text) => text.clone(),
+        other => other.to_string(),
+    }
+}
+
+/// Appends one CSV row, every cell quoted; a cell that a spreadsheet would run as a formula
+/// starts with `'` instead.
+fn row(out: &mut String, cells: &[&str]) {
+    for (i, cell) in cells.iter().enumerate() {
+        let formula = cell.starts_with(['=', '+', '-', '@', '\t', '\r']);
+        let separator = if i == 0 { "" } else { "," };
+        let quote = if formula { "'" } else { "" };
+        let _ = write!(out, "{separator}\"{quote}{}\"", cell.replace('"', "\"\""));
+    }
+    out.push_str("\r\n");
 }

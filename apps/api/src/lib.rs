@@ -2,6 +2,7 @@ mod audit;
 mod auth;
 mod dashboard;
 pub mod db;
+mod export;
 mod health;
 mod passkey;
 mod password;
@@ -74,6 +75,7 @@ fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(passkey::start_sign_in))
         .routes(routes!(passkey::finish_sign_in))
         .routes(routes!(audit::list))
+        .routes(routes!(audit::export))
         .routes(routes!(dashboard::get))
         .routes(routes!(role::list, role::create))
         .routes(routes!(role::update))

@@ -67,7 +67,7 @@
           {
             "name": "before",
             "in": "query",
-            "description": "The `next` of the previous page.",
+            "description": "Only entries older than this one, such as the `next` of the previous page.",
             "required": false,
             "schema": {
               "type": "string",
@@ -91,6 +91,107 @@
           },
           "403": {
             "description": "The User may not read the Audit Log"
+          }
+        }
+      }
+    },
+    "/audit-entries/export": {
+      "post": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "Exports every Audit Entry matching the filter as a CSV, masked like the Audit Log; see the\nexport mechanism.",
+        "description": "# Errors\n`401` without a live session, `403` without `audit.read`, `422` without a reason, `428`\noutside sudo mode.",
+        "operationId": "exportAuditEntries",
+        "parameters": [
+          {
+            "name": "objectType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "objectId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "query",
+            "description": "The acting User's username.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "The first day, in the Village's time zone.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "The last day, inclusive, in the Village's time zone.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "description": "Only entries older than this one, such as the `next` of the previous page.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportReason"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The matching Audit Entries as `log-audit.csv`, encrypted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EncryptedFile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not read the Audit Log"
+          },
+          "422": {
+            "description": "The reason is missing"
+          },
+          "428": {
+            "description": "The User must re-authenticate first"
           }
         }
       }
@@ -1141,6 +1242,41 @@
           "activeUsers": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "EncryptedFile": {
+        "type": "object",
+        "description": "An exported file, encrypted; only `password` opens it.",
+        "required": [
+          "fileName",
+          "password",
+          "content"
+        ],
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "The AES-256 ZIP holding the one file, in base64."
+          },
+          "fileName": {
+            "type": "string",
+            "description": "The ZIP's name, such as `log-audit.zip`."
+          },
+          "password": {
+            "type": "string",
+            "description": "The one-time password, to show once; Pranata keeps no copy."
+          }
+        }
+      },
+      "ExportReason": {
+        "type": "object",
+        "description": "Why the User exports; required (Permenkomdigi 5/2025 Art. 93) and kept in the Audit Entry.",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string"
           }
         }
       },
