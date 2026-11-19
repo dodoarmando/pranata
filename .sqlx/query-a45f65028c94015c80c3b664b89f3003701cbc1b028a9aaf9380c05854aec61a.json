@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE village SET vision = $1, missions = $2, rpjmdes_start_year = $3,\n         rpjmdes_end_year = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Text", "TextArray", "Int4", "Int4"]
+    },
+    "nullable": []
+  },
+  "hash": "a45f65028c94015c80c3b664b89f3003701cbc1b028a9aaf9380c05854aec61a"
+}

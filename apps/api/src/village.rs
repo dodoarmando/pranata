@@ -341,6 +341,148 @@ pub(crate) async fn update_profile(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// The Village's one current Vision and Mission, with the `RPJMDes` period it belongs to.
+#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct VisionMission {
+    vision: String,
+    /// In order; blank ones are dropped.
+    missions: Vec<String>,
+    /// The first year of the `RPJMDes` period.
+    start_year: i32,
+    /// The last year of the `RPJMDes` period.
+    end_year: i32,
+}
+
+impl VisionMission {
+    /// Trims every text, drops blank missions, and refuses with `422` what is malformed.
+    fn normalized(self) -> Result<Self, ApiError> {
+        let vision = self.vision.trim().to_owned();
+        let missions: Vec<String> = self
+            .missions
+            .iter()
+            .map(|mission| mission.trim())
+            .filter(|mission| !mission.is_empty())
+            .map(str::to_owned)
+            .collect();
+        let ok = (1..=1000).contains(&vision.chars().count())
+            && (1..=20).contains(&missions.len())
+            && missions
+                .iter()
+                .all(|mission| mission.chars().count() <= 1000)
+            && 2000 <= self.start_year
+            && self.start_year < self.end_year
+            && self.end_year <= 2100;
+        if ok {
+            Ok(Self {
+                vision,
+                missions,
+                ..self
+            })
+        } else {
+            Err(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY))
+        }
+    }
+}
+
+/// The Village's current Vision and Mission, for the public profile page.
+///
+/// # Errors
+/// `404` before it is first saved, `500` when the database is unreachable.
+#[utoipa::path(
+    get,
+    path = "/village/vision-mission",
+    operation_id = "getVisionMission",
+    tag = "village",
+    responses(
+        (status = OK, description = "The current Vision and Mission", body = VisionMission),
+        (status = NOT_FOUND, description = "No Vision and Mission is saved yet"),
+    ),
+)]
+pub(crate) async fn get_vision_mission(
+    State(pool): State<PgPool>,
+) -> Result<Json<VisionMission>, ApiError> {
+    sqlx::query_as!(
+        VisionMission,
+        r#"SELECT vision AS "vision!", missions AS "missions!",
+         rpjmdes_start_year AS "start_year!", rpjmdes_end_year AS "end_year!"
+         FROM village WHERE vision IS NOT NULL"#
+    )
+    .fetch_optional(&pool)
+    .await?
+    .map(Json)
+    .ok_or(ApiError::Status(StatusCode::NOT_FOUND))
+}
+
+/// Replaces the Village's Vision and Mission; the one replaced lives on in the Audit Log.
+///
+/// # Errors
+/// `401` without a live session, `403` without `village.manage`, `404` before the Village
+/// Code is set, `422` for a blank or overlong text, no mission, over 20 missions, or a period
+/// outside 2000–2100 or not ending after it starts.
+#[utoipa::path(
+    put,
+    path = "/village/vision-mission",
+    operation_id = "updateVisionMission",
+    tag = "village",
+    request_body = VisionMission,
+    responses(
+        (status = NO_CONTENT, description = "The Vision and Mission is saved"),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User may not manage the Village"),
+        (status = NOT_FOUND, description = "The Village Code is not set yet"),
+        (status = UNPROCESSABLE_ENTITY, description = "A field is blank, too long or out of range"),
+    ),
+)]
+pub(crate) async fn update_vision_mission(
+    State(pool): State<PgPool>,
+    session: Session,
+    Json(body): Json<VisionMission>,
+) -> Result<StatusCode, ApiError> {
+    if !session.holds(Permission::VillageManage) {
+        return Err(ApiError::Status(StatusCode::FORBIDDEN));
+    }
+    let new = body.normalized()?;
+    let mut tx = pool.begin().await?;
+    let old = sqlx::query!(
+        "SELECT code, vision, missions, rpjmdes_start_year, rpjmdes_end_year FROM village
+         FOR UPDATE"
+    )
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or(ApiError::Status(StatusCode::NOT_FOUND))?;
+    sqlx::query!(
+        "UPDATE village SET vision = $1, missions = $2, rpjmdes_start_year = $3,
+         rpjmdes_end_year = $4",
+        new.vision,
+        &new.missions,
+        new.start_year,
+        new.end_year,
+    )
+    .execute(&mut *tx)
+    .await?;
+    // Every column is set or none is (the table's CHECK); serde keeps the keys in step.
+    let from = serde_json::to_value(old.vision.map(|vision| VisionMission {
+        vision,
+        missions: old.missions.unwrap_or_default(),
+        start_year: old.rpjmdes_start_year.unwrap_or_default(),
+        end_year: old.rpjmdes_end_year.unwrap_or_default(),
+    }))?;
+    let changes = diff(&from, &serde_json::to_value(&new)?);
+    if !changes.is_empty() {
+        audit::record_change(
+            &mut tx,
+            Actor::User(session.user_id),
+            "village.update_vision_mission",
+            ("village", Some(&old.code)),
+            changes.into(),
+        )
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// The `{ field, from, to }` of every field of `to` whose value differs in `from`.
 fn diff(from: &Value, to: &Value) -> Vec<Value> {
     to.as_object()

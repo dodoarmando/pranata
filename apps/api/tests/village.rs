@@ -291,3 +291,158 @@ async fn setting_the_code_again_keeps_the_profile(pool: PgPool) {
 
     assert_eq!(app.get("/village").await.1["postalCode"], "23111");
 }
+
+fn vision_mission() -> Value {
+    json!({
+        "vision": "Desa yang terbuka, melayani, dan mandiri.",
+        "missions": ["Meningkatkan pelayanan.", "Membangun irigasi desa."],
+        "startYear": 2025,
+        "endYear": 2031,
+    })
+}
+
+async fn put_vision_mission(app: &TestApp, body: &Value, cookie: &str) -> StatusCode {
+    app.call("PUT", "/village/vision-mission", Some(body), Some(cookie))
+        .await
+        .status
+}
+
+#[sqlx::test]
+async fn the_vision_and_mission_is_not_found_until_it_is_saved(pool: PgPool) {
+    pranata::village::set_code(&pool, "1101012001")
+        .await
+        .unwrap();
+    let app = TestApp::new(pool);
+
+    let (status, _) = app.get("/village/vision-mission").await;
+
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[sqlx::test]
+async fn a_village_manager_saves_the_vision_and_mission_and_the_public_sees_it(pool: PgPool) {
+    pranata::village::set_code(&pool, "1101012001")
+        .await
+        .unwrap();
+    let app = TestApp::new(pool.clone());
+    let cookie = app
+        .user_with(&pool, "operator", &["village.manage", "audit.read"])
+        .await;
+
+    let status = put_vision_mission(&app, &vision_mission(), &cookie).await;
+
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    assert_eq!(
+        app.get("/village/vision-mission").await,
+        (StatusCode::OK, vision_mission())
+    );
+    let audit = app
+        .call("GET", "/audit-entries", None, Some(&cookie))
+        .await
+        .body;
+    let entry = &audit["entries"][0];
+    assert_eq!(entry["action"], "village.update_vision_mission");
+    assert_eq!(entry["username"], "operator");
+    assert_eq!(entry["objectType"], "village");
+    assert_eq!(entry["objectId"], "1101012001");
+    assert!(entry["changes"].as_array().unwrap().contains(&json!({
+        "field": "missions",
+        "from": null,
+        "to": ["Meningkatkan pelayanan.", "Membangun irigasi desa."],
+        "sensitive": false,
+    })));
+}
+
+#[sqlx::test]
+async fn a_new_version_replaces_the_old_which_lives_on_in_the_audit_log(pool: PgPool) {
+    pranata::village::set_code(&pool, "1101012001")
+        .await
+        .unwrap();
+    let app = TestApp::new(pool.clone());
+    let cookie = app
+        .user_with(&pool, "operator", &["village.manage", "audit.read"])
+        .await;
+    put_vision_mission(&app, &vision_mission(), &cookie).await;
+    let mut next = vision_mission();
+    next["missions"] = json!(["  Membangun irigasi desa. ", "", "Meningkatkan pelayanan."]);
+
+    let status = put_vision_mission(&app, &next, &cookie).await;
+
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let (_, current) = app.get("/village/vision-mission").await;
+    assert_eq!(
+        current["missions"],
+        json!(["Membangun irigasi desa.", "Meningkatkan pelayanan."])
+    );
+    let audit = app
+        .call("GET", "/audit-entries", None, Some(&cookie))
+        .await
+        .body;
+    assert_eq!(
+        audit["entries"][0]["changes"],
+        json!([{
+            "field": "missions",
+            "from": ["Meningkatkan pelayanan.", "Membangun irigasi desa."],
+            "to": ["Membangun irigasi desa.", "Meningkatkan pelayanan."],
+            "sensitive": false,
+        }])
+    );
+}
+
+#[sqlx::test]
+async fn a_malformed_vision_and_mission_is_refused(pool: PgPool) {
+    pranata::village::set_code(&pool, "1101012001")
+        .await
+        .unwrap();
+    let app = TestApp::new(pool.clone());
+    let cookie = app.user_with(&pool, "operator", &["village.manage"]).await;
+
+    for (field, value) in [
+        ("vision", json!("  ")),
+        ("vision", json!("x".repeat(1001))),
+        ("missions", json!([])),
+        ("missions", json!([" "])),
+        ("missions", json!(["x".repeat(1001)])),
+        ("missions", json!(vec!["Misi"; 21])),
+        ("startYear", json!(1999)),
+        ("startYear", json!(2031)),
+        ("endYear", json!(2101)),
+    ] {
+        let mut body = vision_mission();
+        body[field] = value.clone();
+        let status = put_vision_mission(&app, &body, &cookie).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{field}: {value}");
+    }
+}
+
+#[sqlx::test]
+async fn only_village_managers_save_the_vision_and_mission(pool: PgPool) {
+    pranata::village::set_code(&pool, "1101012001")
+        .await
+        .unwrap();
+    let app = TestApp::new(pool.clone());
+    let cookie = app.user_with(&pool, "writer", &["content.write"]).await;
+
+    let refused = put_vision_mission(&app, &vision_mission(), &cookie).await;
+    let anonymous = app
+        .call(
+            "PUT",
+            "/village/vision-mission",
+            Some(&vision_mission()),
+            None,
+        )
+        .await;
+
+    assert_eq!(refused, StatusCode::FORBIDDEN);
+    assert_eq!(anonymous.status, StatusCode::UNAUTHORIZED);
+}
+
+#[sqlx::test]
+async fn the_vision_and_mission_cannot_be_saved_before_the_village_code_is_set(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    let cookie = app.user_with(&pool, "operator", &["village.manage"]).await;
+
+    let status = put_vision_mission(&app, &vision_mission(), &cookie).await;
+
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}

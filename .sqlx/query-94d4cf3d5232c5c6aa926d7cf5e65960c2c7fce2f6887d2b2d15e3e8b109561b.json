@@ -1,0 +1,68 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT code, vision, missions, rpjmdes_start_year, rpjmdes_end_year FROM village\n         FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "code"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "vision",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "vision"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "missions",
+        "type_info": "TextArray",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "missions"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "rpjmdes_start_year",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "rpjmdes_start_year"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "rpjmdes_end_year",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "rpjmdes_end_year"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, true, true, true, true]
+  },
+  "hash": "94d4cf3d5232c5c6aa926d7cf5e65960c2c7fce2f6887d2b2d15e3e8b109561b"
+}
