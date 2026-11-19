@@ -13,6 +13,7 @@ use sqlx::PgPool;
 use tower::ServiceExt;
 
 pub const PASSWORD: &str = "kopi tubruk pagi hari";
+pub const ORIGIN: &str = "https://desa.example";
 
 pub struct TestApp {
     router: Router,
@@ -33,11 +34,12 @@ impl Reply {
 impl TestApp {
     pub fn new(pool: PgPool) -> Self {
         Self {
-            router: pranata::app(pool),
+            router: pranata::app(pool, ORIGIN.to_owned()),
         }
     }
 
-    /// Sends a request with an optional JSON body and `name=value` cookie.
+    /// Sends a request as the browser does through the web app: same-origin, with an optional
+    /// JSON body and `name=value` cookie.
     pub async fn call(
         &self,
         method: &str,
@@ -45,7 +47,10 @@ impl TestApp {
         body: Option<&Value>,
         cookie: Option<&str>,
     ) -> Reply {
-        let mut request = Request::builder().method(method).uri(path);
+        let mut request = Request::builder()
+            .method(method)
+            .uri(path)
+            .header("sec-fetch-site", "same-origin");
         if let Some(cookie) = cookie {
             request = request.header(header::COOKIE, cookie);
         }
@@ -65,6 +70,10 @@ impl TestApp {
             headers,
             body,
         }
+    }
+
+    pub async fn send(&self, request: Request<Body>) -> StatusCode {
+        self.router.clone().oneshot(request).await.unwrap().status()
     }
 
     pub async fn get(&self, path: &str) -> (StatusCode, Value) {
