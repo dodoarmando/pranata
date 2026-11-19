@@ -1,17 +1,30 @@
 import { createFileRoute, getRouteApi, Link } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
-import { ChevronRight, ChevronsLeft } from 'lucide-react';
+import { createServerFn, useServerFn } from '@tanstack/react-start';
+import { ChevronRight, ChevronsLeft, Download } from 'lucide-react';
+import { type FormEvent, useState } from 'react';
 import {
   type AuditEntry,
+  type EncryptedFile,
+  exportAuditEntries,
   type ListAuditEntriesParams,
   listAuditEntries,
 } from '../../api/generated';
 import { DataTable, Notice, PageHead } from '../../components/admin';
 import { Badge } from '../../components/ui/badge';
 import { Button, buttonVariants } from '../../components/ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
+import { useSudo } from '../../sudo';
 import { ianaZones } from '../../village';
 
 const filterKeys = ['objectType', 'objectId', 'username', 'from', 'to', 'before'] as const;
@@ -50,6 +63,24 @@ const fetchAuditPage = createServerFn({ method: 'GET' })
     };
   });
 
+// Server-only; the encrypted file, or the status that refused it.
+const exportAuditFn = createServerFn({ method: 'POST' })
+  .validator((data: { filter: ListAuditEntriesParams; reason: string }) => ({
+    filter: filterOf(data.filter),
+    reason: String(data.reason),
+  }))
+  .handler(async ({ data }) => {
+    const response = await exportAuditEntries({ reason: data.reason }, data.filter);
+    return response.status === 200 ? response.data : response.status;
+  });
+
+function download({ fileName, content }: EncryptedFile) {
+  const bytes = Uint8Array.from(atob(content), (char) => char.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'application/zip' }));
+  Object.assign(document.createElement('a'), { href: url, download: fileName }).click();
+  setTimeout(() => URL.revokeObjectURL(url));
+}
+
 const root = getRouteApi('__root__');
 
 export const Route = createFileRoute('/admin/log-audit')({
@@ -74,10 +105,90 @@ function AuditLog() {
     timeStyle: 'medium',
     timeZone: ianaZones[zone],
   });
+  const sudo = useSudo();
+  const submitExport = useServerFn(exportAuditFn);
+  const [asking, setAsking] = useState(false);
+  const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
+
+  function onExport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const reason = String(new FormData(event.currentTarget).get('reason'));
+    // Closed first, so the password prompt of sudo mode is the only dialog open.
+    setAsking(false);
+    setMessage('');
+    return sudo.run(async () => {
+      const result = await submitExport({ data: { filter: newest, reason } });
+      if (typeof result === 'number') {
+        if (result !== 428) setMessage('Ekspor gagal. Coba lagi.');
+        return result;
+      }
+      download(result);
+      setPassword(result.password);
+      return 200;
+    });
+  }
 
   return (
     <>
-      <PageHead title="Log audit" />
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <PageHead title="Log audit" />
+        {page !== 403 && (
+          <Button variant="outline" onClick={() => setAsking(true)}>
+            <Download aria-hidden="true" />
+            Ekspor CSV
+          </Button>
+        )}
+      </div>
+      {sudo.prompt}
+      {message && <Notice error>{message}</Notice>}
+      <Dialog open={asking} onOpenChange={setAsking}>
+        <DialogContent>
+          <form onSubmit={onExport} className="grid gap-4">
+            <DialogHeader>
+              <DialogTitle>Ekspor log audit</DialogTitle>
+              <DialogDescription>
+                Semua entri yang cocok dengan saringan saat ini diunduh sebagai CSV dalam berkas ZIP
+                terenkripsi. Alasan ekspor dicatat di log audit.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-2">
+              <Label htmlFor="export-reason">Alasan ekspor</Label>
+              <Input id="export-reason" name="reason" required pattern=".*\S.*" />
+            </div>
+            <DialogFooter>
+              <DialogClose
+                render={<Button type="button" variant="outline" size="lg" className="px-4" />}
+              >
+                Batal
+              </DialogClose>
+              <Button type="submit" size="lg" className="px-4">
+                Ekspor
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={password !== ''} onOpenChange={(open) => open || setPassword('')}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kata sandi berkas</DialogTitle>
+            <DialogDescription>
+              Berkas ZIP sedang diunduh. Bukalah dengan 7-Zip atau aplikasi lain yang mendukung
+              enkripsi AES, memakai kata sandi di bawah. Catat sekarang: kata sandi ini hanya
+              ditampilkan sekali.
+            </DialogDescription>
+          </DialogHeader>
+          <output className="rounded-md bg-muted p-3 text-center font-mono text-lg select-all">
+            {password}
+          </output>
+          <DialogFooter>
+            <DialogClose render={<Button type="button" size="lg" className="px-4" />}>
+              Selesai
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <form method="get" className="flex flex-wrap items-end gap-2">
         <Filter label="Jenis objek" name="objectType" value={filter.objectType} />
         <Filter label="ID objek" name="objectId" value={filter.objectId} />
