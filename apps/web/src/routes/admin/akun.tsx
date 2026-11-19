@@ -18,7 +18,7 @@ import { useSudo } from '../../sudo';
 import { ianaZones } from '../../village';
 
 // Server-only; null when the session ended since the shell checked it.
-const fetchAccount = createServerFn({ method: 'GET' }).handler(async () => {
+const fetchOwnUser = createServerFn({ method: 'GET' }).handler(async () => {
   const [sessions, passkeys] = await Promise.all([listSessions(), listPasskeys()]);
   return sessions.status === 200 && passkeys.status === 200
     ? { sessions: sessions.data, passkeys: passkeys.data }
@@ -58,7 +58,7 @@ const failed = 'Tindakan gagal. Coba lagi.';
 const root = getRouteApi('__root__');
 
 export const Route = createFileRoute('/admin/akun')({
-  loader: () => fetchAccount(),
+  loader: () => fetchOwnUser(),
   head: () => ({ meta: [{ title: 'Akun saya · Pranata' }] }),
   component: OwnUserPage,
 });
