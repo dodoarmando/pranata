@@ -86,11 +86,69 @@ async fn signing_out_other_devices_keeps_only_the_current_session(pool: PgPool) 
 }
 
 #[sqlx::test]
+async fn a_user_changes_their_password_in_sudo_mode(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    app.administrator(&pool, "admin").await;
+    let cookie = app.sign_in("admin", false).await;
+    let change = |password: &str| {
+        let body = json!({ "password": password });
+        let cookie = cookie.clone();
+        let app = &app;
+        async move {
+            app.call("PUT", "/auth/password", Some(&body), Some(&cookie))
+                .await
+        }
+    };
+
+    let refused = change("pendek").await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(refused.body, json!({ "problem": "tooShort" }));
+    let refused = change("kata sandi admin baru").await;
+    assert_eq!(refused.body, json!({ "problem": "containsUsername" }));
+
+    sqlx::query("UPDATE sessions SET authenticated_at = now() - interval '16 minutes'")
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        change("teh manis sore hari").await.status,
+        StatusCode::PRECONDITION_REQUIRED
+    );
+    sqlx::query("UPDATE sessions SET authenticated_at = now()")
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        change("teh manis sore hari").await.status,
+        StatusCode::NO_CONTENT
+    );
+
+    for (password, status) in [
+        (common::PASSWORD, StatusCode::UNAUTHORIZED),
+        ("teh manis sore hari", StatusCode::NO_CONTENT),
+    ] {
+        let body = json!({ "username": "admin", "password": password, "remember": false });
+        let reply = app.call("POST", "/auth/sign-in", Some(&body), None).await;
+        assert_eq!(reply.status, status, "{password}");
+    }
+    let changed: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM audit_entries WHERE action = 'user.password_change'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(changed, 1);
+}
+
+#[sqlx::test]
 async fn akun_saya_needs_a_session(pool: PgPool) {
     let app = TestApp::new(pool);
+    let body = json!({ "password": "teh manis sore hari" });
+
     for (method, path, body) in [
         ("GET", "/auth/sessions", None),
         ("POST", "/auth/sign-out-others", None),
+        ("PUT", "/auth/password", Some(&body)),
     ] {
         let reply = app.call(method, path, body, None).await;
         assert_eq!(reply.status, StatusCode::UNAUTHORIZED, "{method} {path}");
