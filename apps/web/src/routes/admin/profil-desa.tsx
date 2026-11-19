@@ -161,7 +161,10 @@ function VillageProfilePage() {
         <Card>
           <CardHeader>
             <h2 className="text-base font-semibold">Logo</h2>
-            <CardDescription>PNG atau SVG, paling besar 2 MB.</CardDescription>
+            <CardDescription>
+              PNG atau SVG, paling besar 2 MB. Teks di dalam SVG harus sudah diubah menjadi kurva
+              (outline), karena tidak ikut digambar.
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center gap-4">
             {logo ? (
