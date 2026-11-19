@@ -81,6 +81,30 @@ export interface PasswordRejected {
   problem: PasswordProblem;
 }
 
+/**
+ * The fixed catalog of Permissions a Role can hold. Managing Users and Roles is not one:
+ * it belongs to the Administrator Role alone.
+ */
+export type Permission = typeof Permission[keyof typeof Permission];
+
+
+export const Permission = {
+  villagemanage: 'village.manage',
+  contentwrite: 'content.write',
+  contentpublish: 'content.publish',
+  complaintread: 'complaint.read',
+  complainthandle: 'complaint.handle',
+  auditread: 'audit.read',
+} as const;
+
+export interface Role {
+  /** The built-in, locked Administrator Role, which holds every Permission whatever `permissions` says. */
+  administrator: boolean;
+  id: string;
+  name: string;
+  permissions: Permission[];
+}
+
 export interface SignIn {
   password: string;
   /** "Ingat saya": 7 days idle and 30 days absolute instead of 30 minutes and 12 hours. */
@@ -424,6 +448,56 @@ export const getGetHealthUrl = () => {
 export const getHealth = async ( options?: Parameters<typeof apiFetch>[1]): Promise<getHealthResponse> => {
 
   return apiFetch<getHealthResponse>(getGetHealthUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listRolesResponse200 = {
+  data: Role[]
+  status: 200
+}
+
+export type listRolesResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listRolesResponse403 = {
+  data: void
+  status: 403
+}
+
+export type listRolesResponseSuccess = (listRolesResponse200) & {
+  headers: Headers;
+};
+export type listRolesResponseError = (listRolesResponse401 | listRolesResponse403) & {
+  headers: Headers;
+};
+
+export type listRolesResponse = (listRolesResponseSuccess | listRolesResponseError)
+
+export const getListRolesUrl = () => {
+
+
+
+
+  return `/roles`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` outside the Administrator Role.
+ * @summary Every Role, the Administrator first.
+ */
+export const listRoles = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listRolesResponse> => {
+
+  return apiFetch<listRolesResponse>(getListRolesUrl(),
   {
     ...options,
     method: 'GET'

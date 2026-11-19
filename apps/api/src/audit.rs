@@ -10,7 +10,7 @@ use sqlx::{PgConnection, PgPool, types::Json as Jsonb};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use crate::{ApiError, auth::Session, village::TimeZone};
+use crate::{ApiError, auth::Session, role::Permission, village::TimeZone};
 
 /// Who an Audit Entry says acted.
 #[derive(Clone, Copy)]
@@ -132,7 +132,7 @@ pub async fn list(
     session: Session,
     Query(filter): Query<AuditFilter>,
 ) -> Result<Json<AuditPage>, ApiError> {
-    if !session.holds("audit.read") {
+    if !session.holds(Permission::AuditRead) {
         return Err(ApiError::Status(StatusCode::FORBIDDEN));
     }
     // Before the Village Code is set, its days are taken as WIB.
@@ -163,7 +163,8 @@ pub async fn list(
     )
     .fetch_all(&pool)
     .await?;
-    if !session.holds("resident.sensitive") {
+    // shortcut: only the Administrator sees sensitive values until R2 adds `resident.sensitive` to the catalog.
+    if !session.administrator {
         let sensitive = entries
             .iter_mut()
             .flat_map(|entry| entry.changes.iter_mut())

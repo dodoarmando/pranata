@@ -3,6 +3,7 @@ mod auth;
 pub mod db;
 mod health;
 mod password;
+mod role;
 pub mod user;
 pub mod village;
 
@@ -32,6 +33,7 @@ fn api() -> OpenApiRouter<PgPool> {
         .routes(routes!(auth::sign_out))
         .routes(routes!(auth::me))
         .routes(routes!(audit::list))
+        .routes(routes!(role::list))
 }
 
 /// The HTTP application, ready to serve at `public_origin` (`https://host`, no trailing slash).
