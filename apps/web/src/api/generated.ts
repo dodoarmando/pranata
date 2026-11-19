@@ -127,6 +127,23 @@ export interface PasskeyChallenge {
   options: unknown;
 }
 
+/**
+ * `PublicKeyCredential.toJSON()` of the assertion.
+ */
+export type PasskeySignInCredential = { [key: string]: unknown };
+
+export interface PasskeySignIn {
+  ceremonyId: string;
+  /** `PublicKeyCredential.toJSON()` of the assertion. */
+  credential: PasskeySignInCredential;
+  /** "Ingat saya", as for a password sign-in. */
+  remember: boolean;
+}
+
+export interface PasskeySignInStart {
+  username: string;
+}
+
 export interface PasskeySummary {
   createdAt: string;
   id: string;
@@ -429,6 +446,99 @@ export const getMe = async ( options?: Parameters<typeof apiFetch>[1]): Promise<
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type signInWithPasskeyResponse204 = {
+  data: void
+  status: 204
+}
+
+export type signInWithPasskeyResponse401 = {
+  data: void
+  status: 401
+}
+
+export type signInWithPasskeyResponseSuccess = (signInWithPasskeyResponse204) & {
+  headers: Headers;
+};
+export type signInWithPasskeyResponseError = (signInWithPasskeyResponse401) & {
+  headers: Headers;
+};
+
+export type signInWithPasskeyResponse = (signInWithPasskeyResponseSuccess | signInWithPasskeyResponseError)
+
+export const getSignInWithPasskeyUrl = () => {
+
+
+
+
+  return `/auth/passkey-sign-in`
+}
+
+/**
+ * # Errors
+ * `401`, the same for a decoy, an unknown, used or expired ceremony, a failed assertion and an
+ * inactive User.
+ * @summary Signs in with a passkey instead of the password, starting a session held in the
+`__Host-session` cookie.
+ */
+export const signInWithPasskey = async (passkeySignIn: PasskeySignIn, options?: Parameters<typeof apiFetch>[1]): Promise<signInWithPasskeyResponse> => {
+
+  return apiFetch<signInWithPasskeyResponse>(getSignInWithPasskeyUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(passkeySignIn)
+  }
+);}
+
+
+
+export type startPasskeySignInResponse200 = {
+  data: PasskeyChallenge
+  status: 200
+}
+
+export type startPasskeySignInResponse503 = {
+  data: void
+  status: 503
+}
+
+export type startPasskeySignInResponseSuccess = (startPasskeySignInResponse200) & {
+  headers: Headers;
+};
+export type startPasskeySignInResponseError = (startPasskeySignInResponse503) & {
+  headers: Headers;
+};
+
+export type startPasskeySignInResponse = (startPasskeySignInResponseSuccess | startPasskeySignInResponseError)
+
+export const getStartPasskeySignInUrl = () => {
+
+
+
+
+  return `/auth/passkey-sign-in/challenge`
+}
+
+/**
+ * # Errors
+ * `503` with too many ceremonies in flight.
+ * @summary Starts signing in with a passkey for a username. A username that is unknown, inactive or
+without passkeys gets a decoy challenge, so the answer never tells whether it exists.
+ */
+export const startPasskeySignIn = async (passkeySignInStart: PasskeySignInStart, options?: Parameters<typeof apiFetch>[1]): Promise<startPasskeySignInResponse> => {
+
+  return apiFetch<startPasskeySignInResponse>(getStartPasskeySignInUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(passkeySignInStart)
   }
 );}
 

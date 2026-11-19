@@ -24,6 +24,7 @@ utoipa = { version = "6.0.0", features = ["uuid", "chrono"] }
 utoipa-axum = "0.3.0"
 uuid = { version = "1.29.3", features = ["serde", "v4"] }
 webauthn-rs = "0.6.2"
+webauthn-rs-proto = "0.6.2"
 
 [dev-dependencies]
 base64 = "0.22.1"
