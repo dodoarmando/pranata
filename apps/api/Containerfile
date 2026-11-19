@@ -1,0 +1,20 @@
+# Image `pranata-api`. Build context: the repository root.
+FROM docker.io/library/rust:1.100.0-slim-trixie AS build
+WORKDIR /src
+COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
+COPY .sqlx .sqlx
+COPY apps/api apps/api
+# No database at build time: compile queries from the committed .sqlx data.
+ENV SQLX_OFFLINE=true
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/src/target \
+    cargo build --release --locked -p pranata && cp target/release/pranata /pranata
+
+FROM gcr.io/distroless/cc-debian13:nonroot
+LABEL org.opencontainers.image.source=https://github.com/dodoarmando/pranata \
+      org.opencontainers.image.licenses=AGPL-3.0-only
+COPY --from=build /pranata /usr/local/bin/pranata
+ENV PRANATA_LISTEN=0.0.0.0:8080
+EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/pranata"]
+CMD ["serve"]
