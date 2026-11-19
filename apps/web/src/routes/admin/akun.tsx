@@ -1,5 +1,6 @@
 import { createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router';
 import { createServerFn, useServerFn } from '@tanstack/react-start';
+import { Plus, Trash2 } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 import {
   changePassword,
@@ -11,6 +12,19 @@ import {
   signOutOthers,
   startPasskeyRegistration,
 } from '../../api/generated';
+import { DataTable, Notice, PageHead } from '../../components/admin';
+import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+} from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { describeDevice } from '../../device';
 import { createPasskeyCredential } from '../../passkey';
 import { passwordHint, passwordProblems } from '../../password';
@@ -157,101 +171,147 @@ function OwnUserPage() {
 
   return (
     <>
-      <h1>Akun saya</h1>
-      <p>
-        <strong>{me.username}</strong> <small>{me.role}</small>
-      </p>
+      <PageHead title="Akun saya">
+        <strong className="font-medium text-foreground">{me.username}</strong> {me.role}
+      </PageHead>
       {sudo.prompt}
-      {message && <p role="alert">{message}</p>}
-      <form onSubmit={onChangePassword} aria-labelledby="password-title">
-        <h2 id="password-title">Ganti kata sandi</h2>
-        <label>
-          Kata sandi baru
-          <input
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            minLength={12}
-            aria-describedby="password-hint"
-            required
-          />
-        </label>
-        <p id="password-hint">{passwordHint}</p>
-        <button type="submit">Ganti kata sandi</button>
-      </form>
-      <section aria-labelledby="passkeys-title">
-        <h2 id="passkeys-title">Passkey</h2>
-        <p>
-          Masuk tanpa kata sandi dengan sidik jari, wajah, atau PIN perangkat. Kata sandi Anda tetap
-          berlaku.
-        </p>
-        {passkeys.length > 0 ? (
-          <table>
-            <thead>
-              <tr>
-                <th>Nama</th>
-                <th>Ditambahkan</th>
-                <th>Terakhir dipakai</th>
-                <th>Tindakan</th>
-              </tr>
-            </thead>
-            <tbody>
-              {passkeys.map((passkey) => (
-                <tr key={passkey.id}>
-                  <td>{passkey.name}</td>
-                  <td>{time.format(new Date(passkey.createdAt))}</td>
-                  <td>{passkey.lastUsedAt ? time.format(new Date(passkey.lastUsedAt)) : '—'}</td>
-                  <td>
-                    <button
-                      type="button"
-                      onClick={() => onDeletePasskey(passkey.id, passkey.name)}
-                      aria-label={`Hapus passkey ${passkey.name}`}
-                    >
-                      Hapus
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p>Belum ada passkey.</p>
-        )}
-        <form onSubmit={onAddPasskey}>
-          <label>
-            Nama passkey
-            <input name="name" maxLength={64} placeholder="mis. Laptop kantor" required />
-          </label>
-          <button type="submit">Tambah passkey</button>
+      {message && <Notice>{message}</Notice>}
+      <Card>
+        <form onSubmit={onChangePassword} aria-labelledby="password-title" className="contents">
+          <CardHeader>
+            <h2 id="password-title" className="text-base font-semibold">
+              Ganti kata sandi
+            </h2>
+          </CardHeader>
+          <CardContent className="grid max-w-md gap-2">
+            <Label htmlFor="new-password">Kata sandi baru</Label>
+            <Input
+              id="new-password"
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              minLength={12}
+              aria-describedby="password-hint"
+              required
+            />
+            <p id="password-hint" className="text-muted-foreground">
+              {passwordHint}
+            </p>
+            <Button type="submit" size="lg" className="mt-2 w-fit px-4">
+              Ganti kata sandi
+            </Button>
+          </CardContent>
         </form>
-      </section>
-      <section aria-labelledby="sessions-title">
-        <h2 id="sessions-title">Sesi aktif</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Perangkat</th>
-              <th>Alamat IP</th>
-              <th>Aktivitas terakhir</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sessions.map((session) => (
-              <tr key={`${session.lastSeenAt}-${session.userAgent}-${session.ip}`}>
-                <td>
-                  {describeDevice(session.userAgent)}
-                  {session.current && <small> (perangkat ini)</small>}
-                </td>
-                <td>{session.ip ?? '—'}</td>
-                <td>{time.format(new Date(session.lastSeenAt))}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <button type="button" onClick={onSignOutOthers} disabled={sessions.length < 2}>
-          Keluar dari perangkat lain
-        </button>
-      </section>
+      </Card>
+      <Card role="region" aria-labelledby="passkeys-title">
+        <CardHeader>
+          <h2 id="passkeys-title" className="text-base font-semibold">
+            Passkey
+          </h2>
+          <CardDescription>
+            Masuk tanpa kata sandi dengan sidik jari, wajah, atau PIN perangkat. Kata sandi Anda
+            tetap berlaku.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          {passkeys.length > 0 ? (
+            <DataTable>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama</TableHead>
+                  <TableHead>Ditambahkan</TableHead>
+                  <TableHead>Terakhir dipakai</TableHead>
+                  <TableHead className="text-right">Tindakan</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {passkeys.map((passkey) => (
+                  <TableRow key={passkey.id}>
+                    <TableCell className="font-medium">{passkey.name}</TableCell>
+                    <TableCell>{time.format(new Date(passkey.createdAt))}</TableCell>
+                    <TableCell>
+                      {passkey.lastUsedAt ? time.format(new Date(passkey.lastUsedAt)) : '—'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => onDeletePasskey(passkey.id, passkey.name)}
+                        aria-label={`Hapus passkey ${passkey.name}`}
+                      >
+                        <Trash2 aria-hidden="true" />
+                        Hapus
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </DataTable>
+          ) : (
+            <p className="text-muted-foreground">Belum ada passkey.</p>
+          )}
+          <form onSubmit={onAddPasskey} className="flex flex-wrap items-end gap-2">
+            <div className="grid w-full max-w-xs gap-2">
+              <Label htmlFor="passkey-name">Nama passkey</Label>
+              <Input
+                id="passkey-name"
+                name="name"
+                maxLength={64}
+                placeholder="mis. Laptop kantor"
+                required
+              />
+            </div>
+            <Button type="submit" variant="outline" size="lg" className="px-4">
+              <Plus aria-hidden="true" />
+              Tambah passkey
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+      <Card role="region" aria-labelledby="sessions-title">
+        <CardHeader>
+          <h2 id="sessions-title" className="text-base font-semibold">
+            Sesi aktif
+          </h2>
+          <CardAction>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onSignOutOthers}
+              disabled={sessions.length < 2}
+            >
+              Keluar dari perangkat lain
+            </Button>
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          <DataTable>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Perangkat</TableHead>
+                <TableHead>Alamat IP</TableHead>
+                <TableHead>Aktivitas terakhir</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sessions.map((session) => (
+                <TableRow key={`${session.lastSeenAt}-${session.userAgent}-${session.ip}`}>
+                  <TableCell>
+                    {describeDevice(session.userAgent)}
+                    {session.current && (
+                      <Badge variant="secondary" className="ml-2">
+                        perangkat ini
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>{session.ip ?? '—'}</TableCell>
+                  <TableCell>{time.format(new Date(session.lastSeenAt))}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </DataTable>
+        </CardContent>
+      </Card>
     </>
   );
 }

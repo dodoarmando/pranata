@@ -23,6 +23,7 @@ test('the first Administrator sets a password from the Access Link, signs in and
 
   await page.getByText('Sistem').click();
   await page.getByRole('link', { name: 'Log audit' }).click();
+  await expect(page.getByRole('heading', { name: 'Log audit' })).toBeVisible();
   await page.getByLabel('Pengguna').fill(username);
   await page.getByRole('button', { name: 'Saring' }).click();
   await expect(page).toHaveURL(new RegExp(`username=${username}`));
