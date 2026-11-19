@@ -17,6 +17,24 @@ export interface Health {
 }
 
 /**
+ * Why a new password is refused.
+ */
+export type PasswordProblem = typeof PasswordProblem[keyof typeof PasswordProblem];
+
+
+export const PasswordProblem = {
+  tooShort: 'tooShort',
+  tooLong: 'tooLong',
+  common: 'common',
+  containsUsername: 'containsUsername',
+  containsVillageName: 'containsVillageName',
+} as const;
+
+export interface PasswordRejected {
+  problem: PasswordProblem;
+}
+
+/**
  * Indonesia's three time zones; the Village's drives every date-only rule.
  */
 export type TimeZone = typeof TimeZone[keyof typeof TimeZone];
@@ -28,6 +46,12 @@ export const TimeZone = {
   WIT: 'WIT',
 } as const;
 
+export interface UseAccessLink {
+  password: string;
+  /** The token after `#` in the Access Link. */
+  token: string;
+}
+
 export interface Village {
   /** The 10-digit Village Code. */
   code: string;
@@ -37,6 +61,76 @@ export interface Village {
   regency: string;
   timeZone: TimeZone;
 }
+
+const getHeaders = (...sources: (RequestInit['headers'] | Record<string, string | undefined>)[]) => {
+  const seen = new Set<string>();
+  const layers: [string, string | readonly string[]][][] = [];
+  for (const source of sources.reverse()) {
+    if (!source) continue;
+    const entries = source instanceof Headers
+      ? source.entries()
+      : Symbol.iterator in source
+        ? Array.from(source as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string])
+        : Object.entries<string | readonly string[] | undefined>(source);
+    const layer: [string, string | readonly string[]][] = [];
+    for (const [name, value] of entries) {
+      if (value !== undefined && !seen.has(name.toLowerCase())) layer.push([name, value]);
+    }
+    for (const [name] of layer) seen.add(name.toLowerCase());
+    layers.push(layer);
+  }
+  return Object.fromEntries(layers.reverse().flat()) as Extract<RequestInit['headers'], Record<string, unknown>>;
+};
+
+export type useAccessLinkResponse204 = {
+  data: void
+  status: 204
+}
+
+export type useAccessLinkResponse404 = {
+  data: void
+  status: 404
+}
+
+export type useAccessLinkResponse422 = {
+  data: PasswordRejected
+  status: 422
+}
+
+export type useAccessLinkResponseSuccess = (useAccessLinkResponse204) & {
+  headers: Headers;
+};
+export type useAccessLinkResponseError = (useAccessLinkResponse404 | useAccessLinkResponse422) & {
+  headers: Headers;
+};
+
+export type useAccessLinkResponse = (useAccessLinkResponseSuccess | useAccessLinkResponseError)
+
+export const getUseAccessLinkUrl = () => {
+
+
+
+
+  return `/auth/access-link`
+}
+
+/**
+ * # Errors
+ * `404` for an unknown, used or expired link, `422` for a refused password.
+ * @summary Sets the User's password from their Access Link, which is then used up.
+ */
+export const useAccessLink = async (useAccessLinkBody: UseAccessLink, options?: Parameters<typeof apiFetch>[1]): Promise<useAccessLinkResponse> => {
+
+  return apiFetch<useAccessLinkResponse>(getUseAccessLinkUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(useAccessLinkBody)
+  }
+);}
+
+
 
 export type getHealthResponse200 = {
   data: Health

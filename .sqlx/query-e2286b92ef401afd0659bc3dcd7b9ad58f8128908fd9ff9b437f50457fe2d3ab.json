@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM access_links WHERE token_hash = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Bytea"]
+    },
+    "nullable": []
+  },
+  "hash": "e2286b92ef401afd0659bc3dcd7b9ad58f8128908fd9ff9b437f50457fe2d3ab"
+}

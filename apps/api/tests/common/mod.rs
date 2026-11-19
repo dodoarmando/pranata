@@ -1,4 +1,6 @@
 //! HTTP test harness: drives the real router against a per-test database.
+// Each test file compiles this module; not all of them use every helper.
+#![allow(dead_code)]
 
 use axum::{
     Router,
@@ -30,7 +32,18 @@ impl TestApp {
         (status, body)
     }
 
-    #[allow(dead_code)] // each test file compiles this module; not all of them use this
+    pub async fn post(&self, path: &str, body: &Value) -> (StatusCode, Value) {
+        let request = Request::post(path)
+            .header("content-type", "application/json")
+            .body(Body::from(body.to_string()))
+            .unwrap();
+        let response = self.router.clone().oneshot(request).await.unwrap();
+        let status = response.status();
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let body = serde_json::from_slice(&bytes).unwrap_or(Value::Null);
+        (status, body)
+    }
+
     pub async fn request(&self, method: &str, path: &str) -> StatusCode {
         let request = Request::builder()
             .method(method)

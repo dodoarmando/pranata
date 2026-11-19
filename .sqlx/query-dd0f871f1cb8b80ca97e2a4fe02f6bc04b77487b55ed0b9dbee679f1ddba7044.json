@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT users.id, users.username FROM access_links JOIN users ON users.id = access_links.user_id\n         WHERE token_hash = $1 AND expires_at > now() FOR UPDATE OF access_links",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "username",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "username"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Bytea"]
+    },
+    "nullable": [false, false]
+  },
+  "hash": "dd0f871f1cb8b80ca97e2a4fe02f6bc04b77487b55ed0b9dbee679f1ddba7044"
+}
