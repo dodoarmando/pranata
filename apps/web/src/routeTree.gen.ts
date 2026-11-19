@@ -20,6 +20,7 @@ import { Route as AdminAkunRouteImport } from './routes/admin/akun'
 import { Route as AdminLogAuditRouteImport } from './routes/admin/log-audit'
 import { Route as AdminPenggunaRouteImport } from './routes/admin/pengguna'
 import { Route as AdminPeranRouteImport } from './routes/admin/peran'
+import { Route as AdminProfilDesaRouteImport } from './routes/admin/profil-desa'
 import { Route as MediaIdVariantRouteImport } from './routes/media.$id.$variant'
 
 const PublicRoute = PublicRouteImport.update({
@@ -76,6 +77,11 @@ const AdminPeranRoute = AdminPeranRouteImport.update({
   path: '/peran',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminProfilDesaRoute = AdminProfilDesaRouteImport.update({
+  id: '/profil-desa',
+  path: '/profil-desa',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const MediaIdVariantRoute = MediaIdVariantRouteImport.update({
   id: '/media/$id/$variant',
   path: '/media/$id/$variant',
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/admin/log-audit': typeof AdminLogAuditRoute
   '/admin/pengguna': typeof AdminPenggunaRoute
   '/admin/peran': typeof AdminPeranRoute
+  '/admin/profil-desa': typeof AdminProfilDesaRoute
   '/admin/': typeof AdminIndexRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
 }
@@ -103,6 +110,7 @@ export interface FileRoutesByTo {
   '/admin/log-audit': typeof AdminLogAuditRoute
   '/admin/pengguna': typeof AdminPenggunaRoute
   '/admin/peran': typeof AdminPeranRoute
+  '/admin/profil-desa': typeof AdminProfilDesaRoute
   '/': typeof PublicIndexRoute
   '/admin': typeof AdminIndexRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
@@ -118,6 +126,7 @@ export interface FileRoutesById {
   '/admin/log-audit': typeof AdminLogAuditRoute
   '/admin/pengguna': typeof AdminPenggunaRoute
   '/admin/peran': typeof AdminPeranRoute
+  '/admin/profil-desa': typeof AdminProfilDesaRoute
   '/_public/': typeof PublicIndexRoute
   '/admin/': typeof AdminIndexRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/admin/log-audit'
     | '/admin/pengguna'
     | '/admin/peran'
+    | '/admin/profil-desa'
     | '/admin/'
     | '/media/$id/$variant'
   fileRoutesByTo: FileRoutesByTo
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
     | '/admin/log-audit'
     | '/admin/pengguna'
     | '/admin/peran'
+    | '/admin/profil-desa'
     | '/'
     | '/admin'
     | '/media/$id/$variant'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '/admin/log-audit'
     | '/admin/pengguna'
     | '/admin/peran'
+    | '/admin/profil-desa'
     | '/_public/'
     | '/admin/'
     | '/media/$id/$variant'
@@ -251,6 +263,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPeranRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/profil-desa': {
+      id: '/admin/profil-desa'
+      path: '/profil-desa'
+      fullPath: '/admin/profil-desa'
+      preLoaderRoute: typeof AdminProfilDesaRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/media/$id/$variant': {
       id: '/media/$id/$variant'
       path: '/media/$id/$variant'
@@ -266,6 +285,7 @@ interface AdminRouteRouteChildren {
   AdminLogAuditRoute: typeof AdminLogAuditRoute
   AdminPenggunaRoute: typeof AdminPenggunaRoute
   AdminPeranRoute: typeof AdminPeranRoute
+  AdminProfilDesaRoute: typeof AdminProfilDesaRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
@@ -274,6 +294,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminLogAuditRoute: AdminLogAuditRoute,
   AdminPenggunaRoute: AdminPenggunaRoute,
   AdminPeranRoute: AdminPeranRoute,
+  AdminProfilDesaRoute: AdminProfilDesaRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
