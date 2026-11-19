@@ -39,7 +39,7 @@ gen:
     cd apps/web && bun run gen
 
 # Every required CI job except perf
-check: check-commits check-api check-web check-contract
+check: check-commits check-api check-web check-contract images
 
 # Run all tests
 test: test-api test-web
@@ -70,3 +70,8 @@ check-web:
 check-contract: gen
     test -z "$(git status --porcelain -- apps/api/openapi.json apps/web/src/api)" \
         || { git status --short -- apps/api/openapi.json apps/web/src/api; echo 'Run `just gen` and commit the result.'; exit 1; }
+
+# CI job `images`: build both production images (amd64), tagged `local`
+images:
+    podman build --platform linux/amd64 -f apps/api/Containerfile -t pranata-api:local .
+    podman build --platform linux/amd64 -f apps/web/Containerfile -t pranata-web:local .
