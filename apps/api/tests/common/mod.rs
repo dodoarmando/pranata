@@ -47,10 +47,25 @@ impl TestApp {
         body: Option<&Value>,
         cookie: Option<&str>,
     ) -> Reply {
+        self.call_with(method, path, body, cookie, &[]).await
+    }
+
+    /// [`Self::call`] with extra request headers.
+    pub async fn call_with(
+        &self,
+        method: &str,
+        path: &str,
+        body: Option<&Value>,
+        cookie: Option<&str>,
+        headers: &[(&str, &str)],
+    ) -> Reply {
         let mut request = Request::builder()
             .method(method)
             .uri(path)
             .header("sec-fetch-site", "same-origin");
+        for (name, value) in headers {
+            request = request.header(*name, *value);
+        }
         if let Some(cookie) = cookie {
             request = request.header(header::COOKIE, cookie);
         }
@@ -121,12 +136,23 @@ impl TestApp {
 
     /// Signs in and returns the session cookie as `name=value`.
     pub async fn sign_in(&self, username: &str, remember: bool) -> String {
+        self.sign_in_from(username, remember, &[]).await
+    }
+
+    /// [`Self::sign_in`] with extra request headers, such as the forwarded browser and address.
+    pub async fn sign_in_from(
+        &self,
+        username: &str,
+        remember: bool,
+        headers: &[(&str, &str)],
+    ) -> String {
         let reply = self
-            .call(
+            .call_with(
                 "POST",
                 "/auth/sign-in",
                 Some(&json!({ "username": username, "password": PASSWORD, "remember": remember })),
                 None,
+                headers,
             )
             .await;
         assert_eq!(reply.status, StatusCode::NO_CONTENT);

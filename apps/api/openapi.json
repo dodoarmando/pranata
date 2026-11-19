@@ -186,6 +186,34 @@
         }
       }
     },
+    "/auth/sessions": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "The signed-in User's live sessions, most recently active first.",
+        "description": "# Errors\n`401` without a live session.",
+        "operationId": "listSessions",
+        "responses": {
+          "200": {
+            "description": "The User's live sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ActiveSession"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          }
+        }
+      }
+    },
     "/auth/sign-in": {
       "post": {
         "tags": [
@@ -681,6 +709,37 @@
           "userId": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "ActiveSession": {
+        "type": "object",
+        "required": [
+          "lastSeenAt",
+          "current"
+        ],
+        "properties": {
+          "current": {
+            "type": "boolean",
+            "description": "Whether this is the session making the request."
+          },
+          "ip": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The address signed in from."
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "userAgent": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The browser's user agent at sign-in."
           }
         }
       },
