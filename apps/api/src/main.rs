@@ -3,6 +3,7 @@ use std::net::SocketAddr;
 use anyhow::Context;
 use clap::{Parser, Subcommand};
 use sqlx::PgPool;
+use tokio::signal::unix::{SignalKind, signal};
 use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
@@ -48,8 +49,18 @@ async fn main() -> anyhow::Result<()> {
             let listener = tokio::net::TcpListener::bind(listen)
                 .await
                 .with_context(|| format!("cannot listen on {listen}"))?;
+            // As PID 1 in a container, SIGTERM is ignored unless handled.
+            let mut terminate = signal(SignalKind::terminate())?;
             tracing::info!(%listen, "serving");
-            axum::serve(listener, pranata::app(pool)).await?;
+            axum::serve(listener, pranata::app(pool))
+                .with_graceful_shutdown(async move {
+                    tokio::select! {
+                        _ = terminate.recv() => {}
+                        _ = tokio::signal::ctrl_c() => {}
+                    }
+                    tracing::info!("shutting down");
+                })
+                .await?;
         }
         Command::Migrate { database_url } => {
             let pool = PgPool::connect(&database_url).await?;
