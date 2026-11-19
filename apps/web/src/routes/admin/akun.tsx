@@ -56,10 +56,13 @@ function OwnUserPage() {
     return sudo.run(async () => {
       const result = await submitChange({ data: password });
       if (result.status === 428) return result.status;
-      if (result.status === 204) form.reset();
+      if (result.status === 204) {
+        form.reset();
+        await router.invalidate();
+      }
       setMessage(
         result.status === 204
-          ? 'Kata sandi telah diganti.'
+          ? 'Kata sandi telah diganti. Anda telah keluar dari semua perangkat lain.'
           : result.problem
             ? passwordProblems[result.problem]
             : 'Tindakan gagal. Coba lagi.',
