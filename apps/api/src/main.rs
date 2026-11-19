@@ -21,6 +21,9 @@ enum Command {
         database_url: String,
         #[arg(long, env = "PRANATA_LISTEN", default_value = "127.0.0.1:8080")]
         listen: SocketAddr,
+        /// The Installation's public origin, such as `https://example.desa.id`.
+        #[arg(long, env = "PRANATA_PUBLIC_ORIGIN")]
+        public_origin: String,
     },
     /// Apply pending database migrations.
     Migrate {
@@ -85,6 +88,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Serve {
             database_url,
             listen,
+            public_origin,
         } => {
             let pool = PgPool::connect(&database_url).await?;
             pranata::db::ensure_schema(&pool).await?;
@@ -95,7 +99,8 @@ async fn main() -> anyhow::Result<()> {
             let mut terminate = signal(SignalKind::terminate())?;
             tokio::spawn(purge_expired_every_10_minutes(pool.clone()));
             tracing::info!(%listen, "serving");
-            axum::serve(listener, pranata::app(pool))
+            let public_origin = public_origin.trim_end_matches('/').to_owned();
+            axum::serve(listener, pranata::app(pool, public_origin))
                 .with_graceful_shutdown(async move {
                     tokio::select! {
                         _ = terminate.recv() => {}
@@ -127,7 +132,7 @@ async fn main() -> anyhow::Result<()> {
             pranata::db::ensure_schema(&pool).await?;
             let token = pranata::user::create_admin(&pool, &username).await?;
             tracing::info!(%username, "administrator created");
-            println!("{public_origin}/akses#{token}");
+            println!("{}/akses#{token}", public_origin.trim_end_matches('/'));
         }
     }
     Ok(())

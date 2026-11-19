@@ -1,5 +1,7 @@
 # Same URL locally (Podman) and in CI (service container).
 export DATABASE_URL := env('DATABASE_URL', 'postgres://postgres@127.0.0.1:55432/pranata')
+# Where the browser reaches the web app; `localhost`, not 127.0.0.1, for VS Code port forwarding.
+export PRANATA_PUBLIC_ORIGIN := env('PRANATA_PUBLIC_ORIGIN', 'http://localhost:3000')
 
 db_container := 'pranata-db'
 
@@ -84,7 +86,7 @@ e2e-run: db-up
     #!/usr/bin/env bash
     set -euo pipefail
     # Host network reaches the database on 127.0.0.1; ports differ from `just dev`.
-    api=(--network host -e DATABASE_URL -e PRANATA_LISTEN=127.0.0.1:18080)
+    api=(--network host -e DATABASE_URL -e PRANATA_LISTEN=127.0.0.1:18080 -e PRANATA_PUBLIC_ORIGIN=http://127.0.0.1:13000)
     web=(--network host -e HOST=127.0.0.1 -e PORT=13000 -e PRANATA_API_URL=http://127.0.0.1:18080)
     cleanup() {
         if [ "$1" -ne 0 ]; then podman logs pranata-e2e-api; podman logs pranata-e2e-web; fi || true
