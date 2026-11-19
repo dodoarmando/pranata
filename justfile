@@ -92,6 +92,7 @@ e2e-run: db-up
     }
     trap 'cleanup $?' EXIT
     podman run --rm "${api[@]}" pranata-api:local migrate
+    podman run --rm "${api[@]}" pranata-api:local village set-code 1101012001
     podman run -d --name pranata-e2e-api "${api[@]}" pranata-api:local
     podman run -d --name pranata-e2e-web "${web[@]}" pranata-web:local
     timeout 60 bash -c 'until curl -sfo /dev/null http://127.0.0.1:18080/healthz && curl -sfo /dev/null http://127.0.0.1:13000/; do sleep 0.5; done'
