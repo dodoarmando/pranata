@@ -38,6 +38,7 @@ import { Route as AdminPenggunaRouteImport } from './routes/admin/pengguna'
 import { Route as AdminPeranRouteImport } from './routes/admin/peran'
 import { Route as AdminProfilDesaRouteImport } from './routes/admin/profil-desa'
 import { Route as AdminWilayahRouteImport } from './routes/admin/wilayah'
+import { Route as BeritaRssDotxmlRouteImport } from './routes/berita.rss[.]xml'
 import { Route as PublicMenuSlugRouteImport } from './routes/_public/$menu.$slug'
 import { Route as PublicBeritaIndexRouteImport } from './routes/_public/berita/index'
 import { Route as PublicBeritaSlugRouteImport } from './routes/_public/berita/$slug'
@@ -201,6 +202,11 @@ const AdminWilayahRoute = AdminWilayahRouteImport.update({
   path: '/wilayah',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const BeritaRssDotxmlRoute = BeritaRssDotxmlRouteImport.update({
+  id: '/berita/rss.xml',
+  path: '/berita/rss.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PublicMenuSlugRoute = PublicMenuSlugRouteImport.update({
   id: '/$menu/$slug',
   path: '/$menu/$slug',
@@ -320,6 +326,7 @@ export interface FileRoutesByFullPath {
   '/admin/peran': typeof AdminPeranRoute
   '/admin/profil-desa': typeof AdminProfilDesaRoute
   '/admin/wilayah': typeof AdminWilayahRoute
+  '/berita/rss.xml': typeof BeritaRssDotxmlRoute
   '/admin/': typeof AdminIndexRoute
   '/$menu/$slug': typeof PublicMenuSlugRoute
   '/berita/$slug': typeof PublicBeritaSlugRoute
@@ -366,6 +373,7 @@ export interface FileRoutesByTo {
   '/admin/peran': typeof AdminPeranRoute
   '/admin/profil-desa': typeof AdminProfilDesaRoute
   '/admin/wilayah': typeof AdminWilayahRoute
+  '/berita/rss.xml': typeof BeritaRssDotxmlRoute
   '/': typeof PublicIndexRoute
   '/admin': typeof AdminIndexRoute
   '/$menu/$slug': typeof PublicMenuSlugRoute
@@ -416,6 +424,7 @@ export interface FileRoutesById {
   '/admin/peran': typeof AdminPeranRoute
   '/admin/profil-desa': typeof AdminProfilDesaRoute
   '/admin/wilayah': typeof AdminWilayahRoute
+  '/berita/rss.xml': typeof BeritaRssDotxmlRoute
   '/_public/': typeof PublicIndexRoute
   '/admin/': typeof AdminIndexRoute
   '/_public/$menu/$slug': typeof PublicMenuSlugRoute
@@ -467,6 +476,7 @@ export interface FileRouteTypes {
     | '/admin/peran'
     | '/admin/profil-desa'
     | '/admin/wilayah'
+    | '/berita/rss.xml'
     | '/admin/'
     | '/$menu/$slug'
     | '/berita/$slug'
@@ -513,6 +523,7 @@ export interface FileRouteTypes {
     | '/admin/peran'
     | '/admin/profil-desa'
     | '/admin/wilayah'
+    | '/berita/rss.xml'
     | '/'
     | '/admin'
     | '/$menu/$slug'
@@ -562,6 +573,7 @@ export interface FileRouteTypes {
     | '/admin/peran'
     | '/admin/profil-desa'
     | '/admin/wilayah'
+    | '/berita/rss.xml'
     | '/_public/'
     | '/admin/'
     | '/_public/$menu/$slug'
@@ -591,6 +603,7 @@ export interface RootRouteChildren {
   MasukRoute: typeof MasukRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  BeritaRssDotxmlRoute: typeof BeritaRssDotxmlRoute
   MediaIdVariantRoute: typeof MediaIdVariantRoute
 }
 
@@ -798,6 +811,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/wilayah'
       preLoaderRoute: typeof AdminWilayahRouteImport
       parentRoute: typeof AdminRouteRoute
+    }
+    '/berita/rss.xml': {
+      id: '/berita/rss.xml'
+      path: '/berita/rss.xml'
+      fullPath: '/berita/rss.xml'
+      preLoaderRoute: typeof BeritaRssDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_public/$menu/$slug': {
       id: '/_public/$menu/$slug'
@@ -1034,6 +1054,7 @@ const rootRouteChildren: RootRouteChildren = {
   MasukRoute: MasukRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  BeritaRssDotxmlRoute: BeritaRssDotxmlRoute,
   MediaIdVariantRoute: MediaIdVariantRoute,
 }
 export const routeTree = rootRouteImport

@@ -26,6 +26,16 @@ const root = getRouteApi('__root__');
 
 export const Route = createFileRoute('/_public')({
   loader: () => fetchSite(),
+  head: ({ loaderData }) => ({
+    links: [
+      {
+        rel: 'alternate',
+        type: 'application/rss+xml',
+        title: 'Berita',
+        href: `${loaderData?.origin ?? ''}/berita/rss.xml`,
+      },
+    ],
+  }),
   component: PublicLayout,
 });
 

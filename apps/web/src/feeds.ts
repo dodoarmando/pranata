@@ -1,4 +1,4 @@
-import type { Sitemap } from './api/generated';
+import type { NewsCard, Sitemap } from './api/generated';
 import { pagePath } from './page';
 
 /** Text safe inside an XML element. */
@@ -54,3 +54,35 @@ Disallow: /akses
 
 Sitemap: ${origin}/sitemap.xml
 `;
+
+/** `/berita/rss.xml`: RSS 2.0 of the given News Posts, in their order. */
+export function rssXml(
+  origin: string,
+  villageName: string,
+  description: string,
+  posts: NewsCard[],
+) {
+  const items = posts.map((post) => {
+    const link = `${origin}/berita/${post.slug}`;
+    return `<item>
+<title>${xml(post.title)}</title>
+<link>${link}</link>
+<guid isPermaLink="true">${link}</guid>
+<description>${xml(post.summary)}</description>
+<category>${xml(post.category)}</category>
+<pubDate>${new Date(post.publishedAt).toUTCString()}</pubDate>
+</item>`;
+  });
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+<title>Berita — ${xml(villageName)}</title>
+<link>${origin}/berita</link>
+<description>${xml(description)}</description>
+<language>id</language>
+<atom:link href="${origin}/berita/rss.xml" rel="self" type="application/rss+xml"/>
+${items.join('\n')}
+</channel>
+</rss>
+`;
+}
