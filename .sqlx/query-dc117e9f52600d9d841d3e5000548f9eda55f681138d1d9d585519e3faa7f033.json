@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT fiscal_year, published FROM apbdes_summaries WHERE id = $1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiscal_year",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "fiscal_year"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "published",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "published"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": [false, false]
+  },
+  "hash": "dc117e9f52600d9d841d3e5000548f9eda55f681138d1d9d585519e3faa7f033"
+}

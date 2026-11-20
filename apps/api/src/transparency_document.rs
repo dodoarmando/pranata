@@ -554,6 +554,31 @@ pub struct TransparencyDocumentPage {
     fiscal_years: Vec<i32>,
 }
 
+/// The fiscal year's Published documents of the budget types, `APBDes`, its amendment and the
+/// realisation report, the newest first, for its APBDes Summary.
+pub(crate) async fn budget_documents(
+    pool: &PgPool,
+    fiscal_year: i32,
+) -> sqlx::Result<Vec<PublishedTransparencyDocument>> {
+    let types = [
+        TransparencyDocumentType::Apbdes,
+        TransparencyDocumentType::ApbdesAmendment,
+        TransparencyDocumentType::RealisationReport,
+    ];
+    sqlx::query_as!(
+        PublishedTransparencyDocument,
+        r#"SELECT title, document_type AS "document_type: TransparencyDocumentType", fiscal_year,
+           file_id AS file, byte_size AS "byte_size!"
+           FROM transparency_documents documents JOIN files ON files.id = file_id
+           WHERE published AND document_type = ANY($1) AND fiscal_year = $2
+           ORDER BY documents.id DESC"#,
+        &types as &[TransparencyDocumentType],
+        fiscal_year,
+    )
+    .fetch_all(pool)
+    .await
+}
+
 /// Published Transparency Documents, the latest fiscal year first, a page at a time.
 #[utoipa::path(
     get,

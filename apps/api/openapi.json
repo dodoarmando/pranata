@@ -794,6 +794,286 @@
         }
       }
     },
+    "/apbdes-summaries": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Every APBDes Summary, Drafts and Published, the latest fiscal year first.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`.",
+        "operationId": "listApbdesSummaries",
+        "responses": {
+          "200": {
+            "description": "Every APBDes Summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApbdesSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Saves a new APBDes Summary as a Draft.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `409`\nwhen the fiscal year already has a summary, `422` for a fiscal year outside 2000–2100 or\na line that is not a whole rupiah amount from 0 to 999 999 999 999 999.",
+        "operationId": "createApbdesSummary",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApbdesSummaryFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "409": {
+            "description": "The fiscal year already has a summary"
+          },
+          "422": {
+            "description": "A field is malformed"
+          }
+        }
+      }
+    },
+    "/apbdes-summaries/published": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "A fiscal year's Published APBDes Summary, by default the latest, with its budget documents.",
+        "description": "# Errors\n`404` when that year, or any year, has no Published summary.",
+        "operationId": "getPublishedApbdesSummary",
+        "parameters": [
+          {
+            "name": "fiscalYear",
+            "in": "query",
+            "description": "The fiscal year; the latest Published one when absent.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Published APBDes Summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedApbdesSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The filter is malformed"
+          },
+          "404": {
+            "description": "There is no such Published summary"
+          }
+        }
+      }
+    },
+    "/apbdes-summaries/{id}": {
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Saves an APBDes Summary, a Draft or a Published one live.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` (or `content.publish`) for a\nDraft or without `content.publish` for a Published summary, `404` for an unknown summary,\n`409` when another summary has the fiscal year, `422` for a fiscal year outside 2000–2100\nor a line that is not a whole rupiah amount from 0 to 999 999 999 999 999.",
+        "operationId": "updateApbdesSummary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The APBDes Summary",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApbdesSummaryFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The summary is saved"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not change this summary"
+          },
+          "404": {
+            "description": "There is no such summary"
+          },
+          "409": {
+            "description": "Another summary has the fiscal year"
+          },
+          "422": {
+            "description": "A field is malformed"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Deletes a Draft for good. A Published summary is unpublished first.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\nsummary, `409` when it is Published.",
+        "operationId": "deleteApbdesSummary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The APBDes Summary",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Draft is deleted"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such summary"
+          },
+          "409": {
+            "description": "The summary is Published"
+          }
+        }
+      }
+    },
+    "/apbdes-summaries/{id}/publish": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Puts a Draft on `/apbdes`.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\nsummary, `409` when it is already Published.",
+        "operationId": "publishApbdesSummary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The APBDes Summary",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The summary is Published"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such summary"
+          },
+          "409": {
+            "description": "The summary is already Published"
+          }
+        }
+      }
+    },
+    "/apbdes-summaries/{id}/unpublish": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Takes a Published APBDes Summary off `/apbdes`, back to Draft.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\nsummary, `409` when it is a Draft.",
+        "operationId": "unpublishApbdesSummary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The APBDes Summary",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The summary is a Draft again"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such summary"
+          },
+          "409": {
+            "description": "The summary is a Draft"
+          }
+        }
+      }
+    },
     "/audit-entries": {
       "get": {
         "tags": [
@@ -5927,6 +6207,69 @@
           }
         }
       },
+      "ApbdesSummary": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApbdesSummaryFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "published"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "published": {
+                "type": "boolean"
+              }
+            }
+          }
+        ],
+        "description": "An APBDes Summary as the admin area lists and edits it."
+      },
+      "ApbdesSummaryFields": {
+        "type": "object",
+        "description": "What a User writes in an APBDes Summary.",
+        "required": [
+          "fiscalYear",
+          "version",
+          "versionDate",
+          "budget"
+        ],
+        "properties": {
+          "budget": {
+            "$ref": "#/components/schemas/BudgetLines"
+          },
+          "fiscalYear": {
+            "type": "integer",
+            "format": "int32",
+            "description": "2000–2100, at most one summary each."
+          },
+          "realisation": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Realisation",
+                "description": "Null before any realisation is reported."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/BudgetVersion"
+          },
+          "versionDate": {
+            "type": "string",
+            "format": "date",
+            "description": "The day this version was enacted."
+          }
+        }
+      },
       "AuditEntry": {
         "type": "object",
         "required": [
@@ -6024,6 +6367,70 @@
             "description": "The linked Official's Position today, if any."
           }
         }
+      },
+      "BudgetLines": {
+        "type": "object",
+        "description": "One set of APBDes lines in whole rupiah, each 0 to 999 999 999 999 999.",
+        "required": [
+          "revenue",
+          "governance",
+          "development",
+          "community",
+          "empowerment",
+          "emergencies",
+          "financingReceipts",
+          "financingExpenditures"
+        ],
+        "properties": {
+          "community": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Belanja, Bidang Pembinaan Kemasyarakatan Desa."
+          },
+          "development": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Belanja, Bidang Pelaksanaan Pembangunan Desa."
+          },
+          "emergencies": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Belanja, Bidang Penanggulangan Bencana, Keadaan Darurat dan Mendesak Desa."
+          },
+          "empowerment": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Belanja, Bidang Pemberdayaan Masyarakat Desa."
+          },
+          "financingExpenditures": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Pengeluaran pembiayaan."
+          },
+          "financingReceipts": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Penerimaan pembiayaan."
+          },
+          "governance": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Belanja, Bidang Penyelenggaraan Pemerintahan Desa."
+          },
+          "revenue": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Pendapatan."
+          }
+        }
+      },
+      "BudgetVersion": {
+        "type": "string",
+        "description": "Which APBDes the figures follow.",
+        "enum": [
+          "original",
+          "amendment"
+        ]
       },
       "Category": {
         "type": "object",
@@ -7750,6 +8157,38 @@
           }
         }
       },
+      "PublishedApbdesSummary": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApbdesSummaryFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "documents",
+              "fiscalYears"
+            ],
+            "properties": {
+              "documents": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/PublishedTransparencyDocument"
+                },
+                "description": "The year's Published `APBDes`, `APBDes Perubahan` and `Laporan realisasi` documents,\nthe newest first."
+              },
+              "fiscalYears": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "description": "Every fiscal year with a Published summary, the latest first, for the year switch."
+              }
+            }
+          }
+        ],
+        "description": "A Published APBDes Summary on `/apbdes`."
+      },
       "PublishedImportantContact": {
         "type": "object",
         "description": "A Published Important Contact as the public reads it.",
@@ -7963,6 +8402,27 @@
             "type": "string"
           }
         }
+      },
+      "Realisation": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BudgetLines"
+          },
+          {
+            "type": "object",
+            "required": [
+              "asOf"
+            ],
+            "properties": {
+              "asOf": {
+                "type": "string",
+                "format": "date",
+                "description": "The day the realisation is counted to."
+              }
+            }
+          }
+        ],
+        "description": "The realised lines so far."
       },
       "Reauthenticate": {
         "type": "object",

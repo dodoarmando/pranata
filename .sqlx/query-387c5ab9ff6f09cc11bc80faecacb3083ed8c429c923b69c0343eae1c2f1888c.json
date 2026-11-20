@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE apbdes_summaries SET fiscal_year = $1, version = $2, version_date = $3,\n             budget = $4, realisation = $5, updated_at = now() WHERE id = $6",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        {
+          "Custom": {
+            "name": "budget_version",
+            "kind": {
+              "Enum": ["original", "amendment"]
+            }
+          }
+        },
+        "Date",
+        "Jsonb",
+        "Jsonb",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "387c5ab9ff6f09cc11bc80faecacb3083ed8c429c923b69c0343eae1c2f1888c"
+}

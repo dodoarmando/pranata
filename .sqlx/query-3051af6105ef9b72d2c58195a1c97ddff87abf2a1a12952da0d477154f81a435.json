@@ -1,0 +1,86 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT fiscal_year, version AS \"version: BudgetVersion\", version_date, budget,\n           realisation, published FROM apbdes_summaries WHERE id = $1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiscal_year",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "fiscal_year"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "version: BudgetVersion",
+        "type_info": {
+          "Custom": {
+            "name": "budget_version",
+            "kind": {
+              "Enum": ["original", "amendment"]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "version"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "version_date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "version_date"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "budget",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "budget"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "realisation",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "realisation"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "published",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "published"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": [false, false, false, false, true, false]
+  },
+  "hash": "3051af6105ef9b72d2c58195a1c97ddff87abf2a1a12952da0d477154f81a435"
+}

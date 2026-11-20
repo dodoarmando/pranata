@@ -235,6 +235,68 @@ export interface AnnouncementSummary {
 }
 
 /**
+ * One set of APBDes lines in whole rupiah, each 0 to 999 999 999 999 999.
+ */
+export interface BudgetLines {
+  /** Belanja, Bidang Pembinaan Kemasyarakatan Desa. */
+  community: number;
+  /** Belanja, Bidang Pelaksanaan Pembangunan Desa. */
+  development: number;
+  /** Belanja, Bidang Penanggulangan Bencana, Keadaan Darurat dan Mendesak Desa. */
+  emergencies: number;
+  /** Belanja, Bidang Pemberdayaan Masyarakat Desa. */
+  empowerment: number;
+  /** Pengeluaran pembiayaan. */
+  financingExpenditures: number;
+  /** Penerimaan pembiayaan. */
+  financingReceipts: number;
+  /** Belanja, Bidang Penyelenggaraan Pemerintahan Desa. */
+  governance: number;
+  /** Pendapatan. */
+  revenue: number;
+}
+
+/**
+ * The realised lines so far.
+ */
+export type Realisation = BudgetLines & {
+  /** The day the realisation is counted to. */
+  asOf: string;
+};
+
+/**
+ * Which APBDes the figures follow.
+ */
+export type BudgetVersion = typeof BudgetVersion[keyof typeof BudgetVersion];
+
+
+export const BudgetVersion = {
+  original: 'original',
+  amendment: 'amendment',
+} as const;
+
+/**
+ * What a User writes in an APBDes Summary.
+ */
+export interface ApbdesSummaryFields {
+  budget: BudgetLines;
+  /** 2000–2100, at most one summary each. */
+  fiscalYear: number;
+  realisation?: Realisation | null;
+  version: BudgetVersion;
+  /** The day this version was enacted. */
+  versionDate: string;
+}
+
+/**
+ * An APBDes Summary as the admin area lists and edits it.
+ */
+export type ApbdesSummary = ApbdesSummaryFields & {
+  id: string;
+  published: boolean;
+};
+
+/**
  * One field's change in an Audit Entry.
  */
 export interface FieldChange {
@@ -1254,6 +1316,47 @@ export interface PublishedAnnouncement {
 }
 
 /**
+ * A Transparency Document's type, from a fixed catalog.
+ */
+export type TransparencyDocumentType = typeof TransparencyDocumentType[keyof typeof TransparencyDocumentType];
+
+
+export const TransparencyDocumentType = {
+  apbdes: 'apbdes',
+  apbdesAmendment: 'apbdesAmendment',
+  realisationReport: 'realisationReport',
+  rkpdes: 'rkpdes',
+  rpjmdes: 'rpjmdes',
+  villageRegulation: 'villageRegulation',
+  other: 'other',
+} as const;
+
+/**
+ * A Published Transparency Document on `/dokumen`.
+ */
+export interface PublishedTransparencyDocument {
+  byteSize: number;
+  documentType: TransparencyDocumentType;
+  /** Served at `/media/{file}/pdf`. */
+  file: string;
+  fiscalYear: number;
+  title: string;
+}
+
+/**
+ * A Published APBDes Summary on `/apbdes`.
+ */
+export type PublishedApbdesSummary = ApbdesSummaryFields & {
+  /**
+     * The year's Published `APBDes`, `APBDes Perubahan` and `Laporan realisasi` documents,
+     * the newest first.
+     */
+  documents: PublishedTransparencyDocument[];
+  /** Every fiscal year with a Published summary, the latest first, for the year switch. */
+  fiscalYears: number[];
+};
+
+/**
  * Tiptap JSON of the allowed nodes and marks only.
  */
 export type PublishedNewsPostBody = { [key: string]: unknown };
@@ -1312,34 +1415,6 @@ export interface PublishedPartner {
   name: string;
   /** @nullable */
   url?: string | null;
-}
-
-/**
- * A Transparency Document's type, from a fixed catalog.
- */
-export type TransparencyDocumentType = typeof TransparencyDocumentType[keyof typeof TransparencyDocumentType];
-
-
-export const TransparencyDocumentType = {
-  apbdes: 'apbdes',
-  apbdesAmendment: 'apbdesAmendment',
-  realisationReport: 'realisationReport',
-  rkpdes: 'rkpdes',
-  rpjmdes: 'rpjmdes',
-  villageRegulation: 'villageRegulation',
-  other: 'other',
-} as const;
-
-/**
- * A Published Transparency Document on `/dokumen`.
- */
-export interface PublishedTransparencyDocument {
-  byteSize: number;
-  documentType: TransparencyDocumentType;
-  /** Served at `/media/{file}/pdf`. */
-  file: string;
-  fiscalYear: number;
-  title: string;
 }
 
 export interface Reauthenticate {
@@ -1564,6 +1639,11 @@ export type ListPublishedAnnouncementsParams = {
    * @minimum 0
    */
   page?: number;
+};
+
+export type GetPublishedApbdesSummaryParams = {
+  /** The fiscal year; the latest Published one when absent. */
+  fiscalYear?: number;
 };
 
 export type ListAuditEntriesParams = {
@@ -2774,6 +2854,427 @@ export const getUnpublishAnnouncementUrl = (id: string,) => {
 export const unpublishAnnouncement = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<unpublishAnnouncementResponse> => {
 
   return apiFetch<unpublishAnnouncementResponse>(getUnpublishAnnouncementUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type listApbdesSummariesResponse200 = {
+  data: ApbdesSummary[]
+  status: 200
+}
+
+export type listApbdesSummariesResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listApbdesSummariesResponse403 = {
+  data: void
+  status: 403
+}
+
+export type listApbdesSummariesResponseSuccess = (listApbdesSummariesResponse200) & {
+  headers: Headers;
+};
+export type listApbdesSummariesResponseError = (listApbdesSummariesResponse401 | listApbdesSummariesResponse403) & {
+  headers: Headers;
+};
+
+export type listApbdesSummariesResponse = (listApbdesSummariesResponseSuccess | listApbdesSummariesResponseError)
+
+export const getListApbdesSummariesUrl = () => {
+
+
+
+
+  return `/apbdes-summaries`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`.
+ * @summary Every APBDes Summary, Drafts and Published, the latest fiscal year first.
+ */
+export const listApbdesSummaries = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listApbdesSummariesResponse> => {
+
+  return apiFetch<listApbdesSummariesResponse>(getListApbdesSummariesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createApbdesSummaryResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createApbdesSummaryResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createApbdesSummaryResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createApbdesSummaryResponse409 = {
+  data: void
+  status: 409
+}
+
+export type createApbdesSummaryResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createApbdesSummaryResponseSuccess = (createApbdesSummaryResponse201) & {
+  headers: Headers;
+};
+export type createApbdesSummaryResponseError = (createApbdesSummaryResponse401 | createApbdesSummaryResponse403 | createApbdesSummaryResponse409 | createApbdesSummaryResponse422) & {
+  headers: Headers;
+};
+
+export type createApbdesSummaryResponse = (createApbdesSummaryResponseSuccess | createApbdesSummaryResponseError)
+
+export const getCreateApbdesSummaryUrl = () => {
+
+
+
+
+  return `/apbdes-summaries`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `409`
+ * when the fiscal year already has a summary, `422` for a fiscal year outside 2000–2100 or
+ * a line that is not a whole rupiah amount from 0 to 999 999 999 999 999.
+ * @summary Saves a new APBDes Summary as a Draft.
+ */
+export const createApbdesSummary = async (apbdesSummaryFields: ApbdesSummaryFields, options?: Parameters<typeof apiFetch>[1]): Promise<createApbdesSummaryResponse> => {
+
+  return apiFetch<createApbdesSummaryResponse>(getCreateApbdesSummaryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(apbdesSummaryFields)
+  }
+);}
+
+
+
+export type getPublishedApbdesSummaryResponse200 = {
+  data: PublishedApbdesSummary
+  status: 200
+}
+
+export type getPublishedApbdesSummaryResponse400 = {
+  data: void
+  status: 400
+}
+
+export type getPublishedApbdesSummaryResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getPublishedApbdesSummaryResponseSuccess = (getPublishedApbdesSummaryResponse200) & {
+  headers: Headers;
+};
+export type getPublishedApbdesSummaryResponseError = (getPublishedApbdesSummaryResponse400 | getPublishedApbdesSummaryResponse404) & {
+  headers: Headers;
+};
+
+export type getPublishedApbdesSummaryResponse = (getPublishedApbdesSummaryResponseSuccess | getPublishedApbdesSummaryResponseError)
+
+export const getGetPublishedApbdesSummaryUrl = (params?: GetPublishedApbdesSummaryParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/apbdes-summaries/published?${stringifiedParams}` : `/apbdes-summaries/published`
+}
+
+/**
+ * # Errors
+ * `404` when that year, or any year, has no Published summary.
+ * @summary A fiscal year's Published APBDes Summary, by default the latest, with its budget documents.
+ */
+export const getPublishedApbdesSummary = async (params?: GetPublishedApbdesSummaryParams, options?: Parameters<typeof apiFetch>[1]): Promise<getPublishedApbdesSummaryResponse> => {
+
+  return apiFetch<getPublishedApbdesSummaryResponse>(getGetPublishedApbdesSummaryUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type updateApbdesSummaryResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateApbdesSummaryResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateApbdesSummaryResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateApbdesSummaryResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateApbdesSummaryResponse409 = {
+  data: void
+  status: 409
+}
+
+export type updateApbdesSummaryResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateApbdesSummaryResponseSuccess = (updateApbdesSummaryResponse204) & {
+  headers: Headers;
+};
+export type updateApbdesSummaryResponseError = (updateApbdesSummaryResponse401 | updateApbdesSummaryResponse403 | updateApbdesSummaryResponse404 | updateApbdesSummaryResponse409 | updateApbdesSummaryResponse422) & {
+  headers: Headers;
+};
+
+export type updateApbdesSummaryResponse = (updateApbdesSummaryResponseSuccess | updateApbdesSummaryResponseError)
+
+export const getUpdateApbdesSummaryUrl = (id: string,) => {
+
+
+
+
+  return `/apbdes-summaries/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` (or `content.publish`) for a
+ * Draft or without `content.publish` for a Published summary, `404` for an unknown summary,
+ * `409` when another summary has the fiscal year, `422` for a fiscal year outside 2000–2100
+ * or a line that is not a whole rupiah amount from 0 to 999 999 999 999 999.
+ * @summary Saves an APBDes Summary, a Draft or a Published one live.
+ */
+export const updateApbdesSummary = async (id: string,
+    apbdesSummaryFields: ApbdesSummaryFields, options?: Parameters<typeof apiFetch>[1]): Promise<updateApbdesSummaryResponse> => {
+
+  return apiFetch<updateApbdesSummaryResponse>(getUpdateApbdesSummaryUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(apbdesSummaryFields)
+  }
+);}
+
+
+
+export type deleteApbdesSummaryResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteApbdesSummaryResponse401 = {
+  data: void
+  status: 401
+}
+
+export type deleteApbdesSummaryResponse403 = {
+  data: void
+  status: 403
+}
+
+export type deleteApbdesSummaryResponse404 = {
+  data: void
+  status: 404
+}
+
+export type deleteApbdesSummaryResponse409 = {
+  data: void
+  status: 409
+}
+
+export type deleteApbdesSummaryResponseSuccess = (deleteApbdesSummaryResponse204) & {
+  headers: Headers;
+};
+export type deleteApbdesSummaryResponseError = (deleteApbdesSummaryResponse401 | deleteApbdesSummaryResponse403 | deleteApbdesSummaryResponse404 | deleteApbdesSummaryResponse409) & {
+  headers: Headers;
+};
+
+export type deleteApbdesSummaryResponse = (deleteApbdesSummaryResponseSuccess | deleteApbdesSummaryResponseError)
+
+export const getDeleteApbdesSummaryUrl = (id: string,) => {
+
+
+
+
+  return `/apbdes-summaries/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * summary, `409` when it is Published.
+ * @summary Deletes a Draft for good. A Published summary is unpublished first.
+ */
+export const deleteApbdesSummary = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deleteApbdesSummaryResponse> => {
+
+  return apiFetch<deleteApbdesSummaryResponse>(getDeleteApbdesSummaryUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type publishApbdesSummaryResponse204 = {
+  data: void
+  status: 204
+}
+
+export type publishApbdesSummaryResponse401 = {
+  data: void
+  status: 401
+}
+
+export type publishApbdesSummaryResponse403 = {
+  data: void
+  status: 403
+}
+
+export type publishApbdesSummaryResponse404 = {
+  data: void
+  status: 404
+}
+
+export type publishApbdesSummaryResponse409 = {
+  data: void
+  status: 409
+}
+
+export type publishApbdesSummaryResponseSuccess = (publishApbdesSummaryResponse204) & {
+  headers: Headers;
+};
+export type publishApbdesSummaryResponseError = (publishApbdesSummaryResponse401 | publishApbdesSummaryResponse403 | publishApbdesSummaryResponse404 | publishApbdesSummaryResponse409) & {
+  headers: Headers;
+};
+
+export type publishApbdesSummaryResponse = (publishApbdesSummaryResponseSuccess | publishApbdesSummaryResponseError)
+
+export const getPublishApbdesSummaryUrl = (id: string,) => {
+
+
+
+
+  return `/apbdes-summaries/${id}/publish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * summary, `409` when it is already Published.
+ * @summary Puts a Draft on `/apbdes`.
+ */
+export const publishApbdesSummary = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<publishApbdesSummaryResponse> => {
+
+  return apiFetch<publishApbdesSummaryResponse>(getPublishApbdesSummaryUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type unpublishApbdesSummaryResponse204 = {
+  data: void
+  status: 204
+}
+
+export type unpublishApbdesSummaryResponse401 = {
+  data: void
+  status: 401
+}
+
+export type unpublishApbdesSummaryResponse403 = {
+  data: void
+  status: 403
+}
+
+export type unpublishApbdesSummaryResponse404 = {
+  data: void
+  status: 404
+}
+
+export type unpublishApbdesSummaryResponse409 = {
+  data: void
+  status: 409
+}
+
+export type unpublishApbdesSummaryResponseSuccess = (unpublishApbdesSummaryResponse204) & {
+  headers: Headers;
+};
+export type unpublishApbdesSummaryResponseError = (unpublishApbdesSummaryResponse401 | unpublishApbdesSummaryResponse403 | unpublishApbdesSummaryResponse404 | unpublishApbdesSummaryResponse409) & {
+  headers: Headers;
+};
+
+export type unpublishApbdesSummaryResponse = (unpublishApbdesSummaryResponseSuccess | unpublishApbdesSummaryResponseError)
+
+export const getUnpublishApbdesSummaryUrl = (id: string,) => {
+
+
+
+
+  return `/apbdes-summaries/${id}/unpublish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * summary, `409` when it is a Draft.
+ * @summary Takes a Published APBDes Summary off `/apbdes`, back to Draft.
+ */
+export const unpublishApbdesSummary = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<unpublishApbdesSummaryResponse> => {
+
+  return apiFetch<unpublishApbdesSummaryResponse>(getUnpublishApbdesSummaryUrl(id),
   {
     ...options,
     method: 'POST'
