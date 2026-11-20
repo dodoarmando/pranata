@@ -129,7 +129,7 @@ pub struct NewsPostSummary {
 }
 
 /// Editing a Draft is writing; `content.publish` covers it too.
-fn ensure_writer(session: &Session) -> Result<(), ApiError> {
+pub(crate) fn ensure_writer(session: &Session) -> Result<(), ApiError> {
     if session.holds(Permission::ContentWrite) || session.holds(Permission::ContentPublish) {
         Ok(())
     } else {

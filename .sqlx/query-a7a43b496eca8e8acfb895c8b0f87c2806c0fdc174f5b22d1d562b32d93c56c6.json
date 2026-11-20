@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE announcements SET published = $1,\n             first_published_at = coalesce(first_published_at, now()) WHERE id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Bool", "Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "a7a43b496eca8e8acfb895c8b0f87c2806c0fdc174f5b22d1d562b32d93c56c6"
+}

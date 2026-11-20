@@ -10,6 +10,384 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/announcements": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Every Announcement, Drafts and Published, the latest changed first.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`.",
+        "operationId": "listAnnouncements",
+        "responses": {
+          "200": {
+            "description": "Every Announcement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AnnouncementSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Starts a Draft written by the signed-in User; only the title is required.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `409`\nwhen another Announcement takes the slug meanwhile, `422` for a blank title, a malformed\nfield, an end before the start or a body outside the allowlist.",
+        "operationId": "createAnnouncement",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnouncementFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "409": {
+            "description": "Another Announcement took the slug meanwhile"
+          },
+          "422": {
+            "description": "A field is malformed"
+          }
+        }
+      }
+    },
+    "/announcements/in-effect": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "The Published Announcements in effect today, the latest start first, for the home page.",
+        "operationId": "listAnnouncementsInEffect",
+        "responses": {
+          "200": {
+            "description": "The Announcements in effect",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AnnouncementCard"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/announcements/published": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Every Published Announcement, ended ones included, the latest start first, a page at a time.",
+        "operationId": "listPublishedAnnouncements",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "From 1, the default.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of Published Announcements",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnouncementPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/announcements/published/{slug}": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "One Published Announcement by its slug; only one with a body has a detail page.",
+        "description": "# Errors\n`404` for a slug no Published Announcement with a body has.",
+        "operationId": "getPublishedAnnouncement",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "The Announcement's slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Announcement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedAnnouncement"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Published Announcement with a body has the slug"
+          }
+        }
+      }
+    },
+    "/announcements/{id}": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "One Announcement, Draft or Published, for editing.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `404`\nfor an unknown Announcement.",
+        "operationId": "getAnnouncement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Announcement",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Announcement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Announcement"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "404": {
+            "description": "There is no such Announcement"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Saves an Announcement: a Draft as it autosaves, a Published one live.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` (or `content.publish`) for a\nDraft or without `content.publish` for a Published Announcement, `404` for an unknown\nAnnouncement, `409` for a new slug once first published or one another Announcement takes\nmeanwhile, `422` for a blank title, a malformed field, an end before the start, a body\noutside the allowlist, or a Published Announcement missing what publishing requires.",
+        "operationId": "updateAnnouncement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Announcement",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnouncementFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Announcement is saved"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not change this Announcement"
+          },
+          "404": {
+            "description": "There is no such Announcement"
+          },
+          "409": {
+            "description": "The slug is locked or taken"
+          },
+          "422": {
+            "description": "A field is malformed or missing"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Deletes a Draft for good; its slug is free again. A Published one is unpublished first.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\nAnnouncement, `409` when it is Published.",
+        "operationId": "deleteAnnouncement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Announcement",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Draft is deleted"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Announcement"
+          },
+          "409": {
+            "description": "The Announcement is Published"
+          }
+        }
+      }
+    },
+    "/announcements/{id}/publish": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Puts a Draft on the public site; the first publication locks its slug.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\nAnnouncement, `409` when it is already Published, `422` when it lacks a summary or a date.",
+        "operationId": "publishAnnouncement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Announcement",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Announcement is Published"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Announcement"
+          },
+          "409": {
+            "description": "The Announcement is already Published"
+          },
+          "422": {
+            "description": "A field publishing requires is missing"
+          }
+        }
+      }
+    },
+    "/announcements/{id}/unpublish": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Takes a Published Announcement off the public site, back to Draft; it keeps its slug.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\nAnnouncement, `409` when it is a Draft.",
+        "operationId": "unpublishAnnouncement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Announcement",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Announcement is a Draft again"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Announcement"
+          },
+          "409": {
+            "description": "The Announcement is a Draft"
+          }
+        }
+      }
+    },
     "/audit-entries": {
       "get": {
         "tags": [
@@ -2800,6 +3178,223 @@
           }
         }
       },
+      "Announcement": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AnnouncementFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "published",
+              "updatedAt"
+            ],
+            "properties": {
+              "firstPublishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "Null until first published; the slug is locked once set."
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "published": {
+                "type": "boolean"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ],
+        "description": "An Announcement as the admin area edits it."
+      },
+      "AnnouncementCard": {
+        "type": "object",
+        "description": "A Published Announcement in a public list.",
+        "required": [
+          "slug",
+          "title",
+          "summary",
+          "startDate",
+          "endDate",
+          "validity",
+          "hasBody"
+        ],
+        "properties": {
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "hasBody": {
+            "type": "boolean",
+            "description": "Whether it has a detail page."
+          },
+          "slug": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "validity": {
+            "$ref": "#/components/schemas/Validity",
+            "description": "Today's, in the Village's time zone."
+          }
+        }
+      },
+      "AnnouncementFields": {
+        "type": "object",
+        "description": "What a User writes in an Announcement. A Draft may leave out what publishing requires.",
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "body": {
+            "type": "object",
+            "description": "Optional; only an Announcement with a body has a detail page. Tiptap JSON of the same\nallowlist as a News Post's body."
+          },
+          "endDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "The last day in effect, inclusive and not before the start; required to publish."
+          },
+          "slug": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Made from the title when blank; transliterated, and locked once first published."
+          },
+          "startDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "The first day in effect, in the Village's time zone; required to publish."
+          },
+          "summary": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plain text, at most 250 characters; required to publish."
+          },
+          "title": {
+            "type": "string",
+            "description": "1–150 characters."
+          }
+        }
+      },
+      "AnnouncementPage": {
+        "type": "object",
+        "description": "One page of the public Announcement list.",
+        "required": [
+          "announcements",
+          "total",
+          "pageSize"
+        ],
+        "properties": {
+          "announcements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnnouncementCard"
+            }
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many Published Announcements there are, over every page."
+          }
+        }
+      },
+      "AnnouncementSummary": {
+        "type": "object",
+        "description": "A line of the admin area's Announcement list.",
+        "required": [
+          "id",
+          "title",
+          "slug",
+          "published",
+          "updatedAt",
+          "author"
+        ],
+        "properties": {
+          "author": {
+            "type": "string",
+            "description": "The creating User's username."
+          },
+          "endDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "firstPublishedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "published": {
+            "type": "boolean"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "validity": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Validity",
+                "description": "Today's, once both dates are set."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
       "AuditEntry": {
         "type": "object",
         "required": [
@@ -3879,6 +4474,51 @@
           }
         }
       },
+      "PublishedAnnouncement": {
+        "type": "object",
+        "description": "A Published Announcement with a body, as the public reads it.",
+        "required": [
+          "slug",
+          "title",
+          "summary",
+          "startDate",
+          "endDate",
+          "validity",
+          "body",
+          "publishedAt"
+        ],
+        "properties": {
+          "body": {
+            "type": "object",
+            "description": "Tiptap JSON of the allowed nodes and marks only."
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The first publication."
+          },
+          "slug": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "validity": {
+            "$ref": "#/components/schemas/Validity"
+          }
+        }
+      },
       "PublishedNewsPost": {
         "type": "object",
         "description": "A Published News Post as the public reads it.",
@@ -4384,6 +5024,15 @@
             "description": "The User's new Role, held from their next request."
           }
         }
+      },
+      "Validity": {
+        "type": "string",
+        "description": "Berlaku, Akan berlaku or Berakhir, on a given day.",
+        "enum": [
+          "upcoming",
+          "inEffect",
+          "ended"
+        ]
       },
       "Village": {
         "allOf": [
