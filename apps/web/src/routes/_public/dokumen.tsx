@@ -137,6 +137,7 @@ function DocumentList() {
         <nav aria-label="Halaman dokumen" className="flex items-center justify-between gap-4">
           {current > 1 ? (
             <Link
+              from="/dokumen"
               to="/dokumen"
               search={({ halaman: _, ...rest }) =>
                 current > 2 ? { ...rest, halaman: current - 1 } : rest

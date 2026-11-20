@@ -16,6 +16,7 @@ import { Route as MasukRouteImport } from './routes/masuk'
 import { Route as PublicIndexRouteImport } from './routes/_public/index'
 import { Route as PublicAgendaRouteImport } from './routes/_public/agenda'
 import { Route as PublicApbdesRouteImport } from './routes/_public/apbdes'
+import { Route as PublicCariRouteImport } from './routes/_public/cari'
 import { Route as PublicDokumenRouteImport } from './routes/_public/dokumen'
 import { Route as PublicKontakRouteImport } from './routes/_public/kontak'
 import { Route as PublicPemerintahanRouteImport } from './routes/_public/pemerintahan'
@@ -86,6 +87,11 @@ const PublicAgendaRoute = PublicAgendaRouteImport.update({
 const PublicApbdesRoute = PublicApbdesRouteImport.update({
   id: '/apbdes',
   path: '/apbdes',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicCariRoute = PublicCariRouteImport.update({
+  id: '/cari',
+  path: '/cari',
   getParentRoute: () => PublicRoute,
 } as any)
 const PublicDokumenRoute = PublicDokumenRouteImport.update({
@@ -281,6 +287,7 @@ export interface FileRoutesByFullPath {
   '/masuk': typeof MasukRoute
   '/agenda': typeof PublicAgendaRoute
   '/apbdes': typeof PublicApbdesRoute
+  '/cari': typeof PublicCariRoute
   '/dokumen': typeof PublicDokumenRoute
   '/kontak': typeof PublicKontakRoute
   '/pemerintahan': typeof PublicPemerintahanRoute
@@ -324,6 +331,7 @@ export interface FileRoutesByTo {
   '/masuk': typeof MasukRoute
   '/agenda': typeof PublicAgendaRoute
   '/apbdes': typeof PublicApbdesRoute
+  '/cari': typeof PublicCariRoute
   '/dokumen': typeof PublicDokumenRoute
   '/kontak': typeof PublicKontakRoute
   '/pemerintahan': typeof PublicPemerintahanRoute
@@ -371,6 +379,7 @@ export interface FileRoutesById {
   '/masuk': typeof MasukRoute
   '/_public/agenda': typeof PublicAgendaRoute
   '/_public/apbdes': typeof PublicApbdesRoute
+  '/_public/cari': typeof PublicCariRoute
   '/_public/dokumen': typeof PublicDokumenRoute
   '/_public/kontak': typeof PublicKontakRoute
   '/_public/pemerintahan': typeof PublicPemerintahanRoute
@@ -419,6 +428,7 @@ export interface FileRouteTypes {
     | '/masuk'
     | '/agenda'
     | '/apbdes'
+    | '/cari'
     | '/dokumen'
     | '/kontak'
     | '/pemerintahan'
@@ -462,6 +472,7 @@ export interface FileRouteTypes {
     | '/masuk'
     | '/agenda'
     | '/apbdes'
+    | '/cari'
     | '/dokumen'
     | '/kontak'
     | '/pemerintahan'
@@ -508,6 +519,7 @@ export interface FileRouteTypes {
     | '/masuk'
     | '/_public/agenda'
     | '/_public/apbdes'
+    | '/_public/cari'
     | '/_public/dokumen'
     | '/_public/kontak'
     | '/_public/pemerintahan'
@@ -605,6 +617,13 @@ declare module '@tanstack/react-router' {
       path: '/apbdes'
       fullPath: '/apbdes'
       preLoaderRoute: typeof PublicApbdesRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/cari': {
+      id: '/_public/cari'
+      path: '/cari'
+      fullPath: '/cari'
+      preLoaderRoute: typeof PublicCariRouteImport
       parentRoute: typeof PublicRoute
     }
     '/_public/dokumen': {
@@ -932,6 +951,7 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
 interface PublicRouteChildren {
   PublicAgendaRoute: typeof PublicAgendaRoute
   PublicApbdesRoute: typeof PublicApbdesRoute
+  PublicCariRoute: typeof PublicCariRoute
   PublicDokumenRoute: typeof PublicDokumenRoute
   PublicKontakRoute: typeof PublicKontakRoute
   PublicPemerintahanRoute: typeof PublicPemerintahanRoute
@@ -949,6 +969,7 @@ interface PublicRouteChildren {
 const PublicRouteChildren: PublicRouteChildren = {
   PublicAgendaRoute: PublicAgendaRoute,
   PublicApbdesRoute: PublicApbdesRoute,
+  PublicCariRoute: PublicCariRoute,
   PublicDokumenRoute: PublicDokumenRoute,
   PublicKontakRoute: PublicKontakRoute,
   PublicPemerintahanRoute: PublicPemerintahanRoute,
