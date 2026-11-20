@@ -21,6 +21,7 @@ import { Route as PublicProfilRouteImport } from './routes/_public/profil'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAkunRouteImport } from './routes/admin/akun'
 import { Route as AdminIndeksDesaRouteImport } from './routes/admin/indeks-desa'
+import { Route as AdminKontakPentingRouteImport } from './routes/admin/kontak-penting'
 import { Route as AdminLembagaDesaRouteImport } from './routes/admin/lembaga-desa'
 import { Route as AdminLogAuditRouteImport } from './routes/admin/log-audit'
 import { Route as AdminPemerintahanRouteImport } from './routes/admin/pemerintahan'
@@ -104,6 +105,11 @@ const AdminAkunRoute = AdminAkunRouteImport.update({
 const AdminIndeksDesaRoute = AdminIndeksDesaRouteImport.update({
   id: '/indeks-desa',
   path: '/indeks-desa',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminKontakPentingRoute = AdminKontakPentingRouteImport.update({
+  id: '/kontak-penting',
+  path: '/kontak-penting',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminLembagaDesaRoute = AdminLembagaDesaRouteImport.update({
@@ -243,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/profil': typeof PublicProfilRoute
   '/admin/akun': typeof AdminAkunRoute
   '/admin/indeks-desa': typeof AdminIndeksDesaRoute
+  '/admin/kontak-penting': typeof AdminKontakPentingRoute
   '/admin/lembaga-desa': typeof AdminLembagaDesaRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
   '/admin/pemerintahan': typeof AdminPemerintahanRoute
@@ -279,6 +286,7 @@ export interface FileRoutesByTo {
   '/profil': typeof PublicProfilRoute
   '/admin/akun': typeof AdminAkunRoute
   '/admin/indeks-desa': typeof AdminIndeksDesaRoute
+  '/admin/kontak-penting': typeof AdminKontakPentingRoute
   '/admin/lembaga-desa': typeof AdminLembagaDesaRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
   '/admin/pemerintahan': typeof AdminPemerintahanRoute
@@ -319,6 +327,7 @@ export interface FileRoutesById {
   '/_public/profil': typeof PublicProfilRoute
   '/admin/akun': typeof AdminAkunRoute
   '/admin/indeks-desa': typeof AdminIndeksDesaRoute
+  '/admin/kontak-penting': typeof AdminKontakPentingRoute
   '/admin/lembaga-desa': typeof AdminLembagaDesaRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
   '/admin/pemerintahan': typeof AdminPemerintahanRoute
@@ -360,6 +369,7 @@ export interface FileRouteTypes {
     | '/profil'
     | '/admin/akun'
     | '/admin/indeks-desa'
+    | '/admin/kontak-penting'
     | '/admin/lembaga-desa'
     | '/admin/log-audit'
     | '/admin/pemerintahan'
@@ -396,6 +406,7 @@ export interface FileRouteTypes {
     | '/profil'
     | '/admin/akun'
     | '/admin/indeks-desa'
+    | '/admin/kontak-penting'
     | '/admin/lembaga-desa'
     | '/admin/log-audit'
     | '/admin/pemerintahan'
@@ -435,6 +446,7 @@ export interface FileRouteTypes {
     | '/_public/profil'
     | '/admin/akun'
     | '/admin/indeks-desa'
+    | '/admin/kontak-penting'
     | '/admin/lembaga-desa'
     | '/admin/log-audit'
     | '/admin/pemerintahan'
@@ -556,6 +568,13 @@ declare module '@tanstack/react-router' {
       path: '/indeks-desa'
       fullPath: '/admin/indeks-desa'
       preLoaderRoute: typeof AdminIndeksDesaRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/kontak-penting': {
+      id: '/admin/kontak-penting'
+      path: '/kontak-penting'
+      fullPath: '/admin/kontak-penting'
+      preLoaderRoute: typeof AdminKontakPentingRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/lembaga-desa': {
@@ -739,6 +758,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteRouteChildren {
   AdminAkunRoute: typeof AdminAkunRoute
   AdminIndeksDesaRoute: typeof AdminIndeksDesaRoute
+  AdminKontakPentingRoute: typeof AdminKontakPentingRoute
   AdminLembagaDesaRoute: typeof AdminLembagaDesaRoute
   AdminLogAuditRoute: typeof AdminLogAuditRoute
   AdminPemerintahanRoute: typeof AdminPemerintahanRoute
@@ -762,6 +782,7 @@ interface AdminRouteRouteChildren {
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAkunRoute: AdminAkunRoute,
   AdminIndeksDesaRoute: AdminIndeksDesaRoute,
+  AdminKontakPentingRoute: AdminKontakPentingRoute,
   AdminLembagaDesaRoute: AdminLembagaDesaRoute,
   AdminLogAuditRoute: AdminLogAuditRoute,
   AdminPemerintahanRoute: AdminPemerintahanRoute,
