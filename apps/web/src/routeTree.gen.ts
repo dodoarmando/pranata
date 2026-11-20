@@ -31,6 +31,8 @@ import { Route as PublicBeritaIndexRouteImport } from './routes/_public/berita/i
 import { Route as PublicBeritaSlugRouteImport } from './routes/_public/berita/$slug'
 import { Route as AdminBeritaIndexRouteImport } from './routes/admin/berita/index'
 import { Route as AdminBeritaIdRouteImport } from './routes/admin/berita/$id'
+import { Route as AdminPengumumanIndexRouteImport } from './routes/admin/pengumuman/index'
+import { Route as AdminPengumumanIdRouteImport } from './routes/admin/pengumuman/$id'
 import { Route as MediaIdVariantRouteImport } from './routes/media.$id.$variant'
 
 const PublicRoute = PublicRouteImport.update({
@@ -142,6 +144,16 @@ const AdminBeritaIdRoute = AdminBeritaIdRouteImport.update({
   path: '/berita/$id',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminPengumumanIndexRoute = AdminPengumumanIndexRouteImport.update({
+  id: '/pengumuman/',
+  path: '/pengumuman/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminPengumumanIdRoute = AdminPengumumanIdRouteImport.update({
+  id: '/pengumuman/$id',
+  path: '/pengumuman/$id',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const MediaIdVariantRoute = MediaIdVariantRouteImport.update({
   id: '/media/$id/$variant',
   path: '/media/$id/$variant',
@@ -168,9 +180,11 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/berita/$slug': typeof PublicBeritaSlugRoute
   '/admin/berita/$id': typeof AdminBeritaIdRoute
+  '/admin/pengumuman/$id': typeof AdminPengumumanIdRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
   '/berita/': typeof PublicBeritaIndexRoute
   '/admin/berita/': typeof AdminBeritaIndexRoute
+  '/admin/pengumuman/': typeof AdminPengumumanIndexRoute
 }
 export interface FileRoutesByTo {
   '/akses': typeof AksesRoute
@@ -191,9 +205,11 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/berita/$slug': typeof PublicBeritaSlugRoute
   '/admin/berita/$id': typeof AdminBeritaIdRoute
+  '/admin/pengumuman/$id': typeof AdminPengumumanIdRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
   '/berita': typeof PublicBeritaIndexRoute
   '/admin/berita': typeof AdminBeritaIndexRoute
+  '/admin/pengumuman': typeof AdminPengumumanIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -217,9 +233,11 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/_public/berita/$slug': typeof PublicBeritaSlugRoute
   '/admin/berita/$id': typeof AdminBeritaIdRoute
+  '/admin/pengumuman/$id': typeof AdminPengumumanIdRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
   '/_public/berita/': typeof PublicBeritaIndexRoute
   '/admin/berita/': typeof AdminBeritaIndexRoute
+  '/admin/pengumuman/': typeof AdminPengumumanIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -243,9 +261,11 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/berita/$slug'
     | '/admin/berita/$id'
+    | '/admin/pengumuman/$id'
     | '/media/$id/$variant'
     | '/berita/'
     | '/admin/berita/'
+    | '/admin/pengumuman/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/akses'
@@ -266,9 +286,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/berita/$slug'
     | '/admin/berita/$id'
+    | '/admin/pengumuman/$id'
     | '/media/$id/$variant'
     | '/berita'
     | '/admin/berita'
+    | '/admin/pengumuman'
   id:
     | '__root__'
     | '/admin'
@@ -291,9 +313,11 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/_public/berita/$slug'
     | '/admin/berita/$id'
+    | '/admin/pengumuman/$id'
     | '/media/$id/$variant'
     | '/_public/berita/'
     | '/admin/berita/'
+    | '/admin/pengumuman/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -460,6 +484,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBeritaIdRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/pengumuman/': {
+      id: '/admin/pengumuman/'
+      path: '/pengumuman'
+      fullPath: '/admin/pengumuman/'
+      preLoaderRoute: typeof AdminPengumumanIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/pengumuman/$id': {
+      id: '/admin/pengumuman/$id'
+      path: '/pengumuman/$id'
+      fullPath: '/admin/pengumuman/$id'
+      preLoaderRoute: typeof AdminPengumumanIdRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/media/$id/$variant': {
       id: '/media/$id/$variant'
       path: '/media/$id/$variant'
@@ -482,7 +520,9 @@ interface AdminRouteRouteChildren {
   AdminWilayahRoute: typeof AdminWilayahRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminBeritaIdRoute: typeof AdminBeritaIdRoute
+  AdminPengumumanIdRoute: typeof AdminPengumumanIdRoute
   AdminBeritaIndexRoute: typeof AdminBeritaIndexRoute
+  AdminPengumumanIndexRoute: typeof AdminPengumumanIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
@@ -497,7 +537,9 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminWilayahRoute: AdminWilayahRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminBeritaIdRoute: AdminBeritaIdRoute,
+  AdminPengumumanIdRoute: AdminPengumumanIdRoute,
   AdminBeritaIndexRoute: AdminBeritaIndexRoute,
+  AdminPengumumanIndexRoute: AdminPengumumanIndexRoute,
 }
 
 const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
