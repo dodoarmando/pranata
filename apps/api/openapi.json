@@ -6249,7 +6249,8 @@
           "page",
           "album",
           "importantContact",
-          "partner"
+          "partner",
+          "transparencyDocument"
         ]
       },
       "DraftSummary": {

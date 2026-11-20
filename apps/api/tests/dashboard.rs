@@ -212,6 +212,30 @@ async fn the_dashboard_lists_every_draft_to_those_who_write_content(pool: PgPool
     let reply = app.call("GET", "/dashboard", None, Some(&writer)).await;
     assert_eq!(reply.body["drafts"][0]["id"], partner.body["id"]);
     assert_eq!(reply.body["drafts"][0]["kind"], "partner");
+
+    // And Transparency Document Drafts.
+    let file = app
+        .upload(
+            "/transparency-documents/file",
+            b"%PDF-1.7".to_vec(),
+            &writer,
+        )
+        .await;
+    let document = app
+        .call(
+            "POST",
+            "/transparency-documents",
+            Some(&json!({
+                "title": "RKPDes 2027", "documentType": "rkpdes", "fiscalYear": 2027,
+                "file": file.body["id"],
+            })),
+            Some(&writer),
+        )
+        .await;
+    let reply = app.call("GET", "/dashboard", None, Some(&writer)).await;
+    assert_eq!(reply.body["drafts"][0]["id"], document.body["id"]);
+    assert_eq!(reply.body["drafts"][0]["kind"], "transparencyDocument");
+    assert_eq!(reply.body["drafts"][0]["title"], "RKPDes 2027");
 }
 
 #[sqlx::test]

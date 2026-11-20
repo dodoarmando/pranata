@@ -337,6 +337,7 @@ export const DraftKind = {
   album: 'album',
   importantContact: 'importantContact',
   partner: 'partner',
+  transparencyDocument: 'transparencyDocument',
 } as const;
 
 /**
