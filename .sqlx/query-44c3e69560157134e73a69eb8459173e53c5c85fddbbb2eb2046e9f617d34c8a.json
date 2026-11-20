@@ -1,0 +1,108 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT title, document_type AS \"document_type: TransparencyDocumentType\", fiscal_year,\n           file_id AS file, byte_size AS \"byte_size!\"\n           FROM transparency_documents documents JOIN files ON files.id = file_id\n           WHERE published AND document_type = ANY($1) AND fiscal_year = $2\n           ORDER BY documents.id DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transparency_documents",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "document_type: TransparencyDocumentType",
+        "type_info": {
+          "Custom": {
+            "name": "document_type",
+            "kind": {
+              "Enum": [
+                "apbdes",
+                "apbdes_amendment",
+                "realisation_report",
+                "rkpdes",
+                "rpjmdes",
+                "village_regulation",
+                "other"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "transparency_documents",
+            "name": "document_type"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "fiscal_year",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "transparency_documents",
+            "name": "fiscal_year"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "file",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "transparency_documents",
+            "name": "file_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "byte_size!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "files",
+            "name": "byte_size"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "document_type[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "document_type",
+                  "kind": {
+                    "Enum": [
+                      "apbdes",
+                      "apbdes_amendment",
+                      "realisation_report",
+                      "rkpdes",
+                      "rpjmdes",
+                      "village_regulation",
+                      "other"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Int4"
+      ]
+    },
+    "nullable": [false, false, false, false, true]
+  },
+  "hash": "44c3e69560157134e73a69eb8459173e53c5c85fddbbb2eb2046e9f617d34c8a"
+}

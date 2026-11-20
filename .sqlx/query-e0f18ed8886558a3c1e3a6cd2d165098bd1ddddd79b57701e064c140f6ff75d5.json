@@ -1,0 +1,97 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, fiscal_year, version AS \"version: BudgetVersion\", version_date, budget,\n           realisation, published FROM apbdes_summaries ORDER BY fiscal_year DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "fiscal_year",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "fiscal_year"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "version: BudgetVersion",
+        "type_info": {
+          "Custom": {
+            "name": "budget_version",
+            "kind": {
+              "Enum": ["original", "amendment"]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "version"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "version_date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "version_date"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "budget",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "budget"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "realisation",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "realisation"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "published",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "published"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, false, false, false, false, true, false]
+  },
+  "hash": "e0f18ed8886558a3c1e3a6cd2d165098bd1ddddd79b57701e064c140f6ff75d5"
+}

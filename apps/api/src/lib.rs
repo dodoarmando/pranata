@@ -1,5 +1,6 @@
 mod album;
 mod announcement;
+mod apbdes_summary;
 mod audit;
 mod auth;
 mod category;
@@ -104,6 +105,7 @@ impl FromRef<AppState> for Arc<storage::Storage> {
 fn modules() -> OpenApiRouter<AppState> {
     important_contact::routes()
         .merge(partner::routes())
+        .merge(apbdes_summary::routes())
         .merge(transparency_document::routes())
 }
 

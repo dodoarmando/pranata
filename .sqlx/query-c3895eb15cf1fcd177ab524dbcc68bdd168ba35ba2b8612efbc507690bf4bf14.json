@@ -1,0 +1,75 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT fiscal_year, version AS \"version: BudgetVersion\", version_date, budget,\n           realisation FROM apbdes_summaries\n           WHERE published AND ($1::integer IS NULL OR fiscal_year = $1)\n           ORDER BY fiscal_year DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiscal_year",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "fiscal_year"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "version: BudgetVersion",
+        "type_info": {
+          "Custom": {
+            "name": "budget_version",
+            "kind": {
+              "Enum": ["original", "amendment"]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "version"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "version_date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "version_date"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "budget",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "budget"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "realisation",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "realisation"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Int4"]
+    },
+    "nullable": [false, false, false, false, true]
+  },
+  "hash": "c3895eb15cf1fcd177ab524dbcc68bdd168ba35ba2b8612efbc507690bf4bf14"
+}

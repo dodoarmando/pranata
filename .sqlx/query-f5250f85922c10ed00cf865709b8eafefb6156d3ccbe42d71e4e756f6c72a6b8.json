@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE apbdes_summaries SET published = $1 WHERE id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Bool", "Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "f5250f85922c10ed00cf865709b8eafefb6156d3ccbe42d71e4e756f6c72a6b8"
+}
