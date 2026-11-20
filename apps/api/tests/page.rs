@@ -352,6 +352,9 @@ async fn unpublishing_hides_a_page_and_only_a_draft_is_deleted(pool: PgPool) {
     let path = format!("/pages/{id}");
     let public = format!("/pages/published/{slug}");
 
+    let first_published =
+        office.call("GET", &path, None, &office.writer).await.body["firstPublishedAt"].clone();
+
     let live = office.call("DELETE", &path, None, &office.publisher).await;
     let unpublished = office
         .call(
@@ -361,6 +364,7 @@ async fn unpublishing_hides_a_page_and_only_a_draft_is_deleted(pool: PgPool) {
             &office.publisher,
         )
         .await;
+    let draft = office.call("GET", &path, None, &office.writer).await.body;
     let hidden = office.app.get(&public).await.0;
     let listed = office.app.get("/pages/published").await.1;
     let by_writer = office.call("DELETE", &path, None, &office.writer).await;
@@ -368,6 +372,9 @@ async fn unpublishing_hides_a_page_and_only_a_draft_is_deleted(pool: PgPool) {
 
     assert_eq!(live.status, StatusCode::CONFLICT);
     assert_eq!(unpublished.status, StatusCode::NO_CONTENT);
+    assert_eq!(draft["published"], false);
+    assert!(first_published.is_string());
+    assert_eq!(draft["firstPublishedAt"], first_published);
     assert_eq!(hidden, StatusCode::NOT_FOUND);
     assert_eq!(listed, json!([]));
     assert_eq!(by_writer.status, StatusCode::FORBIDDEN);
@@ -376,6 +383,26 @@ async fn unpublishing_hides_a_page_and_only_a_draft_is_deleted(pool: PgPool) {
         office.call("GET", &path, None, &office.writer).await.status,
         StatusCode::NOT_FOUND
     );
+    let entries = office
+        .call("GET", "/audit-entries", None, &office.publisher)
+        .await
+        .body["entries"]
+        .clone();
+    let actions: Vec<_> = entries
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|entry| entry["action"].as_str().unwrap())
+        .filter(|action| action.starts_with("page."))
+        .take(2)
+        .collect();
+    assert_eq!(actions, ["page.delete", "page.unpublish"]);
+
+    // A deleted Draft's slug is free again, and titles are transliterated.
+    let (_, again) = office
+        .draft(&Office::complete("Sejarah Désa", "profile"))
+        .await;
+    assert_eq!(again, slug);
 }
 
 #[sqlx::test]
