@@ -23,7 +23,7 @@ import {
 import { AnnouncementCard } from '../../components/announcement-card';
 import { EventCard } from '../../components/event-card';
 import { Button } from '../../components/ui/button';
-import { tenureKindLabels } from '../../government';
+import { holderTitle } from '../../government';
 import { newsDate } from '../../news';
 import { villageTitle } from '../../village';
 
@@ -350,9 +350,6 @@ function ApbdesSection({ summary }: { summary: PublishedApbdesSummary }) {
 
 /** The head-of-village welcome; blank lines in the message separate its paragraphs. */
 function WelcomeSection({ welcome }: { welcome: HomeWelcome }) {
-  // Pj. or Plt. before the Position; a Definitif holder needs no prefix.
-  const prefix =
-    welcome.signerKind === 'definitive' ? '' : `${tenureKindLabels[welcome.signerKind]} `;
   return (
     <Section
       id="welcome"
@@ -382,8 +379,7 @@ function WelcomeSection({ welcome }: { welcome: HomeWelcome }) {
           <figcaption className="grid">
             <strong>{welcome.signerName}</strong>
             <span className="text-muted-foreground">
-              {prefix}
-              {welcome.signerPosition}
+              {holderTitle(welcome.signerKind, welcome.signerPosition)}
             </span>
           </figcaption>
         </div>

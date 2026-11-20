@@ -7,7 +7,7 @@ import {
   listInstitutions,
   type Village,
 } from '../../api/generated';
-import { tenureKindLabels } from '../../government';
+import { holderTitle } from '../../government';
 import { institutionTitle } from '../../institution';
 import { villageTitle } from '../../village';
 
@@ -94,9 +94,7 @@ function GovernmentPage() {
                 <div className="grid gap-0.5 px-4 py-3">
                   <strong className="leading-snug">{official.name}</strong>
                   <span className="text-sm text-muted-foreground">
-                    {official.kind === 'definitive'
-                      ? official.position
-                      : `${tenureKindLabels[official.kind]} ${official.position}`}
+                    {holderTitle(official.kind, official.position)}
                   </span>
                 </div>
               </li>
