@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from '@tanstack/react-router';
+import { createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router';
 import { createServerFn, useServerFn } from '@tanstack/react-start';
 import { Plus } from 'lucide-react';
 import { type FormEvent, type ReactNode, useState } from 'react';
@@ -16,6 +16,7 @@ import {
   unpublishApbdesSummary,
   updateApbdesSummary,
 } from '../../api/generated';
+import { useAutosave } from '../../autosave';
 import { DataTable, Notice, PageHead } from '../../components/admin';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -24,6 +25,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { NativeSelect, NativeSelectOption } from '../../components/ui/native-select';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
+import { ianaZones } from '../../village';
 
 // Server-only; null without a content Permission.
 const fetchSummaries = createServerFn({ method: 'GET' }).handler(async () => {
@@ -34,15 +36,18 @@ const fetchSummaries = createServerFn({ method: 'GET' }).handler(async () => {
   };
 });
 
-const saveSummaryFn = createServerFn({ method: 'POST' })
-  .validator((data: { id: string | null; summary: ApbdesSummaryFields }) => data)
-  .handler(
-    async ({ data }) =>
-      (data.id
-        ? await updateApbdesSummary(data.id, data.summary)
-        : await createApbdesSummary(data.summary)
-      ).status,
-  );
+const createSummaryFn = createServerFn({ method: 'POST' })
+  .validator((summary: ApbdesSummaryFields) => summary)
+  .handler(async ({ data }) => {
+    const response = await createApbdesSummary(data);
+    return response.status === 201
+      ? { status: response.status, id: response.data.id }
+      : { status: response.status };
+  });
+
+const updateSummaryFn = createServerFn({ method: 'POST' })
+  .validator((data: { id: string; summary: ApbdesSummaryFields }) => data)
+  .handler(async ({ data }) => (await updateApbdesSummary(data.id, data.summary)).status);
 
 const publishFn = createServerFn({ method: 'POST' })
   .validator((data: { id: string; publish: boolean }) => data)
@@ -82,18 +87,17 @@ const noLines: BudgetLines = {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+const root = getRouteApi('__root__');
+
 function Summaries() {
   const { summaries, forbidden } = Route.useLoaderData();
   const router = useRouter();
-  const saveSummary = useServerFn(saveSummaryFn);
+  const createSummary = useServerFn(createSummaryFn);
   const setPublished = useServerFn(publishFn);
   const removeSummary = useServerFn(deleteSummaryFn);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
-  // The summary being edited, with its id or null for a new one; null while none is open.
-  const [editing, setEditing] = useState<{ id: string | null; fields: ApbdesSummaryFields } | null>(
-    null,
-  );
-  const [formError, setFormError] = useState('');
+  // The summary open in the form; null while the list shows.
+  const [editing, setEditing] = useState<ApbdesSummary | null>(null);
 
   if (!summaries) {
     return (
@@ -115,42 +119,28 @@ function Summaries() {
     await router.invalidate();
   }
 
-  const open = (summary: ApbdesSummary | null) => {
-    setFormError('');
+  const open = (summary: ApbdesSummary) => {
     setMessage(null);
-    if (summary) {
-      const { id, published: _, ...fields } = summary;
-      setEditing({ id, fields });
-    } else {
-      const fiscalYear = Math.max(
-        new Date().getFullYear(),
-        ...summaries.map((s) => s.fiscalYear + 1),
-      );
-      setEditing({
-        id: null,
-        fields: {
-          fiscalYear,
-          version: 'original',
-          versionDate: today(),
-          budget: noLines,
-          realisation: null,
-        },
-      });
-    }
+    setEditing(summary);
   };
 
-  async function onSave(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!editing) return;
-    const status = await saveSummary({ data: { id: editing.id, summary: editing.fields } });
-    if (status >= 300) {
-      setFormError(summaryErrors[status] ?? 'Gagal menyimpan.');
+  // A new year starts as a Draft right away, so that the form autosaves into it.
+  const onAdd = async () => {
+    const fields: ApbdesSummaryFields = {
+      fiscalYear: Math.max(new Date().getFullYear(), ...summaries.map((s) => s.fiscalYear + 1)),
+      version: 'original',
+      versionDate: today(),
+      budget: noLines,
+      realisation: null,
+    };
+    const created = await createSummary({ data: fields });
+    if (!created.id) {
+      setMessage({ text: summaryErrors[created.status] ?? 'Gagal menyimpan.', error: true });
       return;
     }
-    setEditing(null);
-    setMessage({ text: 'Ringkasan tersimpan.', error: false });
+    open({ id: created.id, ...fields, published: false });
     await router.invalidate();
-  }
+  };
 
   async function onDelete(summary: ApbdesSummary) {
     if (!window.confirm(`Hapus draf ringkasan APBDes ${summary.fiscalYear}?`)) return;
@@ -158,119 +148,7 @@ function Summaries() {
   }
 
   if (editing) {
-    const { fields } = editing;
-    const change = (patch: Partial<ApbdesSummaryFields>) =>
-      setEditing({ ...editing, fields: { ...fields, ...patch } });
-    const realisation = fields.realisation ?? null;
-    return (
-      <form onSubmit={onSave} className="grid gap-6">
-        <PageHead
-          title={editing.id ? `Ubah APBDes ${fields.fiscalYear}` : 'Tambah ringkasan APBDes'}
-        >
-          Total APBDes yang diisi manual, dalam rupiah penuh.
-        </PageHead>
-        <Card>
-          <CardHeader>
-            <CardTitle>Versi</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="apbdes-year">Tahun anggaran</Label>
-              <Input
-                id="apbdes-year"
-                type="number"
-                required
-                min={2000}
-                max={2100}
-                className="w-28"
-                value={fields.fiscalYear}
-                onChange={(e) => change({ fiscalYear: Number(e.currentTarget.value) })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="apbdes-version">Versi</Label>
-              <NativeSelect
-                id="apbdes-version"
-                value={fields.version}
-                onChange={(e) => change({ version: e.currentTarget.value as BudgetVersion })}
-              >
-                {(Object.keys(versionLabels) as BudgetVersion[]).map((version) => (
-                  <NativeSelectOption key={version} value={version}>
-                    {versionLabels[version]}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="apbdes-version-date">Tanggal ditetapkan</Label>
-              <Input
-                id="apbdes-version-date"
-                type="date"
-                required
-                value={fields.versionDate}
-                onChange={(e) => change({ versionDate: e.currentTarget.value })}
-              />
-            </div>
-          </CardContent>
-        </Card>
-        <LinesCard
-          title="Anggaran"
-          id="budget"
-          lines={fields.budget}
-          onChange={(budget) => change({ budget })}
-        />
-        <label className="flex items-center gap-2.5">
-          <input
-            type="checkbox"
-            checked={realisation !== null}
-            onChange={(e) =>
-              change({
-                realisation: e.currentTarget.checked ? { asOf: today(), ...noLines } : null,
-              })
-            }
-            className="size-4 accent-primary"
-          />
-          Sudah ada realisasi
-        </label>
-        {realisation && (
-          <LinesCard
-            title="Realisasi"
-            id="realised"
-            lines={realisation}
-            onChange={(lines) => change({ realisation: { ...realisation, ...lines } })}
-          >
-            <div className="grid gap-2">
-              <Label htmlFor="realised-as-of">Realisasi per tanggal</Label>
-              <Input
-                id="realised-as-of"
-                type="date"
-                required
-                className="w-fit"
-                value={realisation.asOf}
-                onChange={(e) =>
-                  change({ realisation: { ...realisation, asOf: e.currentTarget.value } })
-                }
-              />
-            </div>
-          </LinesCard>
-        )}
-        {formError && <Notice error>{formError}</Notice>}
-        <div className="flex gap-2">
-          <Button type="submit" size="lg" className="px-4">
-            Simpan
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="px-4"
-            onClick={() => setEditing(null)}
-          >
-            Batal
-          </Button>
-        </div>
-      </form>
-    );
+    return <SummaryForm key={editing.id} summary={editing} onClose={() => setEditing(null)} />;
   }
 
   return (
@@ -280,7 +158,7 @@ function Summaries() {
         situs bersama dokumen APBDes tahun yang sama.
       </PageHead>
       {message && <Notice error={message.error}>{message.text}</Notice>}
-      <Button type="button" size="lg" className="w-fit px-4" onClick={() => open(null)}>
+      <Button type="button" size="lg" className="w-fit px-4" onClick={onAdd}>
         <Plus aria-hidden="true" />
         Tambah tahun anggaran
       </Button>
@@ -352,6 +230,152 @@ function Summaries() {
         </DataTable>
       )}
     </>
+  );
+}
+
+/** One summary's fields: a Draft saves itself as the writer pauses, a Published one on Simpan. */
+function SummaryForm({ summary, onClose }: { summary: ApbdesSummary; onClose: () => void }) {
+  const village = root.useLoaderData();
+  const updateSummary = useServerFn(updateSummaryFn);
+  const [error, setError] = useState('');
+  const { id, published, ...initial } = summary;
+  const { fields, change, dirty, saving, savedAt, flush } = useAutosave<ApbdesSummaryFields>(
+    () => initial,
+    published,
+    (saved) => updateSummary({ data: { id, summary: saved } }),
+    (result) => setError(result >= 300 ? (summaryErrors[result] ?? 'Gagal menyimpan.') : ''),
+  );
+  const time = new Intl.DateTimeFormat('id-ID', {
+    timeStyle: 'short',
+    timeZone: ianaZones[village?.timeZone ?? 'WIB'],
+  });
+  const status = published
+    ? dirty
+      ? 'Ada perubahan yang belum disimpan.'
+      : 'Terbit di situs.'
+    : saving
+      ? 'Menyimpan…'
+      : dirty
+        ? 'Perubahan akan tersimpan otomatis.'
+        : savedAt
+          ? `Tersimpan otomatis pukul ${time.format(savedAt)}.`
+          : 'Draf, belum tampil di situs.';
+
+  async function onDone(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (dirty && !(await flush())) return;
+    onClose();
+  }
+
+  const realisation = fields.realisation ?? null;
+  return (
+    <form onSubmit={onDone} className="grid gap-6">
+      <PageHead title={`APBDes ${fields.fiscalYear}`}>
+        Total APBDes yang diisi manual, dalam rupiah penuh.
+      </PageHead>
+      <div className="flex flex-wrap items-center gap-3">
+        <Badge variant={published ? 'default' : 'secondary'}>{published ? 'Terbit' : 'Draf'}</Badge>
+        <p role="status" className="text-muted-foreground">
+          {status}
+        </p>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Versi</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="apbdes-year">Tahun anggaran</Label>
+            <Input
+              id="apbdes-year"
+              type="number"
+              required
+              min={2000}
+              max={2100}
+              className="w-28"
+              value={fields.fiscalYear}
+              onChange={(e) => change({ fiscalYear: Number(e.currentTarget.value) })}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="apbdes-version">Versi</Label>
+            <NativeSelect
+              id="apbdes-version"
+              value={fields.version}
+              onChange={(e) => change({ version: e.currentTarget.value as BudgetVersion })}
+            >
+              {(Object.keys(versionLabels) as BudgetVersion[]).map((version) => (
+                <NativeSelectOption key={version} value={version}>
+                  {versionLabels[version]}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="apbdes-version-date">Tanggal ditetapkan</Label>
+            <Input
+              id="apbdes-version-date"
+              type="date"
+              required
+              value={fields.versionDate}
+              onChange={(e) => change({ versionDate: e.currentTarget.value })}
+            />
+          </div>
+        </CardContent>
+      </Card>
+      <LinesCard
+        title="Anggaran"
+        id="budget"
+        lines={fields.budget}
+        onChange={(budget) => change({ budget })}
+      />
+      <label className="flex items-center gap-2.5">
+        <input
+          type="checkbox"
+          checked={realisation !== null}
+          onChange={(e) =>
+            change({
+              realisation: e.currentTarget.checked ? { asOf: today(), ...noLines } : null,
+            })
+          }
+          className="size-4 accent-primary"
+        />
+        Sudah ada realisasi
+      </label>
+      {realisation && (
+        <LinesCard
+          title="Realisasi"
+          id="realised"
+          lines={realisation}
+          onChange={(lines) => change({ realisation: { ...realisation, ...lines } })}
+        >
+          <div className="grid gap-2">
+            <Label htmlFor="realised-as-of">Realisasi per tanggal</Label>
+            <Input
+              id="realised-as-of"
+              type="date"
+              required
+              className="w-fit"
+              value={realisation.asOf}
+              onChange={(e) =>
+                change({ realisation: { ...realisation, asOf: e.currentTarget.value } })
+              }
+            />
+          </div>
+        </LinesCard>
+      )}
+      {error && <Notice error>{error}</Notice>}
+      <div className="flex gap-2">
+        <Button type="submit" size="lg" className="px-4" disabled={saving}>
+          {published ? 'Simpan' : 'Selesai'}
+        </Button>
+        {published && (
+          <Button type="button" variant="outline" size="lg" className="px-4" onClick={onClose}>
+            Batal
+          </Button>
+        )}
+      </div>
+    </form>
   );
 }
 
