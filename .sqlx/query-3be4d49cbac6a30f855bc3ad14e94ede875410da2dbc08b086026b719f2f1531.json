@@ -1,0 +1,119 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT slug, title, menu AS \"menu: PageMenu\", summary AS \"summary!\",\n           cover_file_id AS cover, cover_caption, cover_alt, body, updated_at\n           FROM pages WHERE published AND slug = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "pages",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "pages",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "menu: PageMenu",
+        "type_info": {
+          "Custom": {
+            "name": "page_menu",
+            "kind": {
+              "Enum": ["profile", "government", "services"]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "pages",
+            "name": "menu"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "summary!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "pages",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "cover",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "pages",
+            "name": "cover_file_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "cover_caption",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "pages",
+            "name": "cover_caption"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "cover_alt",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "pages",
+            "name": "cover_alt"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "body",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "pages",
+            "name": "body"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "pages",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Text"]
+    },
+    "nullable": [false, false, false, true, true, true, true, false, false]
+  },
+  "hash": "3be4d49cbac6a30f855bc3ad14e94ede875410da2dbc08b086026b719f2f1531"
+}

@@ -2339,6 +2339,402 @@
         }
       }
     },
+    "/pages": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Every Page, Drafts and Published, menu by menu in order.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`.",
+        "operationId": "listPages",
+        "responses": {
+          "200": {
+            "description": "Every Page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PageSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Starts a Draft written by the signed-in User; only the title and menu are required.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `409`\nwhen another Page takes the slug meanwhile, `422` for a blank title, a missing or unknown\nmenu, a malformed field, a body outside the allowlist, or an unknown cover.",
+        "operationId": "createPage",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "409": {
+            "description": "Another Page took the slug meanwhile"
+          },
+          "422": {
+            "description": "A field is malformed or unknown"
+          }
+        }
+      }
+    },
+    "/pages/cover": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Stores a cover photo, a JPEG, PNG or WebP of at most 10 MiB, for saving into a Page.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `413`\nover 10 MiB, `415` for content that is not JPEG, PNG or WebP, `422` over 40 megapixels or\nundecodable.",
+        "operationId": "uploadPageCover",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The stored photo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upload"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "413": {
+            "description": "The file is over 10 MiB"
+          },
+          "415": {
+            "description": "The file is not JPEG, PNG or WebP"
+          },
+          "422": {
+            "description": "The image is too large or broken"
+          }
+        }
+      }
+    },
+    "/pages/published": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Published Pages for the public navigation: Profil, then Pemerintahan, then Layanan, each in\norder.",
+        "operationId": "listPublishedPages",
+        "responses": {
+          "200": {
+            "description": "Every Published Page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PageLink"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pages/published/{slug}": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "One Published Page by its slug.",
+        "description": "# Errors\n`404` for a slug no Published Page has, such as a Draft's or a deleted one's.",
+        "operationId": "getPublishedPage",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "The Page's slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedPage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Published Page has the slug"
+          }
+        }
+      }
+    },
+    "/pages/{id}": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "One Page, Draft or Published, for editing.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `404`\nfor an unknown Page.",
+        "operationId": "getPage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "404": {
+            "description": "There is no such Page"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Saves a Page: a Draft as it autosaves, a Published one live.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` (or `content.publish`) for a\nDraft or without `content.publish` for a Published Page, `404` for an unknown Page, `409`\nfor a new slug or menu once first published or a slug another Page takes meanwhile, `422`\nfor a blank title, a malformed field, a body outside the allowlist, an unknown cover, or a\nPublished Page missing what publishing requires.",
+        "operationId": "updatePage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Page is saved"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not change this Page"
+          },
+          "404": {
+            "description": "There is no such Page"
+          },
+          "409": {
+            "description": "The slug or menu is locked, or the slug is taken"
+          },
+          "422": {
+            "description": "A field is malformed, unknown or missing"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Deletes a Draft for good; its slug is free again. A Published Page is unpublished first.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown Page,\n`409` when it is Published.",
+        "operationId": "deletePage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Draft is deleted"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Page"
+          },
+          "409": {
+            "description": "The Page is Published"
+          }
+        }
+      }
+    },
+    "/pages/{id}/publish": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Puts a Draft on the public site; the first publication locks its slug and menu.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown Page,\n`409` when it is already Published, `422` when it lacks a summary, or has a cover without\nalt text.",
+        "operationId": "publishPage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Page is Published"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Page"
+          },
+          "409": {
+            "description": "The Page is already Published"
+          },
+          "422": {
+            "description": "A field publishing requires is missing"
+          }
+        }
+      }
+    },
+    "/pages/{id}/unpublish": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Takes a Published Page off the public site, back to Draft; it keeps its slug and menu.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown Page,\n`409` when it is a Draft.",
+        "operationId": "unpublishPage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Page is a Draft again"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Page"
+          },
+          "409": {
+            "description": "The Page is a Draft"
+          }
+        }
+      }
+    },
     "/positions": {
       "get": {
         "tags": [
@@ -4906,6 +5302,177 @@
           }
         }
       },
+      "Page": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PageFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "published",
+              "updatedAt"
+            ],
+            "properties": {
+              "firstPublishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "Null until first published; the slug and menu are locked once set."
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "published": {
+                "type": "boolean"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ],
+        "description": "A Page as the admin area edits it."
+      },
+      "PageFields": {
+        "type": "object",
+        "description": "What a User writes in a Page. A Draft may leave out what publishing requires.",
+        "required": [
+          "title",
+          "menu"
+        ],
+        "properties": {
+          "body": {
+            "type": "object",
+            "description": "Tiptap JSON of the allowed nodes and marks only: paragraph, h2–h3, bold, italic, link\n(`http(s):`, `mailto:`, `tel:`), bullet and ordered list, blockquote, table and `YouTube`."
+          },
+          "cover": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The optional cover photo, uploaded at `/pages/cover`."
+          },
+          "coverAlt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The cover's alt text, up to 300 characters; required to publish with a cover."
+          },
+          "coverCaption": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Up to 300 characters."
+          },
+          "menu": {
+            "$ref": "#/components/schemas/PageMenu",
+            "description": "Locked once first published, like the slug."
+          },
+          "order": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The place within the menu, smallest first; a new Page goes last when left out, and an\nedit keeps the place."
+          },
+          "slug": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Made from the title when blank; transliterated, and locked once first published."
+          },
+          "summary": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The meta description, at most 250 characters; required to publish."
+          },
+          "title": {
+            "type": "string",
+            "description": "1–150 characters."
+          }
+        }
+      },
+      "PageLink": {
+        "type": "object",
+        "description": "A Published Page in the public navigation.",
+        "required": [
+          "menu",
+          "slug",
+          "title"
+        ],
+        "properties": {
+          "menu": {
+            "$ref": "#/components/schemas/PageMenu"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "PageMenu": {
+        "type": "string",
+        "description": "The fixed parent menu a Page sits under, which is also its URL's first part.",
+        "enum": [
+          "profile",
+          "government",
+          "services"
+        ]
+      },
+      "PageSummary": {
+        "type": "object",
+        "description": "A line of the admin area's Page list.",
+        "required": [
+          "id",
+          "title",
+          "slug",
+          "menu",
+          "order",
+          "published",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "menu": {
+            "$ref": "#/components/schemas/PageMenu"
+          },
+          "order": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "published": {
+            "type": "boolean"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "PasskeyChallenge": {
         "type": "object",
         "description": "A WebAuthn ceremony's options for the browser, and its id to finish it with.",
@@ -5199,6 +5766,60 @@
           },
           "title": {
             "type": "string"
+          }
+        }
+      },
+      "PublishedPage": {
+        "type": "object",
+        "description": "A Published Page as the public reads it.",
+        "required": [
+          "slug",
+          "title",
+          "menu",
+          "summary",
+          "body",
+          "updatedAt"
+        ],
+        "properties": {
+          "body": {
+            "type": "object",
+            "description": "Tiptap JSON of the allowed nodes and marks only."
+          },
+          "cover": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "coverAlt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "coverCaption": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "menu": {
+            "$ref": "#/components/schemas/PageMenu"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The last save, shown as \"last updated\"."
           }
         }
       },

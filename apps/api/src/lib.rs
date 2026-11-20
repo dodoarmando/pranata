@@ -12,6 +12,7 @@ mod imaging;
 mod index_edition;
 mod institution;
 mod news_post;
+mod page;
 mod passkey;
 mod password;
 mod region;
@@ -155,6 +156,13 @@ fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(event::unpublish))
         .routes(routes!(event::list_upcoming))
         .routes(routes!(event::list_past))
+        .routes(routes!(page::list, page::create))
+        .routes(routes!(page::get, page::update, page::delete))
+        .routes(routes!(page::publish))
+        .routes(routes!(page::unpublish))
+        .routes(routes!(page::upload_cover))
+        .routes(routes!(page::list_published))
+        .routes(routes!(page::get_published))
         .routes(routes!(storage::get_media))
         .routes(routes!(auth::use_access_link))
         .routes(routes!(auth::sign_in))
