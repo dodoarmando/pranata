@@ -4,10 +4,10 @@ import {
   getVisionMission,
   type IndexEdition,
   listIndexEditions,
-  type Village,
   type VisionMission,
 } from '../../api/generated';
 import { dimensions, editionLabel, formatScore, scales, statusLabels } from '../../index-edition';
+import { pageHead } from '../../seo';
 import { villageCodeDotted, villageTitle } from '../../village';
 
 // Server-only; null until saved, or when the API cannot be reached.
@@ -41,11 +41,7 @@ export const Route = createFileRoute('/_public/profil')({
     const [visionMission, editions] = await Promise.all([fetchVisionMission(), fetchEditions()]);
     return { visionMission, editions };
   },
-  head: ({ matches }) => {
-    // The root match comes first; its loader data is typed only through getRouteApi.
-    const village = matches[0]?.loaderData as Village | null | undefined;
-    return { meta: [{ title: village ? `Profil — ${villageTitle(village)}` : 'Profil' }] };
-  },
+  head: (context) => pageHead(context, { title: 'Profil' }),
   component: ProfilePage,
 });
 

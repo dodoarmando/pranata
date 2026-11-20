@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { period } from '../../../announcement';
-import { type GalleryPage, listPublishedAlbums, type Village } from '../../../api/generated';
-import { villageTitle } from '../../../village';
+import { type GalleryPage, listPublishedAlbums } from '../../../api/generated';
+import { pageHead } from '../../../seo';
 
 type Search = { halaman?: number };
 
@@ -26,11 +26,7 @@ export const Route = createFileRoute('/_public/galeri/')({
   },
   loaderDeps: ({ search }) => search,
   loader: ({ deps }) => fetchGallery({ data: deps }),
-  head: ({ matches }) => {
-    // The root match comes first; its loader data is typed only through getRouteApi.
-    const village = matches[0]?.loaderData as Village | null | undefined;
-    return { meta: [{ title: village ? `Galeri — ${villageTitle(village)}` : 'Galeri' }] };
-  },
+  head: (context) => pageHead(context, { title: 'Galeri' }),
   component: Gallery,
 });
 

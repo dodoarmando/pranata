@@ -1,7 +1,8 @@
 import { createFileRoute, getRouteApi } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { ExternalLink, Mail, MapPin, Phone } from 'lucide-react';
-import { listPublishedImportantContacts, type Village } from '../../api/generated';
+import { listPublishedImportantContacts } from '../../api/generated';
+import { pageHead } from '../../seo';
 import { regencyShort, villageTitle } from '../../village';
 
 const root = getRouteApi('__root__');
@@ -20,11 +21,7 @@ const telHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, '')}`;
 
 export const Route = createFileRoute('/_public/kontak')({
   loader: () => fetchImportantContacts(),
-  head: ({ matches }) => {
-    // The root match comes first; its loader data is typed only through getRouteApi.
-    const village = matches[0]?.loaderData as Village | null | undefined;
-    return { meta: [{ title: village ? `Kontak — ${villageTitle(village)}` : 'Kontak' }] };
-  },
+  head: (context) => pageHead(context, { title: 'Kontak' }),
   component: ContactPage,
 });
 

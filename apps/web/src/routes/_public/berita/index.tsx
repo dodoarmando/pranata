@@ -5,12 +5,11 @@ import {
   listCategories,
   listPublishedNewsPosts,
   type NewsPage,
-  type Village,
 } from '../../../api/generated';
 import { SearchForm, SearchResults, searchOnly } from '../../../components/search-results';
 import { newsDate } from '../../../news';
 import { searchQuery } from '../../../search';
-import { villageTitle } from '../../../village';
+import { pageHead } from '../../../seo';
 
 type Search = { q?: string; kategori?: string; halaman?: number };
 
@@ -53,11 +52,7 @@ export const Route = createFileRoute('/_public/berita/')({
   // A query searches News Posts alone, on this page.
   loader: ({ deps }) =>
     deps.q ? searchOnly('newsPost', deps.q, deps.halaman) : fetchNews({ data: deps }),
-  head: ({ matches }) => {
-    // The root match comes first; its loader data is typed only through getRouteApi.
-    const village = matches[0]?.loaderData as Village | null | undefined;
-    return { meta: [{ title: village ? `Berita — ${villageTitle(village)}` : 'Berita' }] };
-  },
+  head: (context) => pageHead(context, { title: 'Berita' }),
   component: NewsList,
 });
 

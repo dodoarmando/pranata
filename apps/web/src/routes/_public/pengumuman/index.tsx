@@ -1,12 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import {
-  type AnnouncementPage,
-  listPublishedAnnouncements,
-  type Village,
-} from '../../../api/generated';
+import { type AnnouncementPage, listPublishedAnnouncements } from '../../../api/generated';
 import { AnnouncementCard } from '../../../components/announcement-card';
-import { villageTitle } from '../../../village';
+import { pageHead } from '../../../seo';
 
 type Search = { halaman?: number };
 
@@ -30,13 +26,7 @@ export const Route = createFileRoute('/_public/pengumuman/')({
   },
   loaderDeps: ({ search }) => search,
   loader: ({ deps }) => fetchAnnouncements({ data: deps }),
-  head: ({ matches }) => {
-    // The root match comes first; its loader data is typed only through getRouteApi.
-    const village = matches[0]?.loaderData as Village | null | undefined;
-    return {
-      meta: [{ title: village ? `Pengumuman — ${villageTitle(village)}` : 'Pengumuman' }],
-    };
-  },
+  head: (context) => pageHead(context, { title: 'Pengumuman' }),
   component: AnnouncementList,
 });
 

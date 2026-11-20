@@ -3,14 +3,13 @@ import { createServerFn } from '@tanstack/react-start';
 import {
   listPublishedTransparencyDocuments,
   type TransparencyDocumentPage,
-  type Village,
 } from '../../api/generated';
 import { SearchForm, SearchResults, searchOnly } from '../../components/search-results';
 import { TransparencyDocumentItem } from '../../components/transparency-document-item';
 import { NativeSelect, NativeSelectOption } from '../../components/ui/native-select';
 import { searchQuery } from '../../search';
+import { pageHead } from '../../seo';
 import { documentGroups } from '../../transparency-document';
-import { villageTitle } from '../../village';
 
 type Search = {
   q?: string;
@@ -56,11 +55,7 @@ export const Route = createFileRoute('/_public/dokumen')({
     deps.q
       ? searchOnly('transparencyDocument', deps.q, deps.halaman)
       : fetchDocuments({ data: deps }),
-  head: ({ matches }) => {
-    // The root match comes first; its loader data is typed only through getRouteApi.
-    const village = matches[0]?.loaderData as Village | null | undefined;
-    return { meta: [{ title: village ? `Dokumen — ${villageTitle(village)}` : 'Dokumen' }] };
-  },
+  head: (context) => pageHead(context, { title: 'Dokumen' }),
   component: DocumentList,
 });
 

@@ -1,10 +1,10 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { period } from '../../../announcement';
-import { getPublishedAnnouncement, type Village } from '../../../api/generated';
+import { getPublishedAnnouncement } from '../../../api/generated';
 import { ValidityBadge } from '../../../components/announcement-card';
 import { RichTextBody } from '../../../components/rich-text-body';
-import { villageTitle } from '../../../village';
+import { pageHead } from '../../../seo';
 
 // Server-only: the body becomes HTML here, so Tiptap never ships to the browser. Null for a
 // slug no Published Announcement with a body has; any other failure throws.
@@ -25,17 +25,13 @@ export const Route = createFileRoute('/_public/pengumuman/$slug')({
     if (!announcement) throw notFound();
     return announcement;
   },
-  head: ({ matches, loaderData }) => {
-    // The root match comes first; its loader data is typed only through getRouteApi.
-    const village = matches[0]?.loaderData as Village | null | undefined;
-    if (!loaderData) return {};
-    return {
-      meta: [
-        { title: village ? `${loaderData.title} — ${villageTitle(village)}` : loaderData.title },
-        { name: 'description', content: loaderData.summary },
-      ],
-    };
-  },
+  head: (context) =>
+    context.loaderData
+      ? pageHead(context, {
+          title: context.loaderData.title,
+          description: context.loaderData.summary,
+        })
+      : {},
   component: AnnouncementPage,
   notFoundComponent: AnnouncementNotFound,
 });
