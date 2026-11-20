@@ -632,6 +632,161 @@
         }
       }
     },
+    "/categories": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Every Category by name, for the public site and the admin area.",
+        "operationId": "listCategories",
+        "responses": {
+          "200": {
+            "description": "Every Category",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Adds a Category.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `409` for a name in use,\n`422` for a blank name or one over 50 characters.",
+        "operationId": "createCategory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Category",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "409": {
+            "description": "Another Category has the name"
+          },
+          "422": {
+            "description": "The name is blank or too long"
+          }
+        }
+      }
+    },
+    "/categories/{id}": {
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Renames a Category.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\nCategory, `409` for a name in use, `422` for a blank name or one over 50 characters.",
+        "operationId": "updateCategory",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Category",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Category is renamed"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Category"
+          },
+          "409": {
+            "description": "Another Category has the name"
+          },
+          "422": {
+            "description": "The name is blank or too long"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Deletes a Category nothing is filed under.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\nCategory, `409` while anything is filed under it.",
+        "operationId": "deleteCategory",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Category",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Category is deleted"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Category"
+          },
+          "409": {
+            "description": "Something is filed under the Category"
+          }
+        }
+      }
+    },
     "/dashboard": {
       "get": {
         "tags": [
@@ -2304,6 +2459,34 @@
             ],
             "format": "uuid",
             "description": "Pass as `before` for the next, older page; null on the last page."
+          }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CategoryFields": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "1–50 characters, unique whatever the case."
           }
         }
       },
