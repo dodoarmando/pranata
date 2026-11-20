@@ -10,6 +10,412 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/albums": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Every Album, Drafts and Published, the latest occasion first and undated Drafts on top.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`.",
+        "operationId": "listAlbums",
+        "responses": {
+          "200": {
+            "description": "Every Album",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AlbumSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Starts a Draft written by the signed-in User; only the title is required.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `409`\nwhen another Album takes the slug meanwhile, `422` for a blank title, a malformed field, an\nend before the start, a photo listed twice or unknown, or a cover that is not a photo.",
+        "operationId": "createAlbum",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlbumFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "409": {
+            "description": "Another Album took the slug meanwhile"
+          },
+          "422": {
+            "description": "A field is malformed or unknown"
+          }
+        }
+      }
+    },
+    "/albums/photo": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Stores a photo, a JPEG, PNG or WebP of at most 10 MiB, for saving into an Album.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `413`\nover 10 MiB, `415` for content that is not JPEG, PNG or WebP, `422` over 40 megapixels or\nundecodable.",
+        "operationId": "uploadAlbumPhoto",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The stored photo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upload"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "413": {
+            "description": "The file is over 10 MiB"
+          },
+          "415": {
+            "description": "The file is not JPEG, PNG or WebP"
+          },
+          "422": {
+            "description": "The image is too large or broken"
+          }
+        }
+      }
+    },
+    "/albums/published": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Published Albums, the latest occasion first, a page at a time.",
+        "operationId": "listPublishedAlbums",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "From 1, the default.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of Published Albums",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GalleryPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/albums/published/{slug}": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "One Published Album by its slug.",
+        "description": "# Errors\n`404` for a slug no Published Album has, such as a Draft's or a deleted one's.",
+        "operationId": "getPublishedAlbum",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "The Album's slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Album",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedAlbum"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Published Album has the slug"
+          }
+        }
+      }
+    },
+    "/albums/{id}": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "One Album, Draft or Published, for editing.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `404`\nfor an unknown Album.",
+        "operationId": "getAlbum",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Album",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Album",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Album"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "404": {
+            "description": "There is no such Album"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Saves an Album: a Draft as it autosaves, a Published one live.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` (or `content.publish`) for a\nDraft or without `content.publish` for a Published Album, `404` for an unknown Album, `409`\nfor a new slug once first published or a slug another Album takes meanwhile, `422` for a\nblank title, a malformed field, an end before the start, a photo listed twice or unknown, a\ncover that is not a photo, or a Published Album missing what publishing requires.",
+        "operationId": "updateAlbum",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Album",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlbumFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Album is saved"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not change this Album"
+          },
+          "404": {
+            "description": "There is no such Album"
+          },
+          "409": {
+            "description": "The slug is locked or taken"
+          },
+          "422": {
+            "description": "A field is malformed, unknown or missing"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Deletes a Draft for good; its slug is free again. A Published Album is unpublished first.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown Album,\n`409` when it is Published.",
+        "operationId": "deleteAlbum",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Album",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Draft is deleted"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Album"
+          },
+          "409": {
+            "description": "The Album is Published"
+          }
+        }
+      }
+    },
+    "/albums/{id}/publish": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Puts a Draft on the public site; the first publication locks its slug.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown Album,\n`409` when it is already Published, `422` when it has no photos, a photo without alt text,\nor no occasion start.",
+        "operationId": "publishAlbum",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Album",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Album is Published"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Album"
+          },
+          "409": {
+            "description": "The Album is already Published"
+          },
+          "422": {
+            "description": "A field publishing requires is missing"
+          }
+        }
+      }
+    },
+    "/albums/{id}/unpublish": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Takes a Published Album off the public site, back to Draft; it keeps its slug.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown Album,\n`409` when it is a Draft.",
+        "operationId": "unpublishAlbum",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Album",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Album is a Draft again"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Album"
+          },
+          "409": {
+            "description": "The Album is a Draft"
+          }
+        }
+      }
+    },
     "/announcements": {
       "get": {
         "tags": [
@@ -3910,6 +4316,213 @@
           }
         }
       },
+      "Album": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AlbumFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "published",
+              "updatedAt"
+            ],
+            "properties": {
+              "firstPublishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "Null until first published; the slug is locked once set."
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "published": {
+                "type": "boolean"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ],
+        "description": "An Album as the admin area edits it."
+      },
+      "AlbumCard": {
+        "type": "object",
+        "description": "A Published Album in the gallery.",
+        "required": [
+          "slug",
+          "title",
+          "occasionStart",
+          "cover",
+          "coverAlt",
+          "photoCount"
+        ],
+        "properties": {
+          "cover": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "coverAlt": {
+            "type": "string"
+          },
+          "occasionEnd": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "occasionStart": {
+            "type": "string",
+            "format": "date"
+          },
+          "photoCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "AlbumFields": {
+        "type": "object",
+        "description": "What a User writes in an Album. A Draft may leave out what publishing requires.",
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "cover": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "One of the photos' files; null makes the first photo the cover."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Up to 500 characters."
+          },
+          "occasionEnd": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "The occasion's last day, when it spans several; not before the start."
+          },
+          "occasionStart": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "The occasion's first day; required to publish."
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlbumPhoto"
+            },
+            "description": "In the order the public sees, each file once; publishing needs at least one."
+          },
+          "slug": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Made from the title when blank; transliterated, and locked once first published."
+          },
+          "title": {
+            "type": "string",
+            "description": "1–150 characters."
+          }
+        }
+      },
+      "AlbumPhoto": {
+        "type": "object",
+        "description": "One photo of an Album.",
+        "required": [
+          "file"
+        ],
+        "properties": {
+          "alt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Up to 300 characters; required to publish."
+          },
+          "caption": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Up to 300 characters."
+          },
+          "file": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Uploaded at `/albums/photo`."
+          }
+        }
+      },
+      "AlbumSummary": {
+        "type": "object",
+        "description": "A line of the admin area's Album list.",
+        "required": [
+          "id",
+          "title",
+          "slug",
+          "photoCount",
+          "published",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "occasionStart": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "photoCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "published": {
+            "type": "boolean"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "Announcement": {
         "allOf": [
           {
@@ -4683,6 +5296,32 @@
             "description": "Whether `from` and `to` are shown as `•••` to readers without `resident.sensitive`."
           },
           "to": {}
+        }
+      },
+      "GalleryPage": {
+        "type": "object",
+        "description": "One page of the gallery.",
+        "required": [
+          "albums",
+          "total",
+          "pageSize"
+        ],
+        "properties": {
+          "albums": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlbumCard"
+            }
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many Albums are Published, over every page."
+          }
         }
       },
       "Government": {
@@ -5666,6 +6305,53 @@
           }
         }
       },
+      "PublishedAlbum": {
+        "type": "object",
+        "description": "A Published Album as the public sees it.",
+        "required": [
+          "slug",
+          "title",
+          "occasionStart",
+          "cover",
+          "photos"
+        ],
+        "properties": {
+          "cover": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The chosen photo, or else the first."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "occasionEnd": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "occasionStart": {
+            "type": "string",
+            "format": "date"
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublishedPhoto"
+            }
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
       "PublishedAnnouncement": {
         "type": "object",
         "description": "A Published Announcement with a body, as the public reads it.",
@@ -5821,6 +6507,29 @@
             "type": "string",
             "format": "date-time",
             "description": "The last save, shown as \"last updated\"."
+          }
+        }
+      },
+      "PublishedPhoto": {
+        "type": "object",
+        "description": "A photo of a Published Album.",
+        "required": [
+          "file",
+          "alt"
+        ],
+        "properties": {
+          "alt": {
+            "type": "string"
+          },
+          "caption": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "file": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },

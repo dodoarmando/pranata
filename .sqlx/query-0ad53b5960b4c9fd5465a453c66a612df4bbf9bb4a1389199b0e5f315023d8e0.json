@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE albums SET title = $1, slug = $2, description = $3, occasion_start = $4,\n         occasion_end = $5, cover_file_id = $6, updated_at = now() WHERE id = $7",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Text", "Text", "Text", "Date", "Date", "Uuid", "Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "0ad53b5960b4c9fd5465a453c66a612df4bbf9bb4a1389199b0e5f315023d8e0"
+}
