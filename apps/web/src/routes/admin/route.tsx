@@ -10,6 +10,7 @@ import {
 import { createServerFn, useServerFn } from '@tanstack/react-start';
 import {
   Building2,
+  CalendarDays,
   ChartLine,
   ChevronRight,
   Handshake,
@@ -52,6 +53,7 @@ const pages = [
   { group: 'Desa', to: '/admin/indeks-desa', label: 'Indeks Desa', icon: ChartLine },
   { group: 'Situs web', to: '/admin/berita', label: 'Berita', icon: Newspaper },
   { group: 'Situs web', to: '/admin/pengumuman', label: 'Pengumuman', icon: Megaphone },
+  { group: 'Situs web', to: '/admin/agenda', label: 'Agenda', icon: CalendarDays },
   { group: 'Sistem', to: '/admin/pengguna', label: 'Pengguna', icon: Users },
   { group: 'Sistem', to: '/admin/peran', label: 'Peran', icon: ShieldCheck },
   { group: 'Sistem', to: '/admin/log-audit', label: 'Log audit', icon: ScrollText },
