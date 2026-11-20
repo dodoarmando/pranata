@@ -1,0 +1,75 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT complaints.id, complaint_topics.name AS topic, created_at,\n           state AS \"state: ComplaintState\", rejection_reason\n           FROM complaints JOIN complaint_topics ON complaint_topics.id = topic_id\n           WHERE code = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "complaints",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "topic",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "complaint_topics",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "complaints",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "state: ComplaintState",
+        "type_info": {
+          "Custom": {
+            "name": "complaint_state",
+            "kind": {
+              "Enum": ["new", "in_progress", "closed", "rejected"]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "complaints",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "rejection_reason",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "complaints",
+            "name": "rejection_reason"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Text"]
+    },
+    "nullable": [false, false, false, false, true]
+  },
+  "hash": "c4d4aca3fe3e43199f896a3b80674d2df12efe106b90603ae6e9c1faf2b8bb58"
+}
