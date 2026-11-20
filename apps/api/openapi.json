@@ -6577,7 +6577,8 @@
           "album",
           "importantContact",
           "partner",
-          "transparencyDocument"
+          "transparencyDocument",
+          "apbdesSummary"
         ]
       },
       "DraftSummary": {

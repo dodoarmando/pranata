@@ -236,6 +236,27 @@ async fn the_dashboard_lists_every_draft_to_those_who_write_content(pool: PgPool
     assert_eq!(reply.body["drafts"][0]["id"], document.body["id"]);
     assert_eq!(reply.body["drafts"][0]["kind"], "transparencyDocument");
     assert_eq!(reply.body["drafts"][0]["title"], "RKPDes 2027");
+
+    // And APBDes Summary Drafts, by fiscal year.
+    let lines = json!({
+        "revenue": 0, "governance": 0, "development": 0, "community": 0, "empowerment": 0,
+        "emergencies": 0, "financingReceipts": 0, "financingExpenditures": 0,
+    });
+    let summary = app
+        .call(
+            "POST",
+            "/apbdes-summaries",
+            Some(&json!({
+                "fiscalYear": 2027, "version": "original", "versionDate": "2026-12-30",
+                "budget": lines,
+            })),
+            Some(&writer),
+        )
+        .await;
+    let reply = app.call("GET", "/dashboard", None, Some(&writer)).await;
+    assert_eq!(reply.body["drafts"][0]["id"], summary.body["id"]);
+    assert_eq!(reply.body["drafts"][0]["kind"], "apbdesSummary");
+    assert_eq!(reply.body["drafts"][0]["title"], "APBDes 2027");
 }
 
 #[sqlx::test]
