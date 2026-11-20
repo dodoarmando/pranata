@@ -5027,6 +5027,27 @@
         }
       }
     },
+    "/sitemap": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Every Published item that has a page, with when it last changed.",
+        "operationId": "getSitemap",
+        "responses": {
+          "200": {
+            "description": "The Published items with a page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sitemap"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/tenures": {
       "post": {
         "tags": [
@@ -9160,6 +9181,104 @@
           },
           "username": {
             "type": "string"
+          }
+        }
+      },
+      "Sitemap": {
+        "type": "object",
+        "description": "The Published items with a page, each list in no particular order.",
+        "required": [
+          "newsPosts",
+          "announcements",
+          "pages",
+          "albums",
+          "apbdesSummaries"
+        ],
+        "properties": {
+          "albums": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SitemapItem"
+            }
+          },
+          "announcements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SitemapItem"
+            },
+            "description": "Only those with a body."
+          },
+          "apbdesSummaries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SitemapApbdesSummary"
+            }
+          },
+          "newsPosts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SitemapItem"
+            }
+          },
+          "pages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SitemapPage"
+            }
+          }
+        }
+      },
+      "SitemapApbdesSummary": {
+        "type": "object",
+        "required": [
+          "fiscalYear",
+          "updatedAt"
+        ],
+        "properties": {
+          "fiscalYear": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SitemapItem": {
+        "type": "object",
+        "description": "An item whose page is found by its slug.",
+        "required": [
+          "slug",
+          "updatedAt"
+        ],
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SitemapPage": {
+        "type": "object",
+        "required": [
+          "menu",
+          "slug",
+          "updatedAt"
+        ],
+        "properties": {
+          "menu": {
+            "$ref": "#/components/schemas/PageMenu"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },

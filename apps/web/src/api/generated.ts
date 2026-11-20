@@ -1598,6 +1598,37 @@ export interface SignIn {
 }
 
 /**
+ * An item whose page is found by its slug.
+ */
+export interface SitemapItem {
+  slug: string;
+  updatedAt: string;
+}
+
+export interface SitemapApbdesSummary {
+  fiscalYear: number;
+  updatedAt: string;
+}
+
+export interface SitemapPage {
+  menu: PageMenu;
+  slug: string;
+  updatedAt: string;
+}
+
+/**
+ * The Published items with a page, each list in no particular order.
+ */
+export interface Sitemap {
+  albums: SitemapItem[];
+  /** Only those with a body. */
+  announcements: SitemapItem[];
+  apbdesSummaries: SitemapApbdesSummary[];
+  newsPosts: SitemapItem[];
+  pages: SitemapPage[];
+}
+
+/**
  * Indonesia's three time zones; the Village's drives every date-only rule.
  */
 export type TimeZone = typeof TimeZone[keyof typeof TimeZone];
@@ -9116,6 +9147,42 @@ time. Ended Announcements are included.
 export const search = async (params: SearchParams, options?: Parameters<typeof apiFetch>[1]): Promise<searchResponse> => {
 
   return apiFetch<searchResponse>(getSearchUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getSitemapResponse200 = {
+  data: Sitemap
+  status: 200
+}
+
+export type getSitemapResponseSuccess = (getSitemapResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getSitemapResponse = (getSitemapResponseSuccess)
+
+export const getGetSitemapUrl = () => {
+
+
+
+
+  return `/sitemap`
+}
+
+/**
+ * @summary Every Published item that has a page, with when it last changed.
+ */
+export const getSitemap = async ( options?: Parameters<typeof apiFetch>[1]): Promise<getSitemapResponse> => {
+
+  return apiFetch<getSitemapResponse>(getGetSitemapUrl(),
   {
     ...options,
     method: 'GET'
