@@ -29,6 +29,7 @@ import {
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
+import { moved } from '../../order';
 
 // Server-only; the tree, or the status that refused it.
 const fetchTree = createServerFn({ method: 'GET' }).handler(async () => {
@@ -127,9 +128,11 @@ function Regions() {
   }
 
   async function onMove(index: number, by: -1 | 1) {
-    const ids = hamlets.map((hamlet) => hamlet.id);
-    const [moved] = ids.splice(index, 1);
-    if (moved) ids.splice(index + by, 0, moved);
+    const ids = moved(
+      hamlets.map((hamlet) => hamlet.id),
+      index,
+      index + by,
+    );
     await done(await order({ data: ids }), unitErrors, 'Urutan tersimpan.');
   }
 

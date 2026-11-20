@@ -27,6 +27,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { institutionTitle } from '../../institution';
+import { moved } from '../../order';
 
 // Server-only; the Institutions, or null when the API cannot be reached.
 const fetchInstitutions = createServerFn({ method: 'GET' }).handler(async () => {
@@ -125,12 +126,7 @@ function Institutions() {
   const setMember = (index: number, field: keyof Member, value: string) =>
     setMembers(members.map((member, i) => (i === index ? { ...member, [field]: value } : member)));
 
-  const move = (index: number, by: number) => {
-    const next = [...members];
-    const [member] = next.splice(index, 1);
-    if (member) next.splice(index + by, 0, member);
-    setMembers(next);
-  };
+  const move = (index: number, by: number) => setMembers(moved(members, index, index + by));
 
   async function onLogo(event: ChangeEvent<HTMLInputElement>) {
     const file = event.currentTarget.files?.[0];

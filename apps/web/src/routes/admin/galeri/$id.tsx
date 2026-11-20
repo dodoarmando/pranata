@@ -20,6 +20,7 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { Textarea } from '../../../components/ui/textarea';
+import { moved } from '../../../order';
 import { ianaZones } from '../../../village';
 
 // Server-only; the album is null when it is gone or the User may not write content.
@@ -189,10 +190,7 @@ function Form({ album }: { album: Album }) {
   }
 
   function move(index: number, by: number) {
-    const moved = [...photos];
-    const [photo] = moved.splice(index, 1);
-    if (photo) moved.splice(index + by, 0, photo);
-    change({ photos: moved });
+    change({ photos: moved(photos, index, index + by) });
   }
 
   function removePhoto(index: number) {

@@ -34,6 +34,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { NativeSelect, NativeSelectOption } from '../../components/ui/native-select';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
+import { moved } from '../../order';
 
 // Server-only; the contacts are null without a content Permission.
 const fetchImportantContacts = createServerFn({ method: 'GET' }).handler(async () => {
@@ -214,9 +215,11 @@ function ImportantContacts() {
   }
 
   async function onMoveCategory(index: number, by: number) {
-    const ids = categories.map((category) => category.id);
-    const [id] = ids.splice(index, 1);
-    if (id) ids.splice(index + by, 0, id);
+    const ids = moved(
+      categories.map((category) => category.id),
+      index,
+      index + by,
+    );
     await result(await orderCategories({ data: ids }), 'Urutan kategori diubah.', categoryErrors);
   }
 
