@@ -90,8 +90,10 @@ function ContactPage() {
               <section key={group.category} aria-label={group.category} className="grid gap-3">
                 <h3 className="font-semibold">{group.category}</h3>
                 <ul className="grid gap-3">
-                  {group.contacts.map((contact) => (
-                    <li key={`${contact.name}-${contact.phone}`} className="flex gap-3">
+                  {group.contacts.map((contact, index) => (
+                    // A static list the server orders; a place is unique where names may repeat.
+                    // biome-ignore lint/suspicious/noArrayIndexKey: see above
+                    <li key={index} className="flex gap-3">
                       <Phone className="mt-1 size-4 flex-none text-primary" aria-hidden="true" />
                       <span>
                         {contact.name}

@@ -76,7 +76,7 @@ function HomePage() {
             Mitra desa
           </h2>
           <ul className="flex flex-wrap items-center gap-x-10 gap-y-6">
-            {partners.map((partner) => {
+            {partners.map((partner, index) => {
               const logo = (
                 <img
                   src={`/media/${partner.logo}/480`}
@@ -88,7 +88,9 @@ function HomePage() {
                 />
               );
               return (
-                <li key={partner.logo}>
+                // A static list the server orders; a place is unique where logos may repeat.
+                // biome-ignore lint/suspicious/noArrayIndexKey: see above
+                <li key={index}>
                   {partner.url ? (
                     <a href={partner.url} target="_blank" rel="noopener noreferrer">
                       {logo}
