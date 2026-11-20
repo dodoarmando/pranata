@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT code, hamlet_label FROM village",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "code"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "hamlet_label",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "hamlet_label"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, false]
+  },
+  "hash": "7e2ddee64ad18698655b781ae34861fce4f76c427b00ad0fe56d5b175bf6bced"
+}

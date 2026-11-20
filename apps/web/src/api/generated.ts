@@ -100,6 +100,50 @@ export interface ExportReason {
   reason: string;
 }
 
+export interface PublicHamlet {
+  /** The names of the Officials serving today as its head. */
+  heads: string[];
+  id: string;
+  name: string;
+}
+
+/**
+ * How an Official holds a Position.
+ */
+export type TenureKind = typeof TenureKind[keyof typeof TenureKind];
+
+
+export const TenureKind = {
+  definitive: 'definitive',
+  appointee: 'appointee',
+  acting: 'acting',
+} as const;
+
+/**
+ * An Official serving today, as the public sees them.
+ */
+export interface ServingOfficial {
+  kind: TenureKind;
+  name: string;
+  /** @nullable */
+  photo?: string | null;
+  /** @nullable */
+  photoAlt?: string | null;
+  position: string;
+}
+
+/**
+ * The government structure on the public site; never a NIPD or decree.
+ */
+export interface Government {
+  /** The local name for a Hamlet, such as dusun. */
+  hamletLabel: string;
+  /** The active Hamlets in their manual order. */
+  hamlets: PublicHamlet[];
+  /** Serving today in the Village's time zone, in the government's order. */
+  officials: ServingOfficial[];
+}
+
 export interface HamletOrder {
   /** Every Hamlet, active or not, in its new order. */
   ids: string[];
@@ -183,18 +227,6 @@ export type NewRegionUnit = RegionUnitFields & ({
      */
   parentId?: string | null;
 });
-
-/**
- * How an Official holds a Position.
- */
-export type TenureKind = typeof TenureKind[keyof typeof TenureKind];
-
-
-export const TenureKind = {
-  definitive: 'definitive',
-  appointee: 'appointee',
-  acting: 'acting',
-} as const;
 
 /**
  * What a User records about a Tenure; the name and NIPD are its Official's.
@@ -1426,6 +1458,51 @@ export const getGetDashboardUrl = () => {
 export const getDashboard = async ( options?: Parameters<typeof apiFetch>[1]): Promise<getDashboardResponse> => {
 
   return apiFetch<getDashboardResponse>(getGetDashboardUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getGovernmentResponse200 = {
+  data: Government
+  status: 200
+}
+
+export type getGovernmentResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getGovernmentResponseSuccess = (getGovernmentResponse200) & {
+  headers: Headers;
+};
+export type getGovernmentResponseError = (getGovernmentResponse404) & {
+  headers: Headers;
+};
+
+export type getGovernmentResponse = (getGovernmentResponseSuccess | getGovernmentResponseError)
+
+export const getGetGovernmentUrl = () => {
+
+
+
+
+  return `/government`
+}
+
+/**
+ * # Errors
+ * `404` before the Village Code is set.
+ * @summary The Officials serving today and the Hamlets with their heads, for the public site.
+ */
+export const getGovernment = async ( options?: Parameters<typeof apiFetch>[1]): Promise<getGovernmentResponse> => {
+
+  return apiFetch<getGovernmentResponse>(getGetGovernmentUrl(),
   {
     ...options,
     method: 'GET'
