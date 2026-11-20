@@ -4132,7 +4132,7 @@
               "null"
             ],
             "format": "date-time",
-            "description": "Optional, not before the start, possibly days later. Without one, the Event is past\nonce the day it starts on is over."
+            "description": "Optional, not before the start, possibly days later. Without one, the Event is past\nonce it has started."
           },
           "location": {
             "type": [

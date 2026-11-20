@@ -196,35 +196,36 @@ async fn upcoming_and_past_follow_the_village_clock_in_wib(pool: PgPool) {
         ),
         ("Tadi pagi", "2026-11-20T07:00:00", None),
         ("Kemarin", "2026-11-19T19:00:00", None),
+        ("Nanti malam", "2026-11-20T23:00:00", None),
         ("Besok", "2026-11-21T08:00:00", None),
     ] {
         board.published(&board.complete(title, start, end)).await;
     }
 
-    // Upcoming soonest first; an Event without an end lasts until its day ends.
+    // Upcoming soonest first; one under way still counts.
     assert_eq!(
         board.titles("/events/upcoming").await,
-        ["Masih berlangsung", "Tadi pagi", "Besok"]
+        ["Masih berlangsung", "Nanti malam", "Besok"]
     );
-    // Past latest first.
+    // Past latest first; an Event without an end is past once it has started.
     assert_eq!(
         board.titles("/events/past").await,
-        ["Selesai sejam lalu", "Kemarin"]
+        ["Selesai sejam lalu", "Tadi pagi", "Kemarin"]
     );
     let (_, page) = board.app.get("/events/past").await;
-    assert_eq!(page["total"], 2);
+    assert_eq!(page["total"], 3);
 }
 
 #[sqlx::test]
 async fn upcoming_and_past_follow_the_village_clock_in_wit(pool: PgPool) {
-    // In WIT it is already 00:30 on the 21st, so the 20th is over.
+    // In WIT it is already 00:30 on the 21st, so 23:00 on the 20th has gone by.
     let board = board(&pool, "9103012004", Some(evening())).await;
     board
-        .published(&board.complete("Tadi pagi", "2026-11-20T07:00:00", None))
+        .published(&board.complete("Nanti malam", "2026-11-20T23:00:00", None))
         .await;
 
     assert_eq!(board.titles("/events/upcoming").await, Vec::<String>::new());
-    assert_eq!(board.titles("/events/past").await, ["Tadi pagi"]);
+    assert_eq!(board.titles("/events/past").await, ["Nanti malam"]);
     let list = board.call("GET", "/events", None, &board.writer).await.body;
     assert_eq!(list[0]["timing"], "past");
 }
