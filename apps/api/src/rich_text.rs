@@ -168,12 +168,16 @@ impl Doc {
         }
     }
 
-    /// Whether it holds nothing but empty paragraphs, as the editor's blank document does.
+    /// Whether it holds nothing but paragraphs of whitespace at most, as the editor's blank
+    /// document does.
     pub fn is_blank(&self) -> bool {
         let Self::Doc { content } = self;
-        content
-            .iter()
-            .all(|block| matches!(block, Block::Paragraph { content } if content.is_empty()))
+        content.iter().all(|block| match block {
+            Block::Paragraph { content } => content
+                .iter()
+                .all(|Text::Text { text, .. }| text.trim().is_empty()),
+            _ => false,
+        })
     }
 
     /// The text alone, one line per block, for reading time and search.
@@ -231,6 +235,23 @@ mod tests {
 
     fn parse(content: &Value) -> Result<Doc, serde_json::Error> {
         serde_json::from_value(json!({ "type": "doc", "content": content }))
+    }
+
+    #[test]
+    fn only_empty_or_whitespace_paragraphs_are_blank() {
+        let blank = parse(&json!([
+            { "type": "paragraph" },
+            { "type": "paragraph", "content": [{ "type": "text", "text": "  " }] },
+        ]))
+        .unwrap();
+        assert!(blank.is_blank());
+        let video =
+            parse(&json!([{ "type": "youtube", "attrs": { "videoId": "dQw4w9WgXcQ" } }])).unwrap();
+        assert!(!video.is_blank());
+        let text =
+            parse(&json!([{ "type": "paragraph", "content": [{ "type": "text", "text": "x" }] }]))
+                .unwrap();
+        assert!(!text.is_blank());
     }
 
     fn paragraph_with_mark(mark: &Value) -> Value {
