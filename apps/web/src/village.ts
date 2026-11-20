@@ -11,6 +11,9 @@ export const villageInitial = (village: Village | null) => village?.name.charAt(
 export const villageCodeDotted = (code: string) =>
   `${code.slice(0, 2)}.${code.slice(2, 4)}.${code.slice(4, 6)}.${code.slice(6)}`;
 
+/** A local word such as a Hamlet label, `dusun`, as a heading or label starts it. */
+export const capitalized = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
 export const regencyShort = (village: Village) => village.regency.replace(/^Kabupaten /, 'Kab. ');
 
 /** The IANA zone of each Indonesian time zone, for formatting times as the Village reads them. */

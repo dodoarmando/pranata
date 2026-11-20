@@ -9,7 +9,7 @@ import {
 import { holderTitle } from '../../government';
 import { institutionTitle } from '../../institution';
 import { pageHead } from '../../seo';
-import { villageTitle } from '../../village';
+import { capitalized, villageTitle } from '../../village';
 
 // Server-only; null before the Village Code is set, or when the API cannot be reached.
 const fetchGovernment = createServerFn({ method: 'GET' }).handler(
@@ -45,8 +45,6 @@ export const Route = createFileRoute('/_public/pemerintahan')({
   head: (context) => pageHead(context, { title: 'Pemerintahan' }),
   component: GovernmentPage,
 });
-
-const capitalized = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 function GovernmentPage() {
   const village = root.useLoaderData();
