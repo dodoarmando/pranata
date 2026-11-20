@@ -24,6 +24,7 @@ import { Route as AdminIndeksDesaRouteImport } from './routes/admin/indeks-desa'
 import { Route as AdminKontakPentingRouteImport } from './routes/admin/kontak-penting'
 import { Route as AdminLembagaDesaRouteImport } from './routes/admin/lembaga-desa'
 import { Route as AdminLogAuditRouteImport } from './routes/admin/log-audit'
+import { Route as AdminMitraRouteImport } from './routes/admin/mitra'
 import { Route as AdminPemerintahanRouteImport } from './routes/admin/pemerintahan'
 import { Route as AdminPenggunaRouteImport } from './routes/admin/pengguna'
 import { Route as AdminPeranRouteImport } from './routes/admin/peran'
@@ -120,6 +121,11 @@ const AdminLembagaDesaRoute = AdminLembagaDesaRouteImport.update({
 const AdminLogAuditRoute = AdminLogAuditRouteImport.update({
   id: '/log-audit',
   path: '/log-audit',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminMitraRoute = AdminMitraRouteImport.update({
+  id: '/mitra',
+  path: '/mitra',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminPemerintahanRoute = AdminPemerintahanRouteImport.update({
@@ -252,6 +258,7 @@ export interface FileRoutesByFullPath {
   '/admin/kontak-penting': typeof AdminKontakPentingRoute
   '/admin/lembaga-desa': typeof AdminLembagaDesaRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
+  '/admin/mitra': typeof AdminMitraRoute
   '/admin/pemerintahan': typeof AdminPemerintahanRoute
   '/admin/pengguna': typeof AdminPenggunaRoute
   '/admin/peran': typeof AdminPeranRoute
@@ -289,6 +296,7 @@ export interface FileRoutesByTo {
   '/admin/kontak-penting': typeof AdminKontakPentingRoute
   '/admin/lembaga-desa': typeof AdminLembagaDesaRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
+  '/admin/mitra': typeof AdminMitraRoute
   '/admin/pemerintahan': typeof AdminPemerintahanRoute
   '/admin/pengguna': typeof AdminPenggunaRoute
   '/admin/peran': typeof AdminPeranRoute
@@ -330,6 +338,7 @@ export interface FileRoutesById {
   '/admin/kontak-penting': typeof AdminKontakPentingRoute
   '/admin/lembaga-desa': typeof AdminLembagaDesaRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
+  '/admin/mitra': typeof AdminMitraRoute
   '/admin/pemerintahan': typeof AdminPemerintahanRoute
   '/admin/pengguna': typeof AdminPenggunaRoute
   '/admin/peran': typeof AdminPeranRoute
@@ -372,6 +381,7 @@ export interface FileRouteTypes {
     | '/admin/kontak-penting'
     | '/admin/lembaga-desa'
     | '/admin/log-audit'
+    | '/admin/mitra'
     | '/admin/pemerintahan'
     | '/admin/pengguna'
     | '/admin/peran'
@@ -409,6 +419,7 @@ export interface FileRouteTypes {
     | '/admin/kontak-penting'
     | '/admin/lembaga-desa'
     | '/admin/log-audit'
+    | '/admin/mitra'
     | '/admin/pemerintahan'
     | '/admin/pengguna'
     | '/admin/peran'
@@ -449,6 +460,7 @@ export interface FileRouteTypes {
     | '/admin/kontak-penting'
     | '/admin/lembaga-desa'
     | '/admin/log-audit'
+    | '/admin/mitra'
     | '/admin/pemerintahan'
     | '/admin/pengguna'
     | '/admin/peran'
@@ -589,6 +601,13 @@ declare module '@tanstack/react-router' {
       path: '/log-audit'
       fullPath: '/admin/log-audit'
       preLoaderRoute: typeof AdminLogAuditRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/mitra': {
+      id: '/admin/mitra'
+      path: '/mitra'
+      fullPath: '/admin/mitra'
+      preLoaderRoute: typeof AdminMitraRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/pemerintahan': {
@@ -761,6 +780,7 @@ interface AdminRouteRouteChildren {
   AdminKontakPentingRoute: typeof AdminKontakPentingRoute
   AdminLembagaDesaRoute: typeof AdminLembagaDesaRoute
   AdminLogAuditRoute: typeof AdminLogAuditRoute
+  AdminMitraRoute: typeof AdminMitraRoute
   AdminPemerintahanRoute: typeof AdminPemerintahanRoute
   AdminPenggunaRoute: typeof AdminPenggunaRoute
   AdminPeranRoute: typeof AdminPeranRoute
@@ -785,6 +805,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminKontakPentingRoute: AdminKontakPentingRoute,
   AdminLembagaDesaRoute: AdminLembagaDesaRoute,
   AdminLogAuditRoute: AdminLogAuditRoute,
+  AdminMitraRoute: AdminMitraRoute,
   AdminPemerintahanRoute: AdminPemerintahanRoute,
   AdminPenggunaRoute: AdminPenggunaRoute,
   AdminPeranRoute: AdminPeranRoute,
