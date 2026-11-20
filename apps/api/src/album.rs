@@ -113,11 +113,6 @@ impl AlbumFields {
         })
     }
 
-    /// Whether the photos are what publishing requires.
-    fn publishable_photos(&self) -> bool {
-        !self.photos.is_empty() && self.photos.iter().all(|photo| photo.alt.is_some())
-    }
-
     /// The fields as an Audit Entry shows them.
     fn audited(&self, slug: &str) -> Value {
         json!({
@@ -151,6 +146,11 @@ impl AlbumFields {
         )?;
         Ok(())
     }
+}
+
+/// Whether the photos are what publishing requires: at least one, each with alt text.
+fn publishable(photos: &[AlbumPhoto]) -> bool {
+    !photos.is_empty() && photos.iter().all(|photo| photo.alt.is_some())
 }
 
 /// An Album's photos in order.
@@ -393,7 +393,7 @@ pub(crate) async fn update(
     .ok_or(ApiError::Status(StatusCode::NOT_FOUND))?;
     if old.published {
         ensure_publisher(&session)?;
-        if !new.publishable_photos() {
+        if !publishable(&new.photos) {
             return Err(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY));
         }
     }
@@ -532,12 +532,8 @@ async fn set_published(
     if was == published {
         return Err(ApiError::Status(StatusCode::CONFLICT));
     }
-    // An empty Album, or one with a photo lacking alt text, stays a Draft.
-    if published {
-        let photos = photos(&mut *tx, id).await?;
-        if photos.is_empty() || photos.iter().any(|photo| photo.alt.is_none()) {
-            return Err(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY));
-        }
+    if published && !publishable(&photos(&mut *tx, id).await?) {
+        return Err(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY));
     }
     let result = sqlx::query!(
         "UPDATE albums SET published = $1,
