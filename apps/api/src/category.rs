@@ -21,8 +21,8 @@ use crate::{
 
 #[derive(Serialize, ToSchema)]
 pub struct Category {
-    pub(crate) id: Uuid,
-    pub(crate) name: String,
+    id: Uuid,
+    name: String,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -32,13 +32,18 @@ pub struct CategoryFields {
 }
 
 impl CategoryFields {
-    pub(crate) fn name(&self) -> Result<&str, ApiError> {
-        let name = self.name.trim();
-        if name.is_empty() || name.chars().count() > 50 {
-            return Err(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY));
-        }
-        Ok(name)
+    fn name(&self) -> Result<&str, ApiError> {
+        label(&self.name)
     }
+}
+
+/// A label's name trimmed, refused with `422` when blank or over 50 characters.
+pub(crate) fn label(name: &str) -> Result<&str, ApiError> {
+    let name = name.trim();
+    if name.is_empty() || name.chars().count() > 50 {
+        return Err(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY));
+    }
+    Ok(name)
 }
 
 /// Managing Categories is publishing's, not writing's.

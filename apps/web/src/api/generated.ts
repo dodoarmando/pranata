@@ -304,21 +304,19 @@ export interface CategoryRef {
 }
 
 /**
- * A Published Important Contact as the public reads it.
+ * One of the Village's ordered labels Important Contacts are grouped under.
  */
-export interface PublishedContact {
+export interface ContactCategory {
+  id: string;
   name: string;
-  /** @nullable */
-  note?: string | null;
-  phone: string;
 }
 
 /**
- * One contact category's Published contacts, in order.
+ * What a publisher writes in a Contact Category.
  */
-export interface ContactGroup {
-  category: string;
-  contacts: PublishedContact[];
+export interface ContactCategoryFields {
+  /** 1–50 characters, unique whatever the case. */
+  name: string;
 }
 
 export interface Created {
@@ -607,7 +605,7 @@ export interface Health {
  * What a User writes in an Important Contact.
  */
 export interface ImportantContactFields {
-  /** The contact category it is listed under. */
+  /** The Contact Category it is listed under. */
   category: string;
   /** 1–100 characters. */
   name: string;
@@ -636,6 +634,24 @@ export type ImportantContact = ImportantContactFields & {
   id: string;
   published: boolean;
 };
+
+/**
+ * A Published Important Contact as the public reads it.
+ */
+export interface PublishedImportantContact {
+  name: string;
+  /** @nullable */
+  note?: string | null;
+  phone: string;
+}
+
+/**
+ * One Contact Category's Published contacts, in order.
+ */
+export interface ImportantContactGroup {
+  category: string;
+  contacts: PublishedImportantContact[];
+}
 
 /**
  * Which index scored the Village.
@@ -3746,7 +3762,7 @@ export const deleteCategory = async (id: string, options?: Parameters<typeof api
 
 
 export type listContactCategoriesResponse200 = {
-  data: Category[]
+  data: ContactCategory[]
   status: 200
 }
 
@@ -3766,7 +3782,7 @@ export const getListContactCategoriesUrl = () => {
 }
 
 /**
- * @summary Every contact category in order, for the public site and the admin area.
+ * @summary Every Contact Category in order, for the public site and the admin area.
  */
 export const listContactCategories = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listContactCategoriesResponse> => {
 
@@ -3827,16 +3843,16 @@ export const getCreateContactCategoryUrl = () => {
  * # Errors
  * `401` without a live session, `403` without `content.publish`, `409` for a name in use,
  * `422` for a blank name or one over 50 characters.
- * @summary Adds a contact category, last.
+ * @summary Adds a Contact Category, last.
  */
-export const createContactCategory = async (categoryFields: CategoryFields, options?: Parameters<typeof apiFetch>[1]): Promise<createContactCategoryResponse> => {
+export const createContactCategory = async (contactCategoryFields: ContactCategoryFields, options?: Parameters<typeof apiFetch>[1]): Promise<createContactCategoryResponse> => {
 
   return apiFetch<createContactCategoryResponse>(getCreateContactCategoryUrl(),
   {
     ...options,
     method: 'POST',
     headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
-    body: JSON.stringify(categoryFields)
+    body: JSON.stringify(contactCategoryFields)
   }
 );}
 
@@ -3882,8 +3898,8 @@ export const getOrderContactCategoriesUrl = () => {
 /**
  * # Errors
  * `401` without a live session, `403` without `content.publish`, `422` unless the list holds
- * every contact category exactly once.
- * @summary Puts every contact category in a new order.
+ * every Contact Category exactly once.
+ * @summary Puts every Contact Category in a new order.
  */
 export const orderContactCategories = async (order: Order, options?: Parameters<typeof apiFetch>[1]): Promise<orderContactCategoriesResponse> => {
 
@@ -3948,19 +3964,19 @@ export const getUpdateContactCategoryUrl = (id: string,) => {
 /**
  * # Errors
  * `401` without a live session, `403` without `content.publish`, `404` for an unknown
- * contact category, `409` for a name in use, `422` for a blank name or one over 50
+ * Contact Category, `409` for a name in use, `422` for a blank name or one over 50
  * characters.
- * @summary Renames a contact category.
+ * @summary Renames a Contact Category.
  */
 export const updateContactCategory = async (id: string,
-    categoryFields: CategoryFields, options?: Parameters<typeof apiFetch>[1]): Promise<updateContactCategoryResponse> => {
+    contactCategoryFields: ContactCategoryFields, options?: Parameters<typeof apiFetch>[1]): Promise<updateContactCategoryResponse> => {
 
   return apiFetch<updateContactCategoryResponse>(getUpdateContactCategoryUrl(id),
   {
     ...options,
     method: 'PUT',
     headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
-    body: JSON.stringify(categoryFields)
+    body: JSON.stringify(contactCategoryFields)
   }
 );}
 
@@ -4011,8 +4027,8 @@ export const getDeleteContactCategoryUrl = (id: string,) => {
 /**
  * # Errors
  * `401` without a live session, `403` without `content.publish`, `404` for an unknown
- * contact category, `409` while a contact is filed under it.
- * @summary Deletes a contact category no contact, Draft or Published, is filed under.
+ * Contact Category, `409` while a contact is filed under it.
+ * @summary Deletes a Contact Category no contact, Draft or Published, is filed under.
  */
 export const deleteContactCategory = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deleteContactCategoryResponse> => {
 
@@ -4761,7 +4777,7 @@ export const createImportantContact = async (importantContactFields: ImportantCo
 
 
 export type listPublishedImportantContactsResponse200 = {
-  data: ContactGroup[]
+  data: ImportantContactGroup[]
   status: 200
 }
 

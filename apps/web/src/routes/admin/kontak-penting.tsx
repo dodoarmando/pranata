@@ -3,7 +3,7 @@ import { createServerFn, useServerFn } from '@tanstack/react-start';
 import { ArrowDown, ArrowUp, Plus } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 import {
-  type Category,
+  type ContactCategory,
   createContactCategory,
   createImportantContact,
   deleteContactCategory,
@@ -36,7 +36,7 @@ import { NativeSelect, NativeSelectOption } from '../../components/ui/native-sel
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 
 // Server-only; the contacts are null without a content Permission.
-const fetchContacts = createServerFn({ method: 'GET' }).handler(async () => {
+const fetchImportantContacts = createServerFn({ method: 'GET' }).handler(async () => {
   const [contacts, categories] = await Promise.all([
     listImportantContacts(),
     listContactCategories(),
@@ -48,7 +48,7 @@ const fetchContacts = createServerFn({ method: 'GET' }).handler(async () => {
   };
 });
 
-const saveContactFn = createServerFn({ method: 'POST' })
+const saveImportantContactFn = createServerFn({ method: 'POST' })
   .validator((data: { id: string | null; contact: ImportantContactFields }) => data)
   .handler(
     async ({ data }) =>
@@ -66,7 +66,7 @@ const publishFn = createServerFn({ method: 'POST' })
         .status,
   );
 
-const deleteContactFn = createServerFn({ method: 'POST' })
+const deleteImportantContactFn = createServerFn({ method: 'POST' })
   .validator((id: string) => id)
   .handler(async ({ data }) => (await deleteImportantContact(data)).status);
 
@@ -87,15 +87,15 @@ const orderCategoriesFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => (await orderContactCategories({ ids: data })).status);
 
 export const Route = createFileRoute('/admin/kontak-penting')({
-  loader: () => fetchContacts(),
+  loader: () => fetchImportantContacts(),
   head: () => ({ meta: [{ title: 'Kontak penting · Pranata' }] }),
-  component: Contacts,
+  component: ImportantContacts,
 });
 
 const publisherOnly =
   'Hanya pengguna dengan izin menerbitkan konten yang dapat melakukannya; kontak yang sudah terbit hanya dapat diubah oleh penerbit.';
 
-const contactErrors: Record<number, string> = {
+const importantContactErrors: Record<number, string> = {
   403: publisherOnly,
   404: 'Kontak ini sudah dihapus.',
   409: 'Status kontak sudah berubah; muat ulang.',
@@ -109,12 +109,12 @@ const categoryErrors: Record<number, string> = {
   422: 'Nama kategori wajib diisi, paling banyak 50 karakter. Bila mengurutkan, muat ulang dulu.',
 };
 
-function Contacts() {
+function ImportantContacts() {
   const { contacts, forbidden, categories } = Route.useLoaderData();
   const router = useRouter();
-  const saveContact = useServerFn(saveContactFn);
+  const saveContact = useServerFn(saveImportantContactFn);
   const setPublished = useServerFn(publishFn);
-  const removeContact = useServerFn(deleteContactFn);
+  const removeContact = useServerFn(deleteImportantContactFn);
   const addCategory = useServerFn(createCategoryFn);
   const renameCategory = useServerFn(renameCategoryFn);
   const removeCategory = useServerFn(deleteCategoryFn);
@@ -160,7 +160,7 @@ function Contacts() {
     };
     const status = await saveContact({ data: { id: editing?.id ?? null, contact } });
     if (status >= 300) {
-      setDialogError(contactErrors[status] ?? 'Gagal menyimpan.');
+      setDialogError(importantContactErrors[status] ?? 'Gagal menyimpan.');
       return;
     }
     setEditing(undefined);
@@ -172,13 +172,17 @@ function Contacts() {
     await result(
       await setPublished({ data: { id: contact.id, publish } }),
       publish ? 'Kontak terbit di situs.' : 'Kontak kembali menjadi draf.',
-      contactErrors,
+      importantContactErrors,
     );
   }
 
   async function onDelete(contact: ImportantContact) {
     if (!window.confirm(`Hapus draf kontak ${contact.name}?`)) return;
-    await result(await removeContact({ data: contact.id }), 'Kontak dihapus.', contactErrors);
+    await result(
+      await removeContact({ data: contact.id }),
+      'Kontak dihapus.',
+      importantContactErrors,
+    );
   }
 
   async function onAddCategory(event: FormEvent<HTMLFormElement>) {
@@ -190,7 +194,7 @@ function Contacts() {
     }
   }
 
-  async function onRename(category: Category) {
+  async function onRename(category: ContactCategory) {
     const name = window.prompt('Nama kategori', category.name)?.trim();
     if (!name || name === category.name) return;
     await result(
@@ -200,7 +204,7 @@ function Contacts() {
     );
   }
 
-  async function onDeleteCategory(category: Category) {
+  async function onDeleteCategory(category: ContactCategory) {
     if (!window.confirm(`Hapus kategori ${category.name}?`)) return;
     await result(await removeCategory({ data: category.id }), 'Kategori dihapus.', categoryErrors);
   }
