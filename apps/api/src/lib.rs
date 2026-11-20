@@ -4,6 +4,7 @@ mod apbdes_summary;
 mod audit;
 mod auth;
 mod category;
+mod complaint;
 mod dashboard;
 pub mod db;
 mod event;
@@ -21,6 +22,7 @@ mod page;
 mod partner;
 mod passkey;
 mod password;
+mod public_form;
 mod region;
 mod rich_text;
 mod role;
@@ -54,12 +56,13 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 struct ApiDoc;
 
 /// What every handler can reach: the database, the passkey ceremonies in flight, the
-/// sign-in throttle, the files volume and the clock.
+/// sign-in throttle, the public forms' defences, the files volume and the clock.
 #[derive(Clone)]
 pub(crate) struct AppState {
     pool: PgPool,
     passkeys: Arc<passkey::Passkeys>,
     throttle: Arc<throttle::Throttle>,
+    public_form: Arc<public_form::PublicForm>,
     storage: Arc<storage::Storage>,
     clock: Clock,
 }
@@ -98,6 +101,12 @@ impl FromRef<AppState> for Arc<throttle::Throttle> {
     }
 }
 
+impl FromRef<AppState> for Arc<public_form::PublicForm> {
+    fn from_ref(state: &AppState) -> Self {
+        state.public_form.clone()
+    }
+}
+
 impl FromRef<AppState> for Arc<storage::Storage> {
     fn from_ref(state: &AppState) -> Self {
         state.storage.clone()
@@ -113,6 +122,8 @@ fn modules() -> OpenApiRouter<AppState> {
         .merge(home::routes())
         .merge(search::routes())
         .merge(sitemap::routes())
+        .routes(routes!(public_form::get_challenge))
+        .merge(complaint::routes())
 }
 
 fn api() -> OpenApiRouter<AppState> {
@@ -249,6 +260,7 @@ pub fn app_at(
             pool,
             passkeys,
             throttle: Arc::default(),
+            public_form: Arc::default(),
             storage: Arc::new(storage::Storage::new(files_dir)),
             clock: Clock(now),
         }))

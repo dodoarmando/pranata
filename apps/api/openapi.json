@@ -1851,6 +1851,105 @@
         }
       }
     },
+    "/complaints": {
+      "post": {
+        "tags": [
+          "complaints"
+        ],
+        "summary": "Sends a Complaint. A filled honeypot, a missing, wrong or spent proof of work, or a sixth\nsending within the hour from one address is answered the same as a Complaint received, with\na code that leads nowhere.",
+        "description": "# Errors\n`422` for blank or overlong text, a Topic or Hamlet that is unknown or inactive, an\noverlong name or a malformed phone.",
+        "operationId": "submitComplaint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewComplaint"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The Complaint's code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintCode"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A field is malformed, or the Topic or Hamlet cannot take it"
+          }
+        }
+      }
+    },
+    "/complaints/form": {
+      "get": {
+        "tags": [
+          "complaints"
+        ],
+        "summary": "The active Complaint Topics and Hamlets, for the public form.",
+        "description": "# Errors\n`404` before the Village Code is set.",
+        "operationId": "getComplaintForm",
+        "responses": {
+          "200": {
+            "description": "What the form offers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintForm"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The Village Code is not set yet"
+          }
+        }
+      }
+    },
+    "/complaints/status/{code}": {
+      "get": {
+        "tags": [
+          "complaints"
+        ],
+        "summary": "A Complaint's topic, date, state, rejection reason and Responses, read by its code.",
+        "description": "# Errors\n`404` for an unknown code; `429` without looking, after 20 lookups a minute from the address.",
+        "operationId": "getComplaintStatus",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "description": "The Complaint Code, in any case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Complaint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Complaint has the code"
+          },
+          "429": {
+            "description": "Too many lookups from the address; try again later"
+          }
+        }
+      }
+    },
     "/contact-categories": {
       "get": {
         "tags": [
@@ -4636,6 +4735,27 @@
         }
       }
     },
+    "/public-form/challenge": {
+      "get": {
+        "tags": [
+          "public-form"
+        ],
+        "summary": "A fresh proof-of-work challenge for a public form, solved in the browser as the form opens.",
+        "operationId": "getPublicFormChallenge",
+        "responses": {
+          "200": {
+            "description": "A challenge valid for 2 hours",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Challenge"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/regions": {
       "get": {
         "tags": [
@@ -6774,6 +6894,158 @@
           }
         }
       },
+      "Challenge": {
+        "type": "object",
+        "description": "A proof-of-work puzzle: find `number` in `0..=maxNumber` whose SHA-256 of `salt` followed\nby its decimal digits, in hex, is `challenge`.",
+        "required": [
+          "algorithm",
+          "challenge",
+          "maxNumber",
+          "salt",
+          "signature"
+        ],
+        "properties": {
+          "algorithm": {
+            "type": "string",
+            "description": "Always `SHA-256`."
+          },
+          "challenge": {
+            "type": "string"
+          },
+          "maxNumber": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "salt": {
+            "type": "string"
+          },
+          "signature": {
+            "type": "string"
+          }
+        }
+      },
+      "Choice": {
+        "type": "object",
+        "description": "Something a Complaint is filed under, or the Hamlet it is about.",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "ComplaintCode": {
+        "type": "object",
+        "description": "The code a sender follows a Complaint with.",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Such as `7KQ2-M9XD-4TRB-HC1N`."
+          }
+        }
+      },
+      "ComplaintForm": {
+        "type": "object",
+        "description": "What the public Complaint form offers.",
+        "required": [
+          "topics",
+          "hamletLabel",
+          "hamlets"
+        ],
+        "properties": {
+          "hamletLabel": {
+            "type": "string",
+            "description": "The local name for a Hamlet, such as dusun."
+          },
+          "hamlets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Choice"
+            },
+            "description": "The active Hamlets in their manual order."
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Choice"
+            },
+            "description": "The active Complaint Topics in order."
+          }
+        }
+      },
+      "ComplaintResponse": {
+        "type": "object",
+        "description": "One Complaint Response.",
+        "required": [
+          "at",
+          "text"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "ComplaintState": {
+        "type": "string",
+        "description": "Where a Complaint stands.",
+        "enum": [
+          "new",
+          "in_progress",
+          "closed",
+          "rejected"
+        ]
+      },
+      "ComplaintStatus": {
+        "type": "object",
+        "description": "A Complaint as its sender sees it; never the name, phone or Hamlet.",
+        "required": [
+          "topic",
+          "submittedAt",
+          "state",
+          "responses"
+        ],
+        "properties": {
+          "rejectionReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "responses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintResponse"
+            },
+            "description": "Oldest first."
+          },
+          "state": {
+            "$ref": "#/components/schemas/ComplaintState"
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "topic": {
+            "type": "string"
+          }
+        }
+      },
       "ContactCategory": {
         "type": "object",
         "description": "One of the Village's ordered labels Important Contacts are grouped under.",
@@ -7685,6 +7957,64 @@
           }
         }
       },
+      "NewComplaint": {
+        "type": "object",
+        "description": "What a resident sends.",
+        "required": [
+          "topicId",
+          "text"
+        ],
+        "properties": {
+          "hamletId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "An active Hamlet."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "At most 100 characters."
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "At most 20 characters: digits, spaces and `+-()`."
+          },
+          "proof": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Proof"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "type": "string",
+            "description": "1–2,000 characters."
+          },
+          "topicId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "An active Complaint Topic."
+          },
+          "website": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The honeypot, which people leave empty."
+          }
+        }
+      },
       "NewPasskey": {
         "type": "object",
         "required": [
@@ -8421,6 +8751,28 @@
           "name": {
             "type": "string",
             "description": "1–100 characters."
+          }
+        }
+      },
+      "Proof": {
+        "type": "object",
+        "description": "A solved [`Challenge`], sent with the form.",
+        "required": [
+          "salt",
+          "number",
+          "signature"
+        ],
+        "properties": {
+          "number": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "salt": {
+            "type": "string"
+          },
+          "signature": {
+            "type": "string"
           }
         }
       },

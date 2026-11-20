@@ -366,6 +366,82 @@ export interface CategoryRef {
 }
 
 /**
+ * A proof-of-work puzzle: find `number` in `0..=maxNumber` whose SHA-256 of `salt` followed
+ * by its decimal digits, in hex, is `challenge`.
+ */
+export interface Challenge {
+  /** Always `SHA-256`. */
+  algorithm: string;
+  challenge: string;
+  /** @minimum 0 */
+  maxNumber: number;
+  salt: string;
+  signature: string;
+}
+
+/**
+ * Something a Complaint is filed under, or the Hamlet it is about.
+ */
+export interface Choice {
+  id: string;
+  name: string;
+}
+
+/**
+ * The code a sender follows a Complaint with.
+ */
+export interface ComplaintCode {
+  /** Such as `7KQ2-M9XD-4TRB-HC1N`. */
+  code: string;
+}
+
+/**
+ * What the public Complaint form offers.
+ */
+export interface ComplaintForm {
+  /** The local name for a Hamlet, such as dusun. */
+  hamletLabel: string;
+  /** The active Hamlets in their manual order. */
+  hamlets: Choice[];
+  /** The active Complaint Topics in order. */
+  topics: Choice[];
+}
+
+/**
+ * One Complaint Response.
+ */
+export interface ComplaintResponse {
+  at: string;
+  text: string;
+}
+
+/**
+ * Where a Complaint stands.
+ */
+export type ComplaintState = typeof ComplaintState[keyof typeof ComplaintState];
+
+
+export const ComplaintState = {
+  new: 'new',
+  in_progress: 'in_progress',
+  closed: 'closed',
+  rejected: 'rejected',
+} as const;
+
+/**
+ * A Complaint as its sender sees it; never the name, phone or Hamlet.
+ */
+export interface ComplaintStatus {
+  /** @nullable */
+  rejectionReason?: string | null;
+  /** Oldest first. */
+  responses: ComplaintResponse[];
+  state: ComplaintState;
+  submittedAt: string;
+  topic: string;
+}
+
+/**
  * One of the Village's ordered labels Important Contacts are grouped under.
  */
 export interface ContactCategory {
@@ -875,6 +951,47 @@ export interface Me {
   /** The name of the User's Role. */
   role: string;
   username: string;
+}
+
+/**
+ * A solved [`Challenge`], sent with the form.
+ */
+export interface Proof {
+  /** @minimum 0 */
+  number: number;
+  salt: string;
+  signature: string;
+}
+
+/**
+ * What a resident sends.
+ */
+export interface NewComplaint {
+  /**
+     * An active Hamlet.
+     * @nullable
+     */
+  hamletId?: string | null;
+  /**
+     * At most 100 characters.
+     * @nullable
+     */
+  name?: string | null;
+  /**
+     * At most 20 characters: digits, spaces and `+-()`.
+     * @nullable
+     */
+  phone?: string | null;
+  proof?: Proof | null;
+  /** 1–2,000 characters. */
+  text: string;
+  /** An active Complaint Topic. */
+  topicId: string;
+  /**
+     * The honeypot, which people leave empty.
+     * @nullable
+     */
+  website?: string | null;
 }
 
 /**
@@ -4504,6 +4621,149 @@ export const deleteCategory = async (id: string, options?: Parameters<typeof api
   {
     ...options,
     method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type submitComplaintResponse201 = {
+  data: ComplaintCode
+  status: 201
+}
+
+export type submitComplaintResponse422 = {
+  data: void
+  status: 422
+}
+
+export type submitComplaintResponseSuccess = (submitComplaintResponse201) & {
+  headers: Headers;
+};
+export type submitComplaintResponseError = (submitComplaintResponse422) & {
+  headers: Headers;
+};
+
+export type submitComplaintResponse = (submitComplaintResponseSuccess | submitComplaintResponseError)
+
+export const getSubmitComplaintUrl = () => {
+
+
+
+
+  return `/complaints`
+}
+
+/**
+ * # Errors
+ * `422` for blank or overlong text, a Topic or Hamlet that is unknown or inactive, an
+ * overlong name or a malformed phone.
+ * @summary Sends a Complaint. A filled honeypot, a missing, wrong or spent proof of work, or a sixth
+sending within the hour from one address is answered the same as a Complaint received, with
+a code that leads nowhere.
+ */
+export const submitComplaint = async (newComplaint: NewComplaint, options?: Parameters<typeof apiFetch>[1]): Promise<submitComplaintResponse> => {
+
+  return apiFetch<submitComplaintResponse>(getSubmitComplaintUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(newComplaint)
+  }
+);}
+
+
+
+export type getComplaintFormResponse200 = {
+  data: ComplaintForm
+  status: 200
+}
+
+export type getComplaintFormResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getComplaintFormResponseSuccess = (getComplaintFormResponse200) & {
+  headers: Headers;
+};
+export type getComplaintFormResponseError = (getComplaintFormResponse404) & {
+  headers: Headers;
+};
+
+export type getComplaintFormResponse = (getComplaintFormResponseSuccess | getComplaintFormResponseError)
+
+export const getGetComplaintFormUrl = () => {
+
+
+
+
+  return `/complaints/form`
+}
+
+/**
+ * # Errors
+ * `404` before the Village Code is set.
+ * @summary The active Complaint Topics and Hamlets, for the public form.
+ */
+export const getComplaintForm = async ( options?: Parameters<typeof apiFetch>[1]): Promise<getComplaintFormResponse> => {
+
+  return apiFetch<getComplaintFormResponse>(getGetComplaintFormUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getComplaintStatusResponse200 = {
+  data: ComplaintStatus
+  status: 200
+}
+
+export type getComplaintStatusResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getComplaintStatusResponse429 = {
+  data: void
+  status: 429
+}
+
+export type getComplaintStatusResponseSuccess = (getComplaintStatusResponse200) & {
+  headers: Headers;
+};
+export type getComplaintStatusResponseError = (getComplaintStatusResponse404 | getComplaintStatusResponse429) & {
+  headers: Headers;
+};
+
+export type getComplaintStatusResponse = (getComplaintStatusResponseSuccess | getComplaintStatusResponseError)
+
+export const getGetComplaintStatusUrl = (code: string,) => {
+
+
+
+
+  return `/complaints/status/${code}`
+}
+
+/**
+ * # Errors
+ * `404` for an unknown code; `429` without looking, after 20 lookups a minute from the address.
+ * @summary A Complaint's topic, date, state, rejection reason and Responses, read by its code.
+ */
+export const getComplaintStatus = async (code: string, options?: Parameters<typeof apiFetch>[1]): Promise<getComplaintStatusResponse> => {
+
+  return apiFetch<getComplaintStatusResponse>(getGetComplaintStatusUrl(code),
+  {
+    ...options,
+    method: 'GET'
 
 
   }
@@ -8589,6 +8849,42 @@ export const deletePosition = async (id: string, options?: Parameters<typeof api
   {
     ...options,
     method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type getPublicFormChallengeResponse200 = {
+  data: Challenge
+  status: 200
+}
+
+export type getPublicFormChallengeResponseSuccess = (getPublicFormChallengeResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getPublicFormChallengeResponse = (getPublicFormChallengeResponseSuccess)
+
+export const getGetPublicFormChallengeUrl = () => {
+
+
+
+
+  return `/public-form/challenge`
+}
+
+/**
+ * @summary A fresh proof-of-work challenge for a public form, solved in the browser as the form opens.
+ */
+export const getPublicFormChallenge = async ( options?: Parameters<typeof apiFetch>[1]): Promise<getPublicFormChallengeResponse> => {
+
+  return apiFetch<getPublicFormChallengeResponse>(getGetPublicFormChallengeUrl(),
+  {
+    ...options,
+    method: 'GET'
 
 
   }

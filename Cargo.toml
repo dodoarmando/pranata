@@ -21,4 +21,6 @@ png.opt-level = 3
 fdeflate.opt-level = 3
 image-webp.opt-level = 3
 zenwebp.opt-level = 3
+# Tests solve public-form proofs of work.
+sha2.opt-level = 3
 tiny-skia.opt-level = 3

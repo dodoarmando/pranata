@@ -65,7 +65,7 @@ pub struct HomeHero {
 }
 
 /// Trims a text, blank to null; `422` when it is longer than `max`.
-fn text(value: Option<&str>, max: usize) -> Result<Option<String>, ApiError> {
+pub(crate) fn text(value: Option<&str>, max: usize) -> Result<Option<String>, ApiError> {
     match value.map(str::trim) {
         None | Some("") => Ok(None),
         Some(value) if value.chars().count() <= max => Ok(Some(value.to_owned())),
@@ -74,7 +74,7 @@ fn text(value: Option<&str>, max: usize) -> Result<Option<String>, ApiError> {
 }
 
 /// [`text`] that may not be blank.
-fn required(value: &str, max: usize) -> Result<String, ApiError> {
+pub(crate) fn required(value: &str, max: usize) -> Result<String, ApiError> {
     text(Some(value), max)?.ok_or(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY))
 }
 
