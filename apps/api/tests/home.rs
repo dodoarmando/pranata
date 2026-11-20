@@ -167,3 +167,144 @@ async fn a_malformed_hero_is_refused(pool: PgPool) {
         .await;
     assert_eq!(reply.status, StatusCode::NO_CONTENT);
 }
+
+/// An Official serving as head of village since 2024 and one whose Tenure as secretary ended
+/// in 2025; their Tenure ids.
+async fn officials(pool: &PgPool) -> (String, String) {
+    let tenure = |name: &'static str, head: bool, end: Option<&'static str>| async move {
+        sqlx::query_scalar::<_, String>(
+            "WITH official AS (INSERT INTO officials (name) VALUES ($1) RETURNING id)
+             INSERT INTO tenures (position_id, official_id, kind, start_date, end_date,
+                 decree_number, decree_date)
+             SELECT positions.id, official.id, 'definitive', '2024-01-01', $3::date, '1', '2024-01-01'
+             FROM positions, official WHERE head_of_village = $2 AND name IS NOT NULL
+             ORDER BY sort_order LIMIT 1 RETURNING id::text",
+        )
+        .bind(name)
+        .bind(head)
+        .bind(end)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+    };
+    (
+        tenure("Budi Santoso", true, None).await,
+        tenure("Siti Aminah", false, Some("2025-01-31")).await,
+    )
+}
+
+#[sqlx::test]
+async fn a_publisher_saves_the_welcome_live_signed_by_a_serving_official(pool: PgPool) {
+    let office = office(&pool).await;
+    let (head, former) = officials(&pool).await;
+    let portrait = office
+        .app
+        .upload(
+            "/home/welcome/photo",
+            common::png(30, 40),
+            &office.publisher,
+        )
+        .await;
+    assert_eq!(portrait.status, StatusCode::CREATED);
+    let welcome = |signer: &str| {
+        json!({
+            "photo": portrait.body["id"], "photoAlt": " Kepala desa ",
+            "message": " Selamat datang di situs desa kami. ", "signer": signer,
+        })
+    };
+    assert_eq!(
+        office.app.get("/home/welcome").await.0,
+        StatusCode::NOT_FOUND
+    );
+
+    let by_writer = office
+        .call(
+            "PUT",
+            "/home/welcome",
+            Some(&welcome(&head)),
+            &office.writer,
+        )
+        .await;
+    let ended = office
+        .call(
+            "PUT",
+            "/home/welcome",
+            Some(&welcome(&former)),
+            &office.publisher,
+        )
+        .await;
+    let saved = office
+        .call(
+            "PUT",
+            "/home/welcome",
+            Some(&welcome(&head)),
+            &office.publisher,
+        )
+        .await;
+
+    assert_eq!(by_writer.status, StatusCode::FORBIDDEN);
+    assert_eq!(ended.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(saved.status, StatusCode::NO_CONTENT);
+    assert_eq!(
+        office.app.get("/home/welcome").await,
+        (
+            StatusCode::OK,
+            json!({
+                "photo": portrait.body["id"], "photoAlt": "Kepala desa",
+                "message": "Selamat datang di situs desa kami.", "signer": head,
+                "signerName": "Budi Santoso", "signerPosition": "Kepala Desa",
+                "signerKind": "definitive", "signerServing": true,
+            })
+        )
+    );
+
+    // Once the signer's Tenure ends the welcome says so, and still saves with them.
+    sqlx::query("UPDATE tenures SET end_date = '2025-06-30' WHERE id = $1::uuid")
+        .bind(&head)
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        office.app.get("/home/welcome").await.1["signerServing"],
+        false
+    );
+    let mut edited = welcome(&head);
+    edited["message"] = json!("Salam sejahtera.");
+    let saved = office
+        .call("PUT", "/home/welcome", Some(&edited), &office.publisher)
+        .await;
+    assert_eq!(saved.status, StatusCode::NO_CONTENT);
+}
+
+#[sqlx::test]
+async fn a_malformed_welcome_is_refused(pool: PgPool) {
+    let office = office(&pool).await;
+    let (head, _) = officials(&pool).await;
+    let welcome = json!({
+        "photo": office.photo, "photoAlt": "Kepala desa", "message": "Selamat datang.",
+        "signer": head,
+    });
+    let with = |field: &str, value: Value| {
+        let mut welcome = welcome.clone();
+        welcome[field] = value;
+        welcome
+    };
+
+    for welcome in [
+        with("photoAlt", json!(" ")),
+        with("message", json!("")),
+        with("message", json!("a".repeat(2001))),
+        with("photo", json!("00000000-0000-7000-8000-000000000000")),
+        with("signer", json!("00000000-0000-7000-8000-000000000000")),
+    ] {
+        let reply = office
+            .call("PUT", "/home/welcome", Some(&welcome), &office.publisher)
+            .await;
+        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{welcome}");
+    }
+    let anonymous = office
+        .app
+        .call("PUT", "/home/welcome", Some(&welcome), None)
+        .await;
+    assert_eq!(anonymous.status, StatusCode::UNAUTHORIZED);
+}

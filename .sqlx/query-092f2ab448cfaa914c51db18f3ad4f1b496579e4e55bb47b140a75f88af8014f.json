@@ -1,0 +1,54 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT officials.name, coalesce(positions.name,\n               'Kepala ' || initcap(village.hamlet_label) || ' ' || hamlets.name) AS \"position!\",\n           tenures.kind AS \"kind: TenureKind\",\n           positions.active AND start_date <= $2 AND (end_date IS NULL OR end_date >= $2)\n               AS \"serving!\"\n           FROM tenures JOIN officials ON officials.id = official_id\n           JOIN positions ON positions.id = position_id\n           LEFT JOIN region_units hamlets ON hamlets.id = hamlet_id\n           LEFT JOIN village ON true\n           WHERE tenures.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "officials",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "position!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "kind: TenureKind",
+        "type_info": {
+          "Custom": {
+            "name": "tenure_kind",
+            "kind": {
+              "Enum": ["definitive", "appointee", "acting"]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "tenures",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "serving!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid", "Date"]
+    },
+    "nullable": [false, null, false, null]
+  },
+  "hash": "092f2ab448cfaa914c51db18f3ad4f1b496579e4e55bb47b140a75f88af8014f"
+}

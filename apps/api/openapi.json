@@ -2615,6 +2615,115 @@
         }
       }
     },
+    "/home/welcome": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "The head-of-village welcome, for the public site and the admin area alike.",
+        "description": "# Errors\n`404` before it is first saved.",
+        "operationId": "getHomeWelcome",
+        "responses": {
+          "200": {
+            "description": "The welcome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeWelcome"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No welcome is saved yet"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Saves the head-of-village welcome live.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `422` for a blank or\noverlong text, an unknown photo, or a new signer whose Tenure is unknown or not serving.",
+        "operationId": "updateHomeWelcome",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WelcomeFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The welcome is saved"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "422": {
+            "description": "A field is malformed or unknown"
+          }
+        }
+      }
+    },
+    "/home/welcome/photo": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Stores a welcome portrait, a JPEG, PNG or WebP of at most 10 MiB.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `413` over 10 MiB, `415`\nfor content that is not JPEG, PNG or WebP, `422` over 40 megapixels or undecodable.",
+        "operationId": "uploadHomeWelcomePhoto",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The stored photo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upload"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "413": {
+            "description": "The file is over 10 MiB"
+          },
+          "415": {
+            "description": "The file is not JPEG, PNG or WebP"
+          },
+          "422": {
+            "description": "The image is too large or broken"
+          }
+        }
+      }
+    },
     "/important-contacts": {
       "get": {
         "tags": [
@@ -7161,6 +7270,38 @@
           }
         }
       },
+      "HomeWelcome": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/WelcomeFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "signerName",
+              "signerPosition",
+              "signerKind",
+              "signerServing"
+            ],
+            "properties": {
+              "signerKind": {
+                "$ref": "#/components/schemas/TenureKind"
+              },
+              "signerName": {
+                "type": "string"
+              },
+              "signerPosition": {
+                "type": "string"
+              },
+              "signerServing": {
+                "type": "boolean",
+                "description": "Whether the signer's Tenure is still serving today; the welcome shows either way."
+              }
+            }
+          }
+        ],
+        "description": "The head-of-village welcome with its signer as they are today."
+      },
       "ImportantContact": {
         "allOf": [
           {
@@ -9297,6 +9438,36 @@
           },
           "vision": {
             "type": "string"
+          }
+        }
+      },
+      "WelcomeFields": {
+        "type": "object",
+        "description": "What a publisher writes in the head-of-village welcome.",
+        "required": [
+          "photo",
+          "photoAlt",
+          "message",
+          "signer"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Plain text of 1–2,000 characters; blank lines separate paragraphs."
+          },
+          "photo": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The portrait, uploaded at `/home/welcome/photo`."
+          },
+          "photoAlt": {
+            "type": "string",
+            "description": "1–200 characters."
+          },
+          "signer": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The signer's Tenure, which must be serving when first chosen."
           }
         }
       }
