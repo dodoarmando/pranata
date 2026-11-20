@@ -566,11 +566,11 @@ pub struct EventPage {
     page_size: i64,
 }
 
-/// Published Events past (latest start first) or not (soonest start first) at `now`.
+/// Published Events of `timing` at `now`: upcoming ones soonest first, past ones latest first.
 async fn cards(
     pool: &PgPool,
     now: NaiveDateTime,
-    past: bool,
+    timing: EventTiming,
     limit: Option<i64>,
     offset: i64,
 ) -> sqlx::Result<Vec<EventCard>> {
@@ -583,7 +583,7 @@ async fn cards(
            ORDER BY CASE WHEN $2 THEN starts_at END DESC, starts_at, events.id
            LIMIT $3 OFFSET $4"#,
         now,
-        past,
+        timing == EventTiming::Past,
         limit,
         offset,
     )
@@ -605,7 +605,9 @@ pub(crate) async fn list_upcoming(
     State(clock): State<Clock>,
 ) -> Result<Json<Vec<EventCard>>, ApiError> {
     let now = village::wall_clock(&pool, clock.now()).await?;
-    Ok(Json(cards(&pool, now, false, None, 0).await?))
+    Ok(Json(
+        cards(&pool, now, EventTiming::Upcoming, None, 0).await?,
+    ))
 }
 
 /// The Published Events that are over, the latest first, a page at a time.
@@ -631,7 +633,7 @@ pub(crate) async fn list_past(
     )
     .fetch_one(&pool)
     .await?;
-    let events = cards(&pool, now, true, Some(PAGE_SIZE), offset).await?;
+    let events = cards(&pool, now, EventTiming::Past, Some(PAGE_SIZE), offset).await?;
     Ok(Json(EventPage {
         events,
         total,
