@@ -70,6 +70,16 @@ export interface AuditPage {
   next?: string | null;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+}
+
+export interface CategoryFields {
+  /** 1–50 characters, unique whatever the case. */
+  name: string;
+}
+
 export interface Created {
   id: string;
 }
@@ -1547,6 +1557,231 @@ export const signOutOthers = async ( options?: Parameters<typeof apiFetch>[1]): 
   {
     ...options,
     method: 'POST'
+
+
+  }
+);}
+
+
+
+export type listCategoriesResponse200 = {
+  data: Category[]
+  status: 200
+}
+
+export type listCategoriesResponseSuccess = (listCategoriesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listCategoriesResponse = (listCategoriesResponseSuccess)
+
+export const getListCategoriesUrl = () => {
+
+
+
+
+  return `/categories`
+}
+
+/**
+ * @summary Every Category by name, for the public site and the admin area.
+ */
+export const listCategories = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listCategoriesResponse> => {
+
+  return apiFetch<listCategoriesResponse>(getListCategoriesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createCategoryResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createCategoryResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createCategoryResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createCategoryResponse409 = {
+  data: void
+  status: 409
+}
+
+export type createCategoryResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createCategoryResponseSuccess = (createCategoryResponse201) & {
+  headers: Headers;
+};
+export type createCategoryResponseError = (createCategoryResponse401 | createCategoryResponse403 | createCategoryResponse409 | createCategoryResponse422) & {
+  headers: Headers;
+};
+
+export type createCategoryResponse = (createCategoryResponseSuccess | createCategoryResponseError)
+
+export const getCreateCategoryUrl = () => {
+
+
+
+
+  return `/categories`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `409` for a name in use,
+ * `422` for a blank name or one over 50 characters.
+ * @summary Adds a Category.
+ */
+export const createCategory = async (categoryFields: CategoryFields, options?: Parameters<typeof apiFetch>[1]): Promise<createCategoryResponse> => {
+
+  return apiFetch<createCategoryResponse>(getCreateCategoryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(categoryFields)
+  }
+);}
+
+
+
+export type updateCategoryResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateCategoryResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateCategoryResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateCategoryResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateCategoryResponse409 = {
+  data: void
+  status: 409
+}
+
+export type updateCategoryResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateCategoryResponseSuccess = (updateCategoryResponse204) & {
+  headers: Headers;
+};
+export type updateCategoryResponseError = (updateCategoryResponse401 | updateCategoryResponse403 | updateCategoryResponse404 | updateCategoryResponse409 | updateCategoryResponse422) & {
+  headers: Headers;
+};
+
+export type updateCategoryResponse = (updateCategoryResponseSuccess | updateCategoryResponseError)
+
+export const getUpdateCategoryUrl = (id: string,) => {
+
+
+
+
+  return `/categories/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * Category, `409` for a name in use, `422` for a blank name or one over 50 characters.
+ * @summary Renames a Category.
+ */
+export const updateCategory = async (id: string,
+    categoryFields: CategoryFields, options?: Parameters<typeof apiFetch>[1]): Promise<updateCategoryResponse> => {
+
+  return apiFetch<updateCategoryResponse>(getUpdateCategoryUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(categoryFields)
+  }
+);}
+
+
+
+export type deleteCategoryResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteCategoryResponse401 = {
+  data: void
+  status: 401
+}
+
+export type deleteCategoryResponse403 = {
+  data: void
+  status: 403
+}
+
+export type deleteCategoryResponse404 = {
+  data: void
+  status: 404
+}
+
+export type deleteCategoryResponse409 = {
+  data: void
+  status: 409
+}
+
+export type deleteCategoryResponseSuccess = (deleteCategoryResponse204) & {
+  headers: Headers;
+};
+export type deleteCategoryResponseError = (deleteCategoryResponse401 | deleteCategoryResponse403 | deleteCategoryResponse404 | deleteCategoryResponse409) & {
+  headers: Headers;
+};
+
+export type deleteCategoryResponse = (deleteCategoryResponseSuccess | deleteCategoryResponseError)
+
+export const getDeleteCategoryUrl = (id: string,) => {
+
+
+
+
+  return `/categories/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * Category, `409` while anything is filed under it.
+ * @summary Deletes a Category nothing is filed under.
+ */
+export const deleteCategory = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deleteCategoryResponse> => {
+
+  return apiFetch<deleteCategoryResponse>(getDeleteCategoryUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
 
 
   }

@@ -1,5 +1,6 @@
 mod audit;
 mod auth;
+mod category;
 mod dashboard;
 pub mod db;
 mod export;
@@ -101,6 +102,8 @@ fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(institution::update, institution::delete))
         .routes(routes!(index_edition::list, index_edition::create))
         .routes(routes!(index_edition::update, index_edition::delete))
+        .routes(routes!(category::list, category::create))
+        .routes(routes!(category::update, category::delete))
         .routes(routes!(storage::get_media))
         .routes(routes!(auth::use_access_link))
         .routes(routes!(auth::sign_in))
