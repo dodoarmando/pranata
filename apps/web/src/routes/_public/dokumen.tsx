@@ -2,22 +2,22 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { Download, FileText } from 'lucide-react';
 import {
-  type DocumentPage,
   listPublishedTransparencyDocuments,
+  type TransparencyDocumentPage,
   type Village,
 } from '../../api/generated';
 import { NativeSelect, NativeSelectOption } from '../../components/ui/native-select';
-import { documentGroups, documentTypeLabels, fileSize } from '../../document';
+import { documentGroups, documentTypeLabels, fileSize } from '../../transparency-document';
 import { villageTitle } from '../../village';
 
-type Search = { jenis?: (typeof documentGroups)[number][0]; tahun?: number; halaman?: number };
+type Search = { jenis?: (typeof documentGroups)[number]['slug']; tahun?: number; halaman?: number };
 
 // Server-only; empty when the API cannot be reached.
 const fetchDocuments = createServerFn({ method: 'GET' })
   .validator((search: Search) => search)
-  .handler(async ({ data }): Promise<DocumentPage> => {
+  .handler(async ({ data }): Promise<TransparencyDocumentPage> => {
     const empty = { documents: [], total: 0, pageSize: 10, fiscalYears: [] };
-    const group = documentGroups.find(([slug]) => slug === data.jenis)?.[1];
+    const group = documentGroups.find(({ slug }) => slug === data.jenis)?.group;
     try {
       const response = await listPublishedTransparencyDocuments({
         ...(group && { group }),
@@ -32,7 +32,7 @@ const fetchDocuments = createServerFn({ method: 'GET' })
 
 export const Route = createFileRoute('/_public/dokumen')({
   validateSearch: (search: Record<string, unknown>): Search => {
-    const jenis = documentGroups.find(([slug]) => slug === search.jenis)?.[0];
+    const jenis = documentGroups.find(({ slug }) => slug === search.jenis)?.slug;
     const year = Number(search.tahun);
     const page = Number(search.halaman);
     return {
@@ -80,7 +80,7 @@ function DocumentList() {
           >
             Semua
           </Link>
-          {documentGroups.map(([slug, , label]) => (
+          {documentGroups.map(({ slug, label }) => (
             <Link
               key={slug}
               to="/dokumen"

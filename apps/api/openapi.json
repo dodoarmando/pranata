@@ -4789,7 +4789,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DocumentPage"
+                  "$ref": "#/components/schemas/TransparencyDocumentPage"
                 }
               }
             }
@@ -6157,86 +6157,6 @@
           "developing",
           "underdeveloped",
           "very_underdeveloped"
-        ]
-      },
-      "DocumentCard": {
-        "type": "object",
-        "description": "A Published Transparency Document on `/dokumen`.",
-        "required": [
-          "title",
-          "documentType",
-          "fiscalYear",
-          "file",
-          "byteSize"
-        ],
-        "properties": {
-          "byteSize": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "documentType": {
-            "$ref": "#/components/schemas/DocumentType"
-          },
-          "file": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Served at `/media/{file}/pdf`."
-          },
-          "fiscalYear": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "title": {
-            "type": "string"
-          }
-        }
-      },
-      "DocumentPage": {
-        "type": "object",
-        "description": "One page of `/dokumen`.",
-        "required": [
-          "documents",
-          "total",
-          "pageSize",
-          "fiscalYears"
-        ],
-        "properties": {
-          "documents": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DocumentCard"
-            }
-          },
-          "fiscalYears": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "format": "int32"
-            },
-            "description": "Every fiscal year with a Published document, the latest first, for the year filter."
-          },
-          "pageSize": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "total": {
-            "type": "integer",
-            "format": "int64",
-            "description": "How many Published documents match, over every page."
-          }
-        }
-      },
-      "DocumentType": {
-        "type": "string",
-        "description": "A Transparency Document's type, from a fixed catalog.",
-        "enum": [
-          "apbdes",
-          "apbdesAmendment",
-          "realisationReport",
-          "rkpdes",
-          "rpjmdes",
-          "villageRegulation",
-          "other"
         ]
       },
       "DraftKind": {
@@ -8012,6 +7932,38 @@
           }
         }
       },
+      "PublishedTransparencyDocument": {
+        "type": "object",
+        "description": "A Published Transparency Document on `/dokumen`.",
+        "required": [
+          "title",
+          "documentType",
+          "fiscalYear",
+          "file",
+          "byteSize"
+        ],
+        "properties": {
+          "byteSize": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "documentType": {
+            "$ref": "#/components/schemas/TransparencyDocumentType"
+          },
+          "file": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Served at `/media/{file}/pdf`."
+          },
+          "fiscalYear": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
       "Reauthenticate": {
         "type": "object",
         "required": [
@@ -8406,7 +8358,7 @@
         ],
         "properties": {
           "documentType": {
-            "$ref": "#/components/schemas/DocumentType"
+            "$ref": "#/components/schemas/TransparencyDocumentType"
           },
           "file": {
             "type": "string",
@@ -8423,6 +8375,54 @@
             "description": "1–200 characters."
           }
         }
+      },
+      "TransparencyDocumentPage": {
+        "type": "object",
+        "description": "One page of `/dokumen`.",
+        "required": [
+          "documents",
+          "total",
+          "pageSize",
+          "fiscalYears"
+        ],
+        "properties": {
+          "documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublishedTransparencyDocument"
+            }
+          },
+          "fiscalYears": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "Every fiscal year with a Published document, the latest first, for the year filter."
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many Published documents match, over every page."
+          }
+        }
+      },
+      "TransparencyDocumentType": {
+        "type": "string",
+        "description": "A Transparency Document's type, from a fixed catalog.",
+        "enum": [
+          "apbdes",
+          "apbdesAmendment",
+          "realisationReport",
+          "rkpdes",
+          "rpjmdes",
+          "villageRegulation",
+          "other"
+        ]
       },
       "Upload": {
         "type": "object",

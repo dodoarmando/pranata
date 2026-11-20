@@ -4,12 +4,12 @@ import { FileText, Plus } from 'lucide-react';
 import { type ChangeEvent, type FormEvent, useState } from 'react';
 import {
   createTransparencyDocument,
-  type DocumentType,
   deleteTransparencyDocument,
   listTransparencyDocuments,
   publishTransparencyDocument,
   type TransparencyDocument,
   type TransparencyDocumentFields,
+  type TransparencyDocumentType,
   unpublishTransparencyDocument,
   updateTransparencyDocument,
   uploadTransparencyDocumentFile,
@@ -29,7 +29,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { NativeSelect, NativeSelectOption } from '../../components/ui/native-select';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
-import { documentTypeLabels, fileSize } from '../../document';
+import { documentTypeLabels, fileSize } from '../../transparency-document';
 
 // Server-only; null without a content Permission.
 const fetchDocuments = createServerFn({ method: 'GET' }).handler(async () => {
@@ -169,7 +169,7 @@ function Documents() {
     const form = new FormData(event.currentTarget);
     const document: TransparencyDocumentFields = {
       title: String(form.get('title') ?? '').trim(),
-      documentType: form.get('documentType') as DocumentType,
+      documentType: form.get('documentType') as TransparencyDocumentType,
       fiscalYear: Number(form.get('fiscalYear')),
       file: file.id,
     };
@@ -301,7 +301,7 @@ function Documents() {
                     name="documentType"
                     defaultValue={editing?.documentType ?? 'apbdes'}
                   >
-                    {(Object.keys(documentTypeLabels) as DocumentType[]).map((type) => (
+                    {(Object.keys(documentTypeLabels) as TransparencyDocumentType[]).map((type) => (
                       <NativeSelectOption key={type} value={type}>
                         {documentTypeLabels[type]}
                       </NativeSelectOption>
