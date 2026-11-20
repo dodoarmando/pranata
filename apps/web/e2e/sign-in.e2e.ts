@@ -227,6 +227,46 @@ test('a village manager builds a Hamlet with an RW and RT on Wilayah, then deact
   await expect(rt).toContainText('Nonaktif');
 });
 
+test('a village manager records a Hamlet head on Pemerintahan, and the public site shows them', async ({
+  page,
+}) => {
+  await page.goto('/masuk');
+  await page.getByLabel('Nama pengguna').fill(username);
+  await page.getByLabel('Kata sandi', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Beranda' })).toBeVisible();
+
+  // A fresh Hamlet each run brings a fresh Head-of-Hamlet Position to fill.
+  const hamlet = `Kidul ${Date.now()}`;
+  await page.getByRole('link', { name: 'Wilayah' }).click();
+  await page.getByRole('button', { name: 'Tambah dusun' }).click();
+  await page.getByLabel('Nama dusun').fill(hamlet);
+  await page.getByRole('button', { name: 'Simpan', exact: true }).click();
+  await expect(page.getByRole('region', { name: `Dusun ${hamlet}` })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Pemerintahan' }).click();
+  await expect(page.getByRole('heading', { name: 'Pemerintahan', exact: true })).toBeVisible();
+  const card = page.getByRole('region', { name: `Kepala Dusun ${hamlet}` });
+  await card.getByRole('button', { name: 'Tambah masa jabatan' }).click();
+  await page.getByLabel('Nama', { exact: true }).fill('Bu Ratna');
+  await page.getByLabel('NIPD (opsional)').fill('1101012001009');
+  await page.getByLabel('Tanggal mulai').fill('2024-01-01');
+  await page.getByLabel('Nomor SK').fill('141/07/2024');
+  await page.getByLabel('Tanggal SK').fill('2023-12-20');
+  await page.getByRole('button', { name: 'Simpan', exact: true }).click();
+  await expect(card.getByRole('table')).toContainText('Bu Ratna');
+  await expect(card.getByRole('table')).toContainText('1 Januari 2024 – sekarang');
+
+  await page.goto('/pemerintahan');
+  await expect(page.getByRole('region', { name: 'Perangkat desa' })).toContainText(
+    `Kepala Dusun ${hamlet}`,
+  );
+  const hamlets = page.getByRole('region', { name: 'Dusun' });
+  await expect(hamlets).toContainText(`Dusun ${hamlet}Bu Ratna`);
+  await expect(page.getByRole('main')).not.toContainText('1101012001009');
+  await expect(page.getByRole('main')).not.toContainText('141/07/2024');
+});
+
 test('every page has the stylesheet, and the public site stays light', async ({ page }) => {
   // Admin code is split into route chunks the public home page never fetches.
   const scripts: Promise<string>[] = [];
@@ -261,6 +301,7 @@ test('every page has the stylesheet, and the public site stays light', async ({ 
   for (const path of [
     '/admin',
     '/admin/akun',
+    '/admin/pemerintahan',
     '/admin/pengguna',
     '/admin/peran',
     '/admin/log-audit',

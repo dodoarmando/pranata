@@ -15,6 +15,7 @@ import { Route as AksesRouteImport } from './routes/akses'
 import { Route as MasukRouteImport } from './routes/masuk'
 import { Route as PublicIndexRouteImport } from './routes/_public/index'
 import { Route as PublicKontakRouteImport } from './routes/_public/kontak'
+import { Route as PublicPemerintahanRouteImport } from './routes/_public/pemerintahan'
 import { Route as PublicProfilRouteImport } from './routes/_public/profil'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAkunRouteImport } from './routes/admin/akun'
@@ -53,6 +54,11 @@ const PublicIndexRoute = PublicIndexRouteImport.update({
 const PublicKontakRoute = PublicKontakRouteImport.update({
   id: '/kontak',
   path: '/kontak',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicPemerintahanRoute = PublicPemerintahanRouteImport.update({
+  id: '/pemerintahan',
+  path: '/pemerintahan',
   getParentRoute: () => PublicRoute,
 } as any)
 const PublicProfilRoute = PublicProfilRouteImport.update({
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/akses': typeof AksesRoute
   '/masuk': typeof MasukRoute
   '/kontak': typeof PublicKontakRoute
+  '/pemerintahan': typeof PublicPemerintahanRoute
   '/profil': typeof PublicProfilRoute
   '/admin/akun': typeof AdminAkunRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByTo {
   '/akses': typeof AksesRoute
   '/masuk': typeof MasukRoute
   '/kontak': typeof PublicKontakRoute
+  '/pemerintahan': typeof PublicPemerintahanRoute
   '/profil': typeof PublicProfilRoute
   '/admin/akun': typeof AdminAkunRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
@@ -146,6 +154,7 @@ export interface FileRoutesById {
   '/akses': typeof AksesRoute
   '/masuk': typeof MasukRoute
   '/_public/kontak': typeof PublicKontakRoute
+  '/_public/pemerintahan': typeof PublicPemerintahanRoute
   '/_public/profil': typeof PublicProfilRoute
   '/admin/akun': typeof AdminAkunRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
     | '/akses'
     | '/masuk'
     | '/kontak'
+    | '/pemerintahan'
     | '/profil'
     | '/admin/akun'
     | '/admin/log-audit'
@@ -181,6 +191,7 @@ export interface FileRouteTypes {
     | '/akses'
     | '/masuk'
     | '/kontak'
+    | '/pemerintahan'
     | '/profil'
     | '/admin/akun'
     | '/admin/log-audit'
@@ -199,6 +210,7 @@ export interface FileRouteTypes {
     | '/akses'
     | '/masuk'
     | '/_public/kontak'
+    | '/_public/pemerintahan'
     | '/_public/profil'
     | '/admin/akun'
     | '/admin/log-audit'
@@ -262,6 +274,13 @@ declare module '@tanstack/react-router' {
       path: '/kontak'
       fullPath: '/kontak'
       preLoaderRoute: typeof PublicKontakRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/pemerintahan': {
+      id: '/_public/pemerintahan'
+      path: '/pemerintahan'
+      fullPath: '/pemerintahan'
+      preLoaderRoute: typeof PublicPemerintahanRouteImport
       parentRoute: typeof PublicRoute
     }
     '/_public/profil': {
@@ -365,12 +384,14 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
 
 interface PublicRouteChildren {
   PublicKontakRoute: typeof PublicKontakRoute
+  PublicPemerintahanRoute: typeof PublicPemerintahanRoute
   PublicProfilRoute: typeof PublicProfilRoute
   PublicIndexRoute: typeof PublicIndexRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
   PublicKontakRoute: PublicKontakRoute,
+  PublicPemerintahanRoute: PublicPemerintahanRoute,
   PublicProfilRoute: PublicProfilRoute,
   PublicIndexRoute: PublicIndexRoute,
 }

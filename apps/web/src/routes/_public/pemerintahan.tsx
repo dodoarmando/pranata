@@ -1,0 +1,113 @@
+import { createFileRoute, getRouteApi } from '@tanstack/react-router';
+import { createServerFn } from '@tanstack/react-start';
+import { type Government, getGovernment, type Village } from '../../api/generated';
+import { tenureKindLabels } from '../../government';
+import { villageTitle } from '../../village';
+
+// Server-only; null before the Village Code is set, or when the API cannot be reached.
+const fetchGovernment = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<Government | null> => {
+    try {
+      const response = await getGovernment();
+      return response.status === 200 ? response.data : null;
+    } catch {
+      return null;
+    }
+  },
+);
+
+const root = getRouteApi('__root__');
+
+export const Route = createFileRoute('/_public/pemerintahan')({
+  loader: () => fetchGovernment(),
+  head: ({ matches }) => {
+    // The root match comes first; its loader data is typed only through getRouteApi.
+    const village = matches[0]?.loaderData as Village | null | undefined;
+    return {
+      meta: [{ title: village ? `Pemerintahan — ${villageTitle(village)}` : 'Pemerintahan' }],
+    };
+  },
+  component: GovernmentPage,
+});
+
+const capitalized = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+function GovernmentPage() {
+  const village = root.useLoaderData();
+  const government = Route.useLoaderData();
+  const label = capitalized(government?.hamletLabel ?? 'dusun');
+  return (
+    <main className="site-container grid gap-12 pt-10 pb-sec md:pt-16">
+      <h1 className="-mb-6 text-[2rem] leading-tight font-semibold tracking-tight md:text-[2.5rem]">
+        {village ? `Pemerintahan ${villageTitle(village)}` : 'Pemerintahan'}
+      </h1>
+      <section aria-labelledby="officials-title" className="grid gap-6">
+        <h2 id="officials-title" className="text-2xl font-semibold tracking-tight md:text-3xl">
+          Perangkat desa
+        </h2>
+        {government?.officials.length ? (
+          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {government.officials.map((official) => (
+              <li
+                key={`${official.position}-${official.name}`}
+                className="overflow-hidden rounded-md border bg-card"
+              >
+                {official.photo ? (
+                  <img
+                    src={`/media/${official.photo}/480`}
+                    alt={official.photoAlt ?? ''}
+                    width={480}
+                    height={600}
+                    loading="lazy"
+                    className="aspect-4/5 w-full object-cover"
+                  />
+                ) : (
+                  <span
+                    className="grid aspect-4/5 w-full place-items-center bg-pri-50 text-4xl font-semibold text-primary"
+                    aria-hidden="true"
+                  >
+                    {official.name.charAt(0)}
+                  </span>
+                )}
+                <div className="grid gap-0.5 px-4 py-3">
+                  <strong className="leading-snug">{official.name}</strong>
+                  <span className="text-sm text-muted-foreground">
+                    {official.kind === 'definitive'
+                      ? official.position
+                      : `${tenureKindLabels[official.kind]} ${official.position}`}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-muted-foreground">Data perangkat desa belum tersedia.</p>
+        )}
+      </section>
+      <section aria-labelledby="hamlets-title" className="grid gap-6">
+        <h2 id="hamlets-title" className="text-2xl font-semibold tracking-tight md:text-3xl">
+          {label}
+        </h2>
+        {government?.hamlets.length ? (
+          <dl className="grid max-w-xl rounded-md border bg-card px-5 py-2">
+            {government.hamlets.map((hamlet) => (
+              <div
+                key={hamlet.id}
+                className="flex justify-between gap-3 border-b py-3 last:border-b-0"
+              >
+                <dt className="font-semibold">
+                  {label} {hamlet.name}
+                </dt>
+                <dd className="text-right text-muted-foreground">
+                  {hamlet.heads.length ? hamlet.heads.join(', ') : 'Kepala belum ditetapkan'}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="text-muted-foreground">Data {label.toLowerCase()} belum tersedia.</p>
+        )}
+      </section>
+    </main>
+  );
+}
