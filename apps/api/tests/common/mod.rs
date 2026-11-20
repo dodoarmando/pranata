@@ -4,17 +4,33 @@
 
 pub mod authenticator;
 
+use std::io::Cursor;
+
 use axum::{
     Router,
     body::Body,
     http::{HeaderMap, Request, StatusCode, header},
 };
 use http_body_util::BodyExt;
+use image::{DynamicImage, ImageFormat, RgbaImage};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use tower::ServiceExt;
 
 use authenticator::Authenticator;
+
+/// A solid `width`×`height` PNG.
+pub fn png(width: u32, height: u32) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    DynamicImage::ImageRgba8(RgbaImage::from_pixel(
+        width,
+        height,
+        image::Rgba([0, 90, 60, 255]),
+    ))
+    .write_to(&mut Cursor::new(&mut bytes), ImageFormat::Png)
+    .unwrap();
+    bytes
+}
 
 pub const PASSWORD: &str = "kopi tubruk pagi hari";
 pub const ORIGIN: &str = "https://desa.example";

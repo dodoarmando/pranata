@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "DELETE FROM files WHERE sweep_after < now()\n         AND id NOT IN (SELECT logo_file_id FROM village WHERE logo_file_id IS NOT NULL)\n         RETURNING id",
+  "query": "UPDATE officials SET name = $1, nipd = $2 WHERE id = $3 RETURNING id",
   "describe": {
     "columns": [
       {
@@ -9,16 +9,16 @@
         "type_info": "Uuid",
         "origin": {
           "Table": {
-            "table": "files",
+            "table": "officials",
             "name": "id"
           }
         }
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": ["Text", "Text", "Uuid"]
     },
     "nullable": [false]
   },
-  "hash": "40715d08a8ed906b72de71ea2200c547655393cd0c4e4022ef2919fe0e0c8f8d"
+  "hash": "ed1a61721cb49205735ab738d1a843d631f6ef470e8ecbca3e634a72ea821fa7"
 }

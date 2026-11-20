@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tenures SET kind = $1, start_date = $2, end_date = $3, decree_number = $4,\n             decree_date = $5, photo_file_id = $6, photo_alt = $7 WHERE id = $8",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "tenure_kind",
+            "kind": {
+              "Enum": ["definitive", "appointee", "acting"]
+            }
+          }
+        },
+        "Date",
+        "Date",
+        "Text",
+        "Date",
+        "Uuid",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "31776ce8f0eed8fe7c719435fd661350036a27cb79eb47267b19e45eea4a2855"
+}

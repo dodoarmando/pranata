@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE officials SET name = $1, nipd = $2 WHERE id = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Text", "Text", "Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "24fc35981a7cb7d3f978490857f55bb0a003399b8b7271cc379dea1f6c1a9642"
+}

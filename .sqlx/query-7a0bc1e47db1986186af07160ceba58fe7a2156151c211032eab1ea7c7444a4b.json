@@ -1,0 +1,152 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT tenures.id, position_id, official_id, name, nipd,\n           kind AS \"kind: TenureKind\", start_date, end_date, decree_number, decree_date,\n           photo_file_id, photo_alt\n           FROM tenures JOIN officials ON officials.id = official_id\n           ORDER BY start_date DESC, tenures.id DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tenures",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "position_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tenures",
+            "name": "position_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "official_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tenures",
+            "name": "official_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "officials",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "nipd",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "officials",
+            "name": "nipd"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "kind: TenureKind",
+        "type_info": {
+          "Custom": {
+            "name": "tenure_kind",
+            "kind": {
+              "Enum": ["definitive", "appointee", "acting"]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "tenures",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "start_date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "tenures",
+            "name": "start_date"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "end_date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "tenures",
+            "name": "end_date"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "decree_number",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tenures",
+            "name": "decree_number"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "decree_date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "tenures",
+            "name": "decree_date"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "photo_file_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tenures",
+            "name": "photo_file_id"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "photo_alt",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tenures",
+            "name": "photo_alt"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, false, false, false, true, false, false, true, false, false, true, true]
+  },
+  "hash": "7a0bc1e47db1986186af07160ceba58fe7a2156151c211032eab1ea7c7444a4b"
+}

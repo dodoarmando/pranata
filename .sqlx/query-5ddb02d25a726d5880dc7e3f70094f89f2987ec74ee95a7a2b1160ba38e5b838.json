@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE positions SET active = $1 WHERE hamlet_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Bool", "Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "5ddb02d25a726d5880dc7e3f70094f89f2987ec74ee95a7a2b1160ba38e5b838"
+}

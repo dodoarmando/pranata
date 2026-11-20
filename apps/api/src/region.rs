@@ -297,7 +297,8 @@ pub(crate) async fn update_settings(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Adds a Hamlet at the end of the order, an RW to a Hamlet, or an RT to its RW (or Hamlet).
+/// Adds a Hamlet at the end of the order with its Head-of-Hamlet Position, an RW to a
+/// Hamlet, or an RT to its RW (or Hamlet).
 ///
 /// # Errors
 /// `401` without a live session, `403` without `village.manage`, `404` before the Village
@@ -369,6 +370,11 @@ pub(crate) async fn create_unit(
         .fetch_one(&mut *tx)
         .await,
     )?;
+    if body.kind == RegionKind::Hamlet {
+        sqlx::query!("INSERT INTO positions (hamlet_id) VALUES ($1)", id)
+            .execute(&mut *tx)
+            .await?;
+    }
     let new = json!({ "kind": body.kind, "parentId": body.parent_id, "active": true });
     let mut changes = diff(&Value::Null, &new);
     changes.extend(diff(&Value::Null, &serde_json::to_value(&fields)?));
@@ -385,11 +391,12 @@ pub(crate) async fn create_unit(
 }
 
 /// Renames or renumbers a Region Unit in place, edits its head, and deactivates or
-/// reactivates it.
+/// reactivates it, a Hamlet with its Head-of-Hamlet Position.
 ///
 /// # Errors
 /// `401` without a live session, `403` without `village.manage`, `404` for an unknown unit,
-/// `409` for a taken number, deactivating a unit with an active child, or reactivating one
+/// `409` for a taken number, deactivating a unit with an active child or a Hamlet whose
+/// Head-of-Hamlet Tenure has no end date, or reactivating one
 /// under an inactive parent or, for an RW, while the Village has no RW level, `422` for a
 /// malformed field.
 #[utoipa::path(
@@ -404,7 +411,7 @@ pub(crate) async fn create_unit(
         (status = UNAUTHORIZED, description = "There is no live session"),
         (status = FORBIDDEN, description = "The User may not manage the Village"),
         (status = NOT_FOUND, description = "There is no such Region Unit"),
-        (status = CONFLICT, description = "The number is taken, the unit is not empty, or its parent is inactive"),
+        (status = CONFLICT, description = "The number is taken, the unit is not empty or its head serves, or its parent is inactive"),
         (status = UNPROCESSABLE_ENTITY, description = "A field is malformed"),
     ),
 )]
@@ -429,11 +436,19 @@ pub(crate) async fn update_unit(
         active: body.active,
     };
     let blocked = match (old.active, new.active) {
-        // Children shared-lock this row when created or reactivated, so none slips in.
+        // Children shared-lock this row when created or reactivated, so none slips in; a
+        // Hamlet's Position is locked as Tenures are recorded into it.
         (true, false) => {
+            sqlx::query!(
+                "SELECT id FROM positions WHERE hamlet_id = $1 FOR UPDATE",
+                id
+            )
+            .fetch_optional(&mut *tx)
+            .await?;
             sqlx::query_scalar!(
                 r#"SELECT EXISTS (SELECT 1 FROM region_units WHERE parent_id = $1 AND active)
-               AS "exists!""#,
+                   OR EXISTS (SELECT 1 FROM tenures JOIN positions ON positions.id = position_id
+                       WHERE hamlet_id = $1 AND end_date IS NULL) AS "exists!""#,
                 id,
             )
             .fetch_one(&mut *tx)
@@ -472,6 +487,13 @@ pub(crate) async fn update_unit(
         .fetch_one(&mut *tx)
         .await,
     )?;
+    sqlx::query!(
+        "UPDATE positions SET active = $1 WHERE hamlet_id = $2",
+        new.active,
+        id
+    )
+    .execute(&mut *tx)
+    .await?;
     let from = serde_json::to_value(RegionUnitUpdate {
         fields: RegionUnitFields {
             name: old.name,
