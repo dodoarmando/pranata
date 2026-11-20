@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT code, hamlet_label, logo_file_id IS NULL AS \"logo!\",\n         vision IS NULL AS \"vision_mission!\" FROM village",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "code"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "hamlet_label",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "hamlet_label"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "logo!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "vision_mission!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, false, null, null]
+  },
+  "hash": "82d47b5e5e3db563d016dfc886e4ce6946c9407e9f29e269240f103ec8ab3f32"
+}

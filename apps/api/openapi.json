@@ -1970,12 +1970,16 @@
         "type": "object",
         "description": "The figures behind the admin dashboard's cards.",
         "required": [
-          "activeUsers"
+          "activeUsers",
+          "missingVillageData"
         ],
         "properties": {
           "activeUsers": {
             "type": "integer",
             "format": "int64"
+          },
+          "missingVillageData": {
+            "$ref": "#/components/schemas/MissingVillageData"
           }
         }
       },
@@ -2110,6 +2114,30 @@
           },
           "username": {
             "type": "string"
+          }
+        }
+      },
+      "MissingVillageData": {
+        "type": "object",
+        "description": "What the Village has yet to fill in.",
+        "required": [
+          "logo",
+          "visionMission",
+          "unfilledPositions"
+        ],
+        "properties": {
+          "logo": {
+            "type": "boolean"
+          },
+          "unfilledPositions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Active Head-of-Hamlet Positions no Official serves in today."
+          },
+          "visionMission": {
+            "type": "boolean"
           }
         }
       },

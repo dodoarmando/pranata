@@ -75,10 +75,21 @@ export interface Created {
 }
 
 /**
+ * What the Village has yet to fill in.
+ */
+export interface MissingVillageData {
+  logo: boolean;
+  /** Active Head-of-Hamlet Positions no Official serves in today. */
+  unfilledPositions: string[];
+  visionMission: boolean;
+}
+
+/**
  * The figures behind the admin dashboard's cards.
  */
 export interface Dashboard {
   activeUsers: number;
+  missingVillageData: MissingVillageData;
 }
 
 /**
