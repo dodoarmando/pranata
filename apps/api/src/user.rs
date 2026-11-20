@@ -114,6 +114,8 @@ pub struct User {
     active: bool,
     /// How many passkeys the User has.
     passkeys: i64,
+    /// The Official the User stands for, if any.
+    official_id: Option<Uuid>,
 }
 
 /// Every User, oldest first.
@@ -139,7 +141,8 @@ pub(crate) async fn list(
     let users = sqlx::query_as!(
         User,
         r#"SELECT users.id, username, role_id, roles.name AS role, active,
-                  (SELECT count(*) FROM passkeys WHERE user_id = users.id) AS "passkeys!"
+                  (SELECT count(*) FROM passkeys WHERE user_id = users.id) AS "passkeys!",
+                  official_id
            FROM users JOIN roles ON roles.id = role_id ORDER BY users.id"#,
     )
     .fetch_all(&pool)
@@ -453,6 +456,80 @@ pub(crate) async fn update(
             "user.update",
             ("user", Some(&id.to_string())),
             changes.into(),
+        )
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct OfficialLink {
+    /// The Official the User stands for, or null for none.
+    official_id: Option<Uuid>,
+}
+
+/// Links a User to the Official they are, or unlinks them; an Official stands behind at most
+/// one User.
+///
+/// # Errors
+/// `401` without a live session, `403` outside the Administrator Role, `404` for an unknown
+/// User, `409` for an Official linked to another User, `422` for an unknown Official, `428`
+/// outside sudo mode.
+#[utoipa::path(
+    put,
+    path = "/users/{id}/official",
+    operation_id = "linkUserOfficial",
+    tag = "users",
+    params(("id" = Uuid, Path, description = "The User")),
+    request_body = OfficialLink,
+    responses(
+        (status = NO_CONTENT, description = "The User is linked or unlinked"),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User is not an Administrator"),
+        (status = NOT_FOUND, description = "There is no such User"),
+        (status = CONFLICT, description = "The Official is linked to another User"),
+        (status = UNPROCESSABLE_ENTITY, description = "The Official is unknown"),
+        (status = PRECONDITION_REQUIRED, description = "The User must re-authenticate first"),
+    ),
+)]
+pub(crate) async fn link_official(
+    State(pool): State<PgPool>,
+    session: Session,
+    Path(id): Path<Uuid>,
+    Json(body): Json<OfficialLink>,
+) -> Result<StatusCode, ApiError> {
+    session.ensure_administrator()?;
+    session.ensure_sudo()?;
+    let mut tx = pool.begin().await?;
+    let old = sqlx::query_scalar!("SELECT official_id FROM users WHERE id = $1 FOR UPDATE", id)
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or(ApiError::Status(StatusCode::NOT_FOUND))?;
+    let updated = sqlx::query!(
+        "UPDATE users SET official_id = $1 WHERE id = $2",
+        body.official_id,
+        id
+    )
+    .execute(&mut *tx)
+    .await;
+    match updated {
+        Err(sqlx::Error::Database(error)) if error.is_unique_violation() => {
+            return Err(ApiError::Status(StatusCode::CONFLICT));
+        }
+        Err(sqlx::Error::Database(error)) if error.is_foreign_key_violation() => {
+            return Err(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY));
+        }
+        updated => updated?,
+    };
+    if old != body.official_id {
+        audit::record_change(
+            &mut tx,
+            Actor::User(session.user_id),
+            "user.link_official",
+            ("user", Some(&id.to_string())),
+            json!([{ "field": "officialId", "from": old, "to": body.official_id }]),
         )
         .await?;
     }

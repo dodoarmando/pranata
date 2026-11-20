@@ -287,6 +287,14 @@ export interface NewUser {
   username: string;
 }
 
+export interface OfficialLink {
+  /**
+     * The Official the User stands for, or null for none.
+     * @nullable
+     */
+  officialId?: string | null;
+}
+
 /**
  * A WebAuthn ceremony's options for the browser, and its id to finish it with.
  */
@@ -472,6 +480,11 @@ export interface User {
   /** False once deactivated: the User can neither sign in nor keep a session. */
   active: boolean;
   id: string;
+  /**
+     * The Official the User stands for, if any.
+     * @nullable
+     */
+  officialId?: string | null;
   /** How many passkeys the User has. */
   passkeys: number;
   /** The name of the User's Role. */
@@ -2804,6 +2817,80 @@ export const createAccessLink = async (id: string, options?: Parameters<typeof a
     method: 'POST'
 
 
+  }
+);}
+
+
+
+export type linkUserOfficialResponse204 = {
+  data: void
+  status: 204
+}
+
+export type linkUserOfficialResponse401 = {
+  data: void
+  status: 401
+}
+
+export type linkUserOfficialResponse403 = {
+  data: void
+  status: 403
+}
+
+export type linkUserOfficialResponse404 = {
+  data: void
+  status: 404
+}
+
+export type linkUserOfficialResponse409 = {
+  data: void
+  status: 409
+}
+
+export type linkUserOfficialResponse422 = {
+  data: void
+  status: 422
+}
+
+export type linkUserOfficialResponse428 = {
+  data: void
+  status: 428
+}
+
+export type linkUserOfficialResponseSuccess = (linkUserOfficialResponse204) & {
+  headers: Headers;
+};
+export type linkUserOfficialResponseError = (linkUserOfficialResponse401 | linkUserOfficialResponse403 | linkUserOfficialResponse404 | linkUserOfficialResponse409 | linkUserOfficialResponse422 | linkUserOfficialResponse428) & {
+  headers: Headers;
+};
+
+export type linkUserOfficialResponse = (linkUserOfficialResponseSuccess | linkUserOfficialResponseError)
+
+export const getLinkUserOfficialUrl = (id: string,) => {
+
+
+
+
+  return `/users/${id}/official`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` outside the Administrator Role, `404` for an unknown
+ * User, `409` for an Official linked to another User, `422` for an unknown Official, `428`
+ * outside sudo mode.
+ * @summary Links a User to the Official they are, or unlinks them; an Official stands behind at most
+one User.
+ */
+export const linkUserOfficial = async (id: string,
+    officialLink: OfficialLink, options?: Parameters<typeof apiFetch>[1]): Promise<linkUserOfficialResponse> => {
+
+  return apiFetch<linkUserOfficialResponse>(getLinkUserOfficialUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(officialLink)
   }
 );}
 
