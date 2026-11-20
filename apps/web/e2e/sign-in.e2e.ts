@@ -400,12 +400,29 @@ test('a publisher writes and publishes a News Post, read on /berita until unpubl
   await expect(page.getByText('Kerja bakti dimulai pukul tujuh pagi.')).toBeVisible();
   await expect(page.getByRole('img', { name: 'Warga membersihkan saluran' })).toBeVisible();
   const post = page.url();
+  // The public origin is the base URL, so the canonical URL is the address itself.
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', post);
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+    'content',
+    /^http:\/\/localhost:13000\/media\/[0-9a-f-]+\/share$/,
+  );
+  const sitemap = async () => (await page.request.get('/sitemap.xml')).text();
+  expect(await sitemap()).toContain(`<loc>${post}</loc>`);
 
   await page.goto(editor);
   await page.getByRole('button', { name: 'Batalkan terbit' }).click();
   await expect(page.getByText('Berita kembali menjadi draf.')).toBeVisible();
   expect((await page.goto(post))?.status()).toBe(404);
   await expect(page.getByRole('heading', { name: 'Berita tidak ditemukan' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Lihat semua berita' })).toHaveAttribute(
+    'href',
+    '/berita',
+  );
+  await expect(page.getByRole('link', { name: 'Cari di situs ini' })).toHaveAttribute(
+    'href',
+    '/cari',
+  );
+  expect(await sitemap()).not.toContain(`<loc>${post}</loc>`);
 
   await page.goto(editor);
   await page.getByRole('button', { name: 'Hapus draf' }).click();
