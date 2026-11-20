@@ -221,6 +221,7 @@ export type DraftKind = typeof DraftKind[keyof typeof DraftKind];
 export const DraftKind = {
   newsPost: 'newsPost',
   announcement: 'announcement',
+  event: 'event',
 } as const;
 
 /**

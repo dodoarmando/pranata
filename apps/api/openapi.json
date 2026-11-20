@@ -3938,7 +3938,8 @@
         "description": "What kind of website item a Draft is.",
         "enum": [
           "newsPost",
-          "announcement"
+          "announcement",
+          "event"
         ]
       },
       "DraftSummary": {
