@@ -21,6 +21,7 @@ import { Route as PublicPemerintahanRouteImport } from './routes/_public/pemerin
 import { Route as PublicProfilRouteImport } from './routes/_public/profil'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAkunRouteImport } from './routes/admin/akun'
+import { Route as AdminApbdesRouteImport } from './routes/admin/apbdes'
 import { Route as AdminDokumenRouteImport } from './routes/admin/dokumen'
 import { Route as AdminIndeksDesaRouteImport } from './routes/admin/indeks-desa'
 import { Route as AdminKontakPentingRouteImport } from './routes/admin/kontak-penting'
@@ -108,6 +109,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const AdminAkunRoute = AdminAkunRouteImport.update({
   id: '/akun',
   path: '/akun',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminApbdesRoute = AdminApbdesRouteImport.update({
+  id: '/apbdes',
+  path: '/apbdes',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminDokumenRoute = AdminDokumenRouteImport.update({
@@ -267,6 +273,7 @@ export interface FileRoutesByFullPath {
   '/pemerintahan': typeof PublicPemerintahanRoute
   '/profil': typeof PublicProfilRoute
   '/admin/akun': typeof AdminAkunRoute
+  '/admin/apbdes': typeof AdminApbdesRoute
   '/admin/dokumen': typeof AdminDokumenRoute
   '/admin/indeks-desa': typeof AdminIndeksDesaRoute
   '/admin/kontak-penting': typeof AdminKontakPentingRoute
@@ -307,6 +314,7 @@ export interface FileRoutesByTo {
   '/pemerintahan': typeof PublicPemerintahanRoute
   '/profil': typeof PublicProfilRoute
   '/admin/akun': typeof AdminAkunRoute
+  '/admin/apbdes': typeof AdminApbdesRoute
   '/admin/dokumen': typeof AdminDokumenRoute
   '/admin/indeks-desa': typeof AdminIndeksDesaRoute
   '/admin/kontak-penting': typeof AdminKontakPentingRoute
@@ -351,6 +359,7 @@ export interface FileRoutesById {
   '/_public/pemerintahan': typeof PublicPemerintahanRoute
   '/_public/profil': typeof PublicProfilRoute
   '/admin/akun': typeof AdminAkunRoute
+  '/admin/apbdes': typeof AdminApbdesRoute
   '/admin/dokumen': typeof AdminDokumenRoute
   '/admin/indeks-desa': typeof AdminIndeksDesaRoute
   '/admin/kontak-penting': typeof AdminKontakPentingRoute
@@ -396,6 +405,7 @@ export interface FileRouteTypes {
     | '/pemerintahan'
     | '/profil'
     | '/admin/akun'
+    | '/admin/apbdes'
     | '/admin/dokumen'
     | '/admin/indeks-desa'
     | '/admin/kontak-penting'
@@ -436,6 +446,7 @@ export interface FileRouteTypes {
     | '/pemerintahan'
     | '/profil'
     | '/admin/akun'
+    | '/admin/apbdes'
     | '/admin/dokumen'
     | '/admin/indeks-desa'
     | '/admin/kontak-penting'
@@ -479,6 +490,7 @@ export interface FileRouteTypes {
     | '/_public/pemerintahan'
     | '/_public/profil'
     | '/admin/akun'
+    | '/admin/apbdes'
     | '/admin/dokumen'
     | '/admin/indeks-desa'
     | '/admin/kontak-penting'
@@ -604,6 +616,13 @@ declare module '@tanstack/react-router' {
       path: '/akun'
       fullPath: '/admin/akun'
       preLoaderRoute: typeof AdminAkunRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/apbdes': {
+      id: '/admin/apbdes'
+      path: '/apbdes'
+      fullPath: '/admin/apbdes'
+      preLoaderRoute: typeof AdminApbdesRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/dokumen': {
@@ -814,6 +833,7 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteRouteChildren {
   AdminAkunRoute: typeof AdminAkunRoute
+  AdminApbdesRoute: typeof AdminApbdesRoute
   AdminDokumenRoute: typeof AdminDokumenRoute
   AdminIndeksDesaRoute: typeof AdminIndeksDesaRoute
   AdminKontakPentingRoute: typeof AdminKontakPentingRoute
@@ -840,6 +860,7 @@ interface AdminRouteRouteChildren {
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAkunRoute: AdminAkunRoute,
+  AdminApbdesRoute: AdminApbdesRoute,
   AdminDokumenRoute: AdminDokumenRoute,
   AdminIndeksDesaRoute: AdminIndeksDesaRoute,
   AdminKontakPentingRoute: AdminKontakPentingRoute,
