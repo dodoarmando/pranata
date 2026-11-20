@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT 'Kepala ' || initcap($2) || ' ' || hamlets.name AS \"name!\"\n                   FROM positions JOIN region_units hamlets ON hamlets.id = hamlet_id\n                   WHERE positions.active AND NOT EXISTS (SELECT 1 FROM tenures\n                       WHERE position_id = positions.id\n                       AND start_date <= (now() AT TIME ZONE $1)::date\n                       AND (end_date IS NULL OR end_date >= (now() AT TIME ZONE $1)::date))\n                   ORDER BY hamlets.sort_order",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name!",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": ["Text", "Text"]
+    },
+    "nullable": [null]
+  },
+  "hash": "7d7ab2d50015a26cfd561e481aaa9c2e4f99035327227d1150dd556d37aafa87"
+}
