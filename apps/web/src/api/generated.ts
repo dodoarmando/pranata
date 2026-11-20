@@ -851,8 +851,8 @@ export interface PageFields {
   /** Locked once first published, like the slug. */
   menu: PageMenu;
   /**
-     * The place within the menu, smallest first; a new Page goes last when left out, and an
-     * edit keeps the place.
+     * The place within the menu, smallest first; left out, a new Page or one moved to
+     * another menu goes last there, and any other edit keeps the place.
      * @nullable
      */
   order?: number | null;

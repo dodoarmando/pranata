@@ -5384,7 +5384,7 @@
               "null"
             ],
             "format": "int32",
-            "description": "The place within the menu, smallest first; a new Page goes last when left out, and an\nedit keeps the place."
+            "description": "The place within the menu, smallest first; left out, a new Page or one moved to\nanother menu goes last there, and any other edit keeps the place."
           },
           "slug": {
             "type": [

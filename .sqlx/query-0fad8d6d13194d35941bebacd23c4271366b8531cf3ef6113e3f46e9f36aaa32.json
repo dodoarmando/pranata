@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT coalesce(max(sort_order), 0) + 1 AS \"order!\" FROM pages\n                   WHERE menu = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "order!",
+        "type_info": "Int4",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "page_menu",
+            "kind": {
+              "Enum": ["profile", "government", "services"]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": [null]
+  },
+  "hash": "0fad8d6d13194d35941bebacd23c4271366b8531cf3ef6113e3f46e9f36aaa32"
+}
