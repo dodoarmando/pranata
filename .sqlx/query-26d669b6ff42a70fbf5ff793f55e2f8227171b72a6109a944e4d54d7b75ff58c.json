@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT name, head_of_village FROM positions WHERE id = $1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "positions",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "head_of_village",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "positions",
+            "name": "head_of_village"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": [true, false]
+  },
+  "hash": "26d669b6ff42a70fbf5ff793f55e2f8227171b72a6109a944e4d54d7b75ff58c"
+}

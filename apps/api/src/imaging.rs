@@ -13,10 +13,6 @@ use resvg::{tiny_skia, usvg};
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum Kind {
     /// JPEG, PNG or WebP, up to 10 MiB.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "the first photo upload comes with a later module")
-    )]
     Photo,
     /// PNG or SVG, up to 2 MiB; an SVG is rasterised and never kept.
     Logo,

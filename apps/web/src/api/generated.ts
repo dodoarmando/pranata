@@ -184,6 +184,60 @@ export type NewRegionUnit = RegionUnitFields & ({
   parentId?: string | null;
 });
 
+/**
+ * How an Official holds a Position.
+ */
+export type TenureKind = typeof TenureKind[keyof typeof TenureKind];
+
+
+export const TenureKind = {
+  definitive: 'definitive',
+  appointee: 'appointee',
+  acting: 'acting',
+} as const;
+
+/**
+ * What a User records about a Tenure; the name and NIPD are its Official's.
+ */
+export interface TenureFields {
+  decreeDate: string;
+  /** The appointing decree, never shown publicly. */
+  decreeNumber: string;
+  /**
+     * Open while the Official still serves.
+     * @nullable
+     */
+  endDate?: string | null;
+  kind: TenureKind;
+  /** The Official's name. */
+  name: string;
+  /**
+     * The Official's Nomor Induk Perangkat Desa, never shown publicly.
+     * @nullable
+     */
+  nipd?: string | null;
+  /**
+     * The photo's file, served at `/media/{photo}/{variant}`.
+     * @nullable
+     */
+  photo?: string | null;
+  /**
+     * Required with a photo.
+     * @nullable
+     */
+  photoAlt?: string | null;
+  startDate: string;
+}
+
+export type NewTenure = TenureFields & ({
+  /**
+     * An existing Official, whose name and NIPD the body's replace; null for a new one.
+     * @nullable
+     */
+  officialId?: string | null;
+  positionId: string;
+});
+
 export interface NewUser {
   roleId: string;
   /** 3–32 lowercase letters, digits, dots, underscores or dashes; never changed or reused. */
@@ -260,6 +314,33 @@ export const Permission = {
   complainthandle: 'complaint.handle',
   auditread: 'audit.read',
 } as const;
+
+export type Tenure = TenureFields & {
+  id: string;
+  officialId: string;
+};
+
+export interface Position {
+  /** An inactive Position takes no new Tenure. */
+  active: boolean;
+  /**
+     * A Head-of-Hamlet Position's Hamlet, which it is created and deactivated with.
+     * @nullable
+     */
+  hamletId?: string | null;
+  /** The head of village's Position, which is never deleted. */
+  headOfVillage: boolean;
+  id: string;
+  /** A Head-of-Hamlet Position is named after its Hamlet, such as "Kepala Dusun Krajan". */
+  name: string;
+  /** Latest start first. */
+  tenures: Tenure[];
+}
+
+export interface PositionName {
+  /** 1–100 characters. */
+  name: string;
+}
 
 export interface Reauthenticate {
   password: string;
@@ -1451,6 +1532,237 @@ export const getMedia = async (id: string,
 
 
 
+export type listPositionsResponse200 = {
+  data: Position[]
+  status: 200
+}
+
+export type listPositionsResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listPositionsResponseSuccess = (listPositionsResponse200) & {
+  headers: Headers;
+};
+export type listPositionsResponseError = (listPositionsResponse401) & {
+  headers: Headers;
+};
+
+export type listPositionsResponse = (listPositionsResponseSuccess | listPositionsResponseError)
+
+export const getListPositionsUrl = () => {
+
+
+
+
+  return `/positions`
+}
+
+/**
+ * # Errors
+ * `401` without a live session.
+ * @summary Every Position in the government's order with its Tenures, for any signed-in User.
+ */
+export const listPositions = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listPositionsResponse> => {
+
+  return apiFetch<listPositionsResponse>(getListPositionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createPositionResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createPositionResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createPositionResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createPositionResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createPositionResponseSuccess = (createPositionResponse201) & {
+  headers: Headers;
+};
+export type createPositionResponseError = (createPositionResponse401 | createPositionResponse403 | createPositionResponse422) & {
+  headers: Headers;
+};
+
+export type createPositionResponse = (createPositionResponseSuccess | createPositionResponseError)
+
+export const getCreatePositionUrl = () => {
+
+
+
+
+  return `/positions`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `422` for a blank name or
+ * one over 100 characters.
+ * @summary Adds a Village-defined Position at the end of the government's order.
+ */
+export const createPosition = async (positionName: PositionName, options?: Parameters<typeof apiFetch>[1]): Promise<createPositionResponse> => {
+
+  return apiFetch<createPositionResponse>(getCreatePositionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(positionName)
+  }
+);}
+
+
+
+export type renamePositionResponse204 = {
+  data: void
+  status: 204
+}
+
+export type renamePositionResponse401 = {
+  data: void
+  status: 401
+}
+
+export type renamePositionResponse403 = {
+  data: void
+  status: 403
+}
+
+export type renamePositionResponse404 = {
+  data: void
+  status: 404
+}
+
+export type renamePositionResponse409 = {
+  data: void
+  status: 409
+}
+
+export type renamePositionResponse422 = {
+  data: void
+  status: 422
+}
+
+export type renamePositionResponseSuccess = (renamePositionResponse204) & {
+  headers: Headers;
+};
+export type renamePositionResponseError = (renamePositionResponse401 | renamePositionResponse403 | renamePositionResponse404 | renamePositionResponse409 | renamePositionResponse422) & {
+  headers: Headers;
+};
+
+export type renamePositionResponse = (renamePositionResponseSuccess | renamePositionResponseError)
+
+export const getRenamePositionUrl = (id: string,) => {
+
+
+
+
+  return `/positions/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `404` for an unknown
+ * Position, `409` for a Head-of-Hamlet Position, `422` for a blank name or one over 100
+ * characters.
+ * @summary Renames a Position other than a Head-of-Hamlet one, which takes its Hamlet's name.
+ */
+export const renamePosition = async (id: string,
+    positionName: PositionName, options?: Parameters<typeof apiFetch>[1]): Promise<renamePositionResponse> => {
+
+  return apiFetch<renamePositionResponse>(getRenamePositionUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(positionName)
+  }
+);}
+
+
+
+export type deletePositionResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deletePositionResponse401 = {
+  data: void
+  status: 401
+}
+
+export type deletePositionResponse403 = {
+  data: void
+  status: 403
+}
+
+export type deletePositionResponse404 = {
+  data: void
+  status: 404
+}
+
+export type deletePositionResponse409 = {
+  data: void
+  status: 409
+}
+
+export type deletePositionResponseSuccess = (deletePositionResponse204) & {
+  headers: Headers;
+};
+export type deletePositionResponseError = (deletePositionResponse401 | deletePositionResponse403 | deletePositionResponse404 | deletePositionResponse409) & {
+  headers: Headers;
+};
+
+export type deletePositionResponse = (deletePositionResponseSuccess | deletePositionResponseError)
+
+export const getDeletePositionUrl = (id: string,) => {
+
+
+
+
+  return `/positions/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `404` for an unknown
+ * Position, `409` for the head of village's, a Head-of-Hamlet one, or one with a Tenure.
+ * @summary Deletes a Position that never had a Tenure, other than the head of village's and the
+Head-of-Hamlet ones.
+ */
+export const deletePosition = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deletePositionResponse> => {
+
+  return apiFetch<deletePositionResponse>(getDeletePositionUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
 export type getRegionTreeResponse200 = {
   data: RegionTree
   status: 200
@@ -1678,7 +1990,8 @@ export const getCreateRegionUnitUrl = () => {
  * `401` without a live session, `403` without `village.manage`, `404` before the Village
  * Code is set, `409` for a taken number or an RW while the Village has no RW level, `422`
  * for a malformed field or a parent that is missing, inactive or of the wrong level.
- * @summary Adds a Hamlet at the end of the order, an RW to a Hamlet, or an RT to its RW (or Hamlet).
+ * @summary Adds a Hamlet at the end of the order with its Head-of-Hamlet Position, an RW to a
+Hamlet, or an RT to its RW (or Hamlet).
  */
 export const createRegionUnit = async (newRegionUnit: NewRegionUnit, options?: Parameters<typeof apiFetch>[1]): Promise<createRegionUnitResponse> => {
 
@@ -1743,11 +2056,12 @@ export const getUpdateRegionUnitUrl = (id: string,) => {
 /**
  * # Errors
  * `401` without a live session, `403` without `village.manage`, `404` for an unknown unit,
- * `409` for a taken number, deactivating a unit with an active child, or reactivating one
+ * `409` for a taken number, deactivating a unit with an active child or a Hamlet whose
+ * Head-of-Hamlet Tenure has no end date, or reactivating one
  * under an inactive parent or, for an RW, while the Village has no RW level, `422` for a
  * malformed field.
  * @summary Renames or renumbers a Region Unit in place, edits its head, and deactivates or
-reactivates it.
+reactivates it, a Hamlet with its Head-of-Hamlet Position.
  */
 export const updateRegionUnit = async (id: string,
     regionUnitUpdate: RegionUnitUpdate, options?: Parameters<typeof apiFetch>[1]): Promise<updateRegionUnitResponse> => {
@@ -1947,6 +2261,204 @@ export const updateRole = async (id: string,
     method: 'PUT',
     headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
     body: JSON.stringify(roleInput)
+  }
+);}
+
+
+
+export type createTenureResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createTenureResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createTenureResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createTenureResponse409 = {
+  data: void
+  status: 409
+}
+
+export type createTenureResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createTenureResponseSuccess = (createTenureResponse201) & {
+  headers: Headers;
+};
+export type createTenureResponseError = (createTenureResponse401 | createTenureResponse403 | createTenureResponse409 | createTenureResponse422) & {
+  headers: Headers;
+};
+
+export type createTenureResponse = (createTenureResponseSuccess | createTenureResponseError)
+
+export const getCreateTenureUrl = () => {
+
+
+
+
+  return `/tenures`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `409` for an inactive
+ * Position or a Definitif or Pj. Tenure overlapping another, `422` for a malformed field, an
+ * end before the start, a photo without alt text, or an unknown Position, Official or photo.
+ * @summary Records a Tenure of a new or existing Official in an active Position.
+ */
+export const createTenure = async (newTenure: NewTenure, options?: Parameters<typeof apiFetch>[1]): Promise<createTenureResponse> => {
+
+  return apiFetch<createTenureResponse>(getCreateTenureUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(newTenure)
+  }
+);}
+
+
+
+export type uploadTenurePhotoResponse201 = {
+  data: Upload
+  status: 201
+}
+
+export type uploadTenurePhotoResponse401 = {
+  data: void
+  status: 401
+}
+
+export type uploadTenurePhotoResponse403 = {
+  data: void
+  status: 403
+}
+
+export type uploadTenurePhotoResponse413 = {
+  data: void
+  status: 413
+}
+
+export type uploadTenurePhotoResponse415 = {
+  data: void
+  status: 415
+}
+
+export type uploadTenurePhotoResponse422 = {
+  data: void
+  status: 422
+}
+
+export type uploadTenurePhotoResponseSuccess = (uploadTenurePhotoResponse201) & {
+  headers: Headers;
+};
+export type uploadTenurePhotoResponseError = (uploadTenurePhotoResponse401 | uploadTenurePhotoResponse403 | uploadTenurePhotoResponse413 | uploadTenurePhotoResponse415 | uploadTenurePhotoResponse422) & {
+  headers: Headers;
+};
+
+export type uploadTenurePhotoResponse = (uploadTenurePhotoResponseSuccess | uploadTenurePhotoResponseError)
+
+export const getUploadTenurePhotoUrl = () => {
+
+
+
+
+  return `/tenures/photo`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `413` over 10 MiB, `415`
+ * for content that is not JPEG, PNG or WebP, `422` over 40 megapixels or undecodable.
+ * @summary Stores an Official's photo, a JPEG, PNG or WebP of at most 10 MiB, for saving into a
+Tenure.
+ */
+export const uploadTenurePhoto = async (uploadTenurePhotoBody: Blob, options?: Parameters<typeof apiFetch>[1]): Promise<uploadTenurePhotoResponse> => {
+
+  return apiFetch<uploadTenurePhotoResponse>(getUploadTenurePhotoUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/octet-stream' }, options?.headers),
+    body: uploadTenurePhotoBody
+  }
+);}
+
+
+
+export type updateTenureResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateTenureResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateTenureResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateTenureResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateTenureResponse409 = {
+  data: void
+  status: 409
+}
+
+export type updateTenureResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateTenureResponseSuccess = (updateTenureResponse204) & {
+  headers: Headers;
+};
+export type updateTenureResponseError = (updateTenureResponse401 | updateTenureResponse403 | updateTenureResponse404 | updateTenureResponse409 | updateTenureResponse422) & {
+  headers: Headers;
+};
+
+export type updateTenureResponse = (updateTenureResponseSuccess | updateTenureResponseError)
+
+export const getUpdateTenureUrl = (id: string,) => {
+
+
+
+
+  return `/tenures/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `404` for an unknown
+ * Tenure, `409` for a Definitif or Pj. Tenure overlapping another or an open one in an
+ * inactive Position, `422` for a malformed field, an end before the start, a photo without
+ * alt text, or an unknown photo.
+ * @summary Corrects or ends a Tenure, and its Official's name and NIPD; a Tenure is never deleted.
+ */
+export const updateTenure = async (id: string,
+    tenureFields: TenureFields, options?: Parameters<typeof apiFetch>[1]): Promise<updateTenureResponse> => {
+
+  return apiFetch<updateTenureResponse>(getUpdateTenureUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(tenureFields)
   }
 );}
 

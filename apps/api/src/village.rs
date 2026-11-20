@@ -499,7 +499,7 @@ pub(crate) fn diff(from: &Value, to: &Value) -> Vec<Value> {
 #[derive(Serialize, ToSchema)]
 pub struct Upload {
     /// The stored file, unreferenced until saved into its owner and swept after 24 h if not.
-    id: Uuid,
+    pub(crate) id: Uuid,
 }
 
 /// Stores a Village logo, a PNG or SVG of at most 2 MiB, for saving into the profile.

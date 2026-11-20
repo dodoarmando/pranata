@@ -3,6 +3,7 @@ mod auth;
 mod dashboard;
 pub mod db;
 mod export;
+mod government;
 mod health;
 mod imaging;
 mod passkey;
@@ -82,6 +83,17 @@ fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(region::create_unit))
         .routes(routes!(region::update_unit))
         .routes(routes!(region::order_hamlets))
+        .routes(routes!(
+            government::list_positions,
+            government::create_position
+        ))
+        .routes(routes!(
+            government::rename_position,
+            government::delete_position
+        ))
+        .routes(routes!(government::create_tenure))
+        .routes(routes!(government::update_tenure))
+        .routes(routes!(government::upload_photo))
         .routes(routes!(storage::get_media))
         .routes(routes!(auth::use_access_link))
         .routes(routes!(auth::sign_in))

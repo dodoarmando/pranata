@@ -3,21 +3,9 @@ mod common;
 use std::io::Cursor;
 
 use axum::http::{StatusCode, header};
-use common::TestApp;
-use image::{DynamicImage, ImageFormat, RgbaImage};
+use common::{TestApp, png};
+use image::{DynamicImage, ImageFormat};
 use sqlx::PgPool;
-
-fn png(width: u32, height: u32) -> Vec<u8> {
-    let mut bytes = Vec::new();
-    DynamicImage::ImageRgba8(RgbaImage::from_pixel(
-        width,
-        height,
-        image::Rgba([0, 90, 60, 255]),
-    ))
-    .write_to(&mut Cursor::new(&mut bytes), ImageFormat::Png)
-    .unwrap();
-    bytes
-}
 
 const SVG: &str = r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5"/></svg>"#;
 

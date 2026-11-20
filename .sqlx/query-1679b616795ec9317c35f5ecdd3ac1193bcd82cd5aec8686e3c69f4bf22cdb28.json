@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS (SELECT 1 FROM region_units WHERE parent_id = $1 AND active)\n                   OR EXISTS (SELECT 1 FROM tenures JOIN positions ON positions.id = position_id\n                       WHERE hamlet_id = $1 AND end_date IS NULL) AS \"exists!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": [null]
+  },
+  "hash": "1679b616795ec9317c35f5ecdd3ac1193bcd82cd5aec8686e3c69f4bf22cdb28"
+}

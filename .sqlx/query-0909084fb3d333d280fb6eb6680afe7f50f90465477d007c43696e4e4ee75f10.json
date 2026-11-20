@@ -1,0 +1,63 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT positions.id, coalesce(positions.name,\n               'Kepala ' || initcap(village.hamlet_label) || ' ' || hamlets.name) AS \"name!\",\n           head_of_village, hamlet_id, positions.active\n           FROM positions LEFT JOIN region_units hamlets ON hamlets.id = hamlet_id\n           LEFT JOIN village ON true\n           ORDER BY hamlet_id IS NOT NULL, positions.sort_order, hamlets.sort_order",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "positions",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "head_of_village",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "positions",
+            "name": "head_of_village"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "hamlet_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "positions",
+            "name": "hamlet_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "active",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "positions",
+            "name": "active"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, null, false, true, false]
+  },
+  "hash": "0909084fb3d333d280fb6eb6680afe7f50f90465477d007c43696e4e4ee75f10"
+}

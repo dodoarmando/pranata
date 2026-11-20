@@ -731,6 +731,162 @@
         }
       }
     },
+    "/positions": {
+      "get": {
+        "tags": [
+          "government"
+        ],
+        "summary": "Every Position in the government's order with its Tenures, for any signed-in User.",
+        "description": "# Errors\n`401` without a live session.",
+        "operationId": "listPositions",
+        "responses": {
+          "200": {
+            "description": "Every Position",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Position"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "government"
+        ],
+        "summary": "Adds a Village-defined Position at the end of the government's order.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `422` for a blank name or\none over 100 characters.",
+        "operationId": "createPosition",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PositionName"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Position",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "422": {
+            "description": "The name is blank or too long"
+          }
+        }
+      }
+    },
+    "/positions/{id}": {
+      "put": {
+        "tags": [
+          "government"
+        ],
+        "summary": "Renames a Position other than a Head-of-Hamlet one, which takes its Hamlet's name.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `404` for an unknown\nPosition, `409` for a Head-of-Hamlet Position, `422` for a blank name or one over 100\ncharacters.",
+        "operationId": "renamePosition",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Position",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PositionName"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Position is renamed"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "404": {
+            "description": "There is no such Position"
+          },
+          "409": {
+            "description": "A Head-of-Hamlet Position is named after its Hamlet"
+          },
+          "422": {
+            "description": "The name is blank or too long"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "government"
+        ],
+        "summary": "Deletes a Position that never had a Tenure, other than the head of village's and the\nHead-of-Hamlet ones.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `404` for an unknown\nPosition, `409` for the head of village's, a Head-of-Hamlet one, or one with a Tenure.",
+        "operationId": "deletePosition",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Position",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Position is deleted"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "404": {
+            "description": "There is no such Position"
+          },
+          "409": {
+            "description": "The Position is kept"
+          }
+        }
+      }
+    },
     "/regions": {
       "get": {
         "tags": [
@@ -838,7 +994,7 @@
         "tags": [
           "regions"
         ],
-        "summary": "Adds a Hamlet at the end of the order, an RW to a Hamlet, or an RT to its RW (or Hamlet).",
+        "summary": "Adds a Hamlet at the end of the order with its Head-of-Hamlet Position, an RW to a\nHamlet, or an RT to its RW (or Hamlet).",
         "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `404` before the Village\nCode is set, `409` for a taken number or an RW while the Village has no RW level, `422`\nfor a malformed field or a parent that is missing, inactive or of the wrong level.",
         "operationId": "createRegionUnit",
         "requestBody": {
@@ -885,8 +1041,8 @@
         "tags": [
           "regions"
         ],
-        "summary": "Renames or renumbers a Region Unit in place, edits its head, and deactivates or\nreactivates it.",
-        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `404` for an unknown unit,\n`409` for a taken number, deactivating a unit with an active child, or reactivating one\nunder an inactive parent or, for an RW, while the Village has no RW level, `422` for a\nmalformed field.",
+        "summary": "Renames or renumbers a Region Unit in place, edits its head, and deactivates or\nreactivates it, a Hamlet with its Head-of-Hamlet Position.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `404` for an unknown unit,\n`409` for a taken number, deactivating a unit with an active child or a Hamlet whose\nHead-of-Hamlet Tenure has no end date, or reactivating one\nunder an inactive parent or, for an RW, while the Village has no RW level, `422` for a\nmalformed field.",
         "operationId": "updateRegionUnit",
         "parameters": [
           {
@@ -924,7 +1080,7 @@
             "description": "There is no such Region Unit"
           },
           "409": {
-            "description": "The number is taken, the unit is not empty, or its parent is inactive"
+            "description": "The number is taken, the unit is not empty or its head serves, or its parent is inactive"
           },
           "422": {
             "description": "A field is malformed"
@@ -1059,6 +1215,154 @@
           },
           "428": {
             "description": "The User must re-authenticate first"
+          }
+        }
+      }
+    },
+    "/tenures": {
+      "post": {
+        "tags": [
+          "government"
+        ],
+        "summary": "Records a Tenure of a new or existing Official in an active Position.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `409` for an inactive\nPosition or a Definitif or Pj. Tenure overlapping another, `422` for a malformed field, an\nend before the start, a photo without alt text, or an unknown Position, Official or photo.",
+        "operationId": "createTenure",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewTenure"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Tenure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "409": {
+            "description": "The Position is inactive or already held then"
+          },
+          "422": {
+            "description": "A field is malformed or unknown"
+          }
+        }
+      }
+    },
+    "/tenures/photo": {
+      "post": {
+        "tags": [
+          "government"
+        ],
+        "summary": "Stores an Official's photo, a JPEG, PNG or WebP of at most 10 MiB, for saving into a\nTenure.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `413` over 10 MiB, `415`\nfor content that is not JPEG, PNG or WebP, `422` over 40 megapixels or undecodable.",
+        "operationId": "uploadTenurePhoto",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The stored photo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upload"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "413": {
+            "description": "The file is over 10 MiB"
+          },
+          "415": {
+            "description": "The file is not JPEG, PNG or WebP"
+          },
+          "422": {
+            "description": "The image is too large or broken"
+          }
+        }
+      }
+    },
+    "/tenures/{id}": {
+      "put": {
+        "tags": [
+          "government"
+        ],
+        "summary": "Corrects or ends a Tenure, and its Official's name and NIPD; a Tenure is never deleted.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `404` for an unknown\nTenure, `409` for a Definitif or Pj. Tenure overlapping another or an open one in an\ninactive Position, `422` for a malformed field, an end before the start, a photo without\nalt text, or an unknown photo.",
+        "operationId": "updateTenure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Tenure",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenureFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Tenure is changed"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "404": {
+            "description": "There is no such Tenure"
+          },
+          "409": {
+            "description": "The Position is already held then, or inactive"
+          },
+          "422": {
+            "description": "A field is malformed or unknown"
           }
         }
       }
@@ -1814,6 +2118,33 @@
           }
         ]
       },
+      "NewTenure": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TenureFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "positionId"
+            ],
+            "properties": {
+              "officialId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "An existing Official, whose name and NIPD the body's replace; null for a new one."
+              },
+              "positionId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ]
+      },
       "NewUser": {
         "type": "object",
         "required": [
@@ -1943,6 +2274,61 @@
           "complaint.handle",
           "audit.read"
         ]
+      },
+      "Position": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "headOfVillage",
+          "active",
+          "tenures"
+        ],
+        "properties": {
+          "active": {
+            "type": "boolean",
+            "description": "An inactive Position takes no new Tenure."
+          },
+          "hamletId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "A Head-of-Hamlet Position's Hamlet, which it is created and deactivated with."
+          },
+          "headOfVillage": {
+            "type": "boolean",
+            "description": "The head of village's Position, which is never deleted."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "A Head-of-Hamlet Position is named after its Hamlet, such as \"Kepala Dusun Krajan\"."
+          },
+          "tenures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tenure"
+            },
+            "description": "Latest start first."
+          }
+        }
+      },
+      "PositionName": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "1–100 characters."
+          }
+        }
       },
       "Reauthenticate": {
         "type": "object",
@@ -2159,6 +2545,101 @@
             "type": "string"
           }
         }
+      },
+      "Tenure": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TenureFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "officialId"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "officialId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ]
+      },
+      "TenureFields": {
+        "type": "object",
+        "description": "What a User records about a Tenure; the name and NIPD are its Official's.",
+        "required": [
+          "name",
+          "kind",
+          "startDate",
+          "decreeNumber",
+          "decreeDate"
+        ],
+        "properties": {
+          "decreeDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "decreeNumber": {
+            "type": "string",
+            "description": "The appointing decree, never shown publicly."
+          },
+          "endDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "Open while the Official still serves."
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TenureKind"
+          },
+          "name": {
+            "type": "string",
+            "description": "The Official's name."
+          },
+          "nipd": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The Official's Nomor Induk Perangkat Desa, never shown publicly."
+          },
+          "photo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The photo's file, served at `/media/{photo}/{variant}`."
+          },
+          "photoAlt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Required with a photo."
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "TenureKind": {
+        "type": "string",
+        "description": "How an Official holds a Position.",
+        "enum": [
+          "definitive",
+          "appointee",
+          "acting"
+        ]
       },
       "TimeZone": {
         "type": "string",

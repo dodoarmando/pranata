@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO positions (hamlet_id) VALUES ($1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "0169327aa518ad9d6db5cb6bfc0561c0ff060c9b24e0fe8057ff328c92169145"
+}

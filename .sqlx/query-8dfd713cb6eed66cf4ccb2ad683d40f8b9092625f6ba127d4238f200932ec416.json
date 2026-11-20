@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO positions (name, sort_order)\n         SELECT $1, coalesce(max(sort_order), 0) + 1 FROM positions RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "positions",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Text"]
+    },
+    "nullable": [false]
+  },
+  "hash": "8dfd713cb6eed66cf4ccb2ad683d40f8b9092625f6ba127d4238f200932ec416"
+}

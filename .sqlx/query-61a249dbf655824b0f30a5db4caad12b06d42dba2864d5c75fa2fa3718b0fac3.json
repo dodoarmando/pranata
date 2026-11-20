@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE positions SET name = $1 WHERE id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Text", "Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "61a249dbf655824b0f30a5db4caad12b06d42dba2864d5c75fa2fa3718b0fac3"
+}
