@@ -20,6 +20,8 @@ const draftKinds = {
   event: { label: 'Agenda', to: '/admin/agenda/$id' },
   page: { label: 'Halaman', to: '/admin/halaman/$id' },
   album: { label: 'Galeri', to: '/admin/galeri/$id' },
+  importantContact: { label: 'Kontak penting', to: '/admin/kontak-penting' },
+  partner: { label: 'Mitra', to: '/admin/mitra' },
 } as const satisfies Record<DraftKind, { label: string; to: string }>;
 
 export const Route = createFileRoute('/admin/')({

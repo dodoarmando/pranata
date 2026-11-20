@@ -1,0 +1,37 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id AS \"id!\", kind AS \"kind!: DraftKind\", title AS \"title!\",\n                   updated_at AS \"updated_at!\"\n                   FROM (SELECT id, 'news_post' AS kind, title, updated_at FROM news_posts\n                         WHERE NOT published\n                         UNION ALL SELECT id, 'announcement', title, updated_at\n                         FROM announcements WHERE NOT published\n                         UNION ALL SELECT id, 'event', title, updated_at\n                         FROM events WHERE NOT published\n                         UNION ALL SELECT id, 'page', title, updated_at\n                         FROM pages WHERE NOT published\n                         UNION ALL SELECT id, 'album', title, updated_at\n                         FROM albums WHERE NOT published\n                         UNION ALL SELECT id, 'important_contact', name, updated_at\n                         FROM important_contacts WHERE NOT published\n                         UNION ALL SELECT id, 'partner', name, updated_at\n                         FROM partners WHERE NOT published) drafts\n                   ORDER BY updated_at DESC, id DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "kind!: DraftKind",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "title!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "updated_at!",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [null, null, null, null]
+  },
+  "hash": "2f7e1f23171a8a90740429ac7126052aef0f28f46c29b6b09276bb840a754e1d"
+}
