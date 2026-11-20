@@ -4121,14 +4121,14 @@
         "tags": [
           "regions"
         ],
-        "summary": "Puts every Hamlet in a new manual order.",
+        "summary": "Puts every Hamlet, active or not, in a new manual order.",
         "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `422` unless the list holds\nevery Hamlet exactly once.",
         "operationId": "orderHamlets",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/HamletOrder"
+                "$ref": "#/components/schemas/Order"
               }
             }
           },
@@ -6174,22 +6174,6 @@
               "$ref": "#/components/schemas/ServingOfficial"
             },
             "description": "Serving today in the Village's time zone, in the government's order."
-          }
-        }
-      },
-      "HamletOrder": {
-        "type": "object",
-        "required": [
-          "ids"
-        ],
-        "properties": {
-          "ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Every Hamlet, active or not, in its new order."
           }
         }
       },

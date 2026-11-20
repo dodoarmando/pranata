@@ -26,8 +26,8 @@ use crate::{
     category::ensure_publisher,
     government::Created,
     imaging::Kind,
-    important_contact::Order,
     news_post::{ensure_writer, saved},
+    order::Order,
     storage::{self, Storage},
     village::{Upload, diff},
 };

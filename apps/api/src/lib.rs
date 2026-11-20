@@ -14,6 +14,7 @@ mod important_contact;
 mod index_edition;
 mod institution;
 mod news_post;
+mod order;
 mod page;
 mod partner;
 mod passkey;

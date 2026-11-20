@@ -586,11 +586,6 @@ export interface Government {
   officials: ServingOfficial[];
 }
 
-export interface HamletOrder {
-  /** Every Hamlet, active or not, in its new order. */
-  ids: string[];
-}
-
 export type HealthStatus = typeof HealthStatus[keyof typeof HealthStatus];
 
 
@@ -7536,16 +7531,16 @@ export const getOrderHamletsUrl = () => {
  * # Errors
  * `401` without a live session, `403` without `village.manage`, `422` unless the list holds
  * every Hamlet exactly once.
- * @summary Puts every Hamlet in a new manual order.
+ * @summary Puts every Hamlet, active or not, in a new manual order.
  */
-export const orderHamlets = async (hamletOrder: HamletOrder, options?: Parameters<typeof apiFetch>[1]): Promise<orderHamletsResponse> => {
+export const orderHamlets = async (order: Order, options?: Parameters<typeof apiFetch>[1]): Promise<orderHamletsResponse> => {
 
   return apiFetch<orderHamletsResponse>(getOrderHamletsUrl(),
   {
     ...options,
     method: 'PUT',
     headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
-    body: JSON.stringify(hamletOrder)
+    body: JSON.stringify(order)
   }
 );}
 

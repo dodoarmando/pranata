@@ -23,6 +23,7 @@ use crate::{
     category::{ensure_publisher, label, unique_name},
     government::Created,
     news_post::{ensure_writer, saved},
+    order::Order,
     village::diff,
 };
 
@@ -36,22 +37,6 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
         .routes(routes!(publish))
         .routes(routes!(unpublish))
         .routes(routes!(list_published))
-}
-
-/// A new manual order: every item of the list exactly once, first to last.
-#[derive(Deserialize, ToSchema)]
-pub struct Order {
-    pub(crate) ids: Vec<Uuid>,
-}
-
-impl Order {
-    /// Whether `ids` holds exactly the items of `old`.
-    pub(crate) fn matches(&self, old: &[Uuid]) -> bool {
-        let (mut old, mut new) = (old.to_vec(), self.ids.clone());
-        old.sort_unstable();
-        new.sort_unstable();
-        old == new
-    }
 }
 
 /// One of the Village's ordered labels Important Contacts are grouped under.
