@@ -18,13 +18,60 @@ const MAX_DELAY: Duration = Duration::from_mins(15);
 // shortcut: in-memory state assumes a single API process (ADR-0001) and resets on a restart;
 // keep it in Postgres if the API ever scales out. Entries are only pruned by age, so many
 // addresses spraying distinct usernames grow it; add a size cap if that is ever seen.
-#[derive(Default)]
-pub(crate) struct Throttle(Mutex<Attempts>);
+pub(crate) struct Throttle {
+    addresses: RateLimit,
+    attempts: Mutex<Attempts>,
+}
+
+impl Default for Throttle {
+    fn default() -> Self {
+        Self {
+            addresses: RateLimit::new(ADDRESS_LIMIT, ADDRESS_WINDOW),
+            attempts: Mutex::default(),
+        }
+    }
+}
 
 #[derive(Default)]
 struct Attempts {
-    by_address: HashMap<Option<IpAddr>, Vec<Instant>>,
     failures: HashMap<String, Failures>,
+}
+
+/// At most `limit` requests from each client address in any `window`.
+// shortcut: in memory, like [`Throttle`], for the same single API process.
+pub(crate) struct RateLimit {
+    limit: usize,
+    window: Duration,
+    by_address: Mutex<HashMap<Option<IpAddr>, Vec<Instant>>>,
+}
+
+impl RateLimit {
+    pub(crate) fn new(limit: usize, window: Duration) -> Self {
+        Self {
+            limit,
+            window,
+            by_address: Mutex::default(),
+        }
+    }
+
+    /// Admits a request from `ip`; `None` stands for every request without one.
+    pub(crate) fn admit(&self, ip: Option<IpAddr>) -> bool {
+        self.admit_at(ip, Instant::now())
+    }
+
+    fn admit_at(&self, ip: Option<IpAddr>, now: Instant) -> bool {
+        let mut by_address = self.by_address.lock().expect("rate limit lock poisoned");
+        by_address.retain(|_, times| {
+            times.retain(|time| now.duration_since(*time) < self.window);
+            !times.is_empty()
+        });
+        let times = by_address.entry(ip).or_default();
+        let admitted = times.len() < self.limit;
+        if admitted {
+            times.push(now);
+        }
+        admitted
+    }
 }
 
 /// A username's run of failures, each within 15 minutes of the end of the delay before it.
@@ -52,15 +99,13 @@ impl Failures {
 impl Throttle {
     /// Admits an attempt from `ip`, at most 20 a minute; `None` stands for every request without one.
     pub(crate) fn admit_address(&self, ip: Option<IpAddr>) -> bool {
-        self.lock().admit_address(ip, Instant::now())
+        self.addresses.admit(ip)
     }
 
     /// Admits a password attempt from `ip` for `username`, which counts as a failure until
     /// [`Self::succeeded`] clears it, so parallel guesses cannot slip past the delay.
     pub(crate) fn admit_password(&self, ip: Option<IpAddr>, username: &str) -> bool {
-        let now = Instant::now();
-        let mut attempts = self.lock();
-        attempts.admit_address(ip, now) && attempts.admit_username(username, now)
+        self.addresses.admit(ip) && self.lock().admit_username(username, Instant::now())
     }
 
     /// Forgets the failures of `username`, who just signed in.
@@ -69,7 +114,7 @@ impl Throttle {
     }
 
     fn lock(&self) -> MutexGuard<'_, Attempts> {
-        self.0.lock().expect("throttle lock poisoned")
+        self.attempts.lock().expect("throttle lock poisoned")
     }
 }
 
@@ -83,19 +128,6 @@ fn key(username: &str) -> &str {
 }
 
 impl Attempts {
-    fn admit_address(&mut self, ip: Option<IpAddr>, now: Instant) -> bool {
-        self.by_address.retain(|_, times| {
-            times.retain(|time| now.duration_since(*time) < ADDRESS_WINDOW);
-            !times.is_empty()
-        });
-        let times = self.by_address.entry(ip).or_default();
-        let admitted = times.len() < ADDRESS_LIMIT;
-        if admitted {
-            times.push(now);
-        }
-        admitted
-    }
-
     fn admit_username(&mut self, username: &str, now: Instant) -> bool {
         // Forgotten 15 minutes after the delay ends, so a steady guesser stays at the cap.
         self.failures
@@ -155,15 +187,15 @@ mod tests {
 
     #[test]
     fn an_address_gets_20_attempts_in_any_minute() {
-        let mut attempts = Attempts::default();
+        let addresses = Throttle::default().addresses;
         let start = Instant::now();
         let ip = Some(IpAddr::from([203, 0, 113, 7]));
         for _ in 0..20 {
-            assert!(attempts.admit_address(ip, start));
+            assert!(addresses.admit_at(ip, start));
         }
-        assert!(!attempts.admit_address(ip, start + secs(59)));
-        assert!(attempts.admit_address(None, start + secs(59)));
-        assert!(attempts.admit_address(ip, start + secs(60)));
+        assert!(!addresses.admit_at(ip, start + secs(59)));
+        assert!(addresses.admit_at(None, start + secs(59)));
+        assert!(addresses.admit_at(ip, start + secs(60)));
     }
 
     #[test]
