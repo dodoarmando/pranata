@@ -231,7 +231,8 @@ pub(crate) async fn update(
     }
     saved(
         sqlx::query!(
-            "UPDATE partners SET name = $1, logo_file_id = $2, url = $3 WHERE id = $4",
+            "UPDATE partners SET name = $1, logo_file_id = $2, url = $3, updated_at = now()
+             WHERE id = $4",
             new.name,
             new.logo,
             new.url,

@@ -36,6 +36,8 @@ pub enum DraftKind {
     Event,
     Page,
     Album,
+    ImportantContact,
+    Partner,
 }
 
 /// A Draft waiting to be published.
@@ -131,7 +133,11 @@ pub async fn get(
                          UNION ALL SELECT id, 'page', title, updated_at
                          FROM pages WHERE NOT published
                          UNION ALL SELECT id, 'album', title, updated_at
-                         FROM albums WHERE NOT published) drafts
+                         FROM albums WHERE NOT published
+                         UNION ALL SELECT id, 'important_contact', name, updated_at
+                         FROM important_contacts WHERE NOT published
+                         UNION ALL SELECT id, 'partner', name, updated_at
+                         FROM partners WHERE NOT published) drafts
                    ORDER BY updated_at DESC, id DESC"#
             )
             .fetch_all(&pool)

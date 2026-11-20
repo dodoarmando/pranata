@@ -175,6 +175,43 @@ async fn the_dashboard_lists_every_draft_to_those_who_write_content(pool: PgPool
     let reply = app.call("GET", "/dashboard", None, Some(&writer)).await;
     assert_eq!(reply.body["drafts"][0]["id"], album.body["id"]);
     assert_eq!(reply.body["drafts"][0]["kind"], "album");
+
+    // And Important Contact and Partner Drafts, by name.
+    let publisher = app.user_with(&pool, "redaksi", &["content.publish"]).await;
+    let category = app
+        .call(
+            "POST",
+            "/contact-categories",
+            Some(&json!({ "name": "Kesehatan" })),
+            Some(&publisher),
+        )
+        .await;
+    let contact = app
+        .call(
+            "POST",
+            "/important-contacts",
+            Some(&json!({ "name": "Puskesmas", "category": category.body["id"], "phone": "112" })),
+            Some(&writer),
+        )
+        .await;
+    let reply = app.call("GET", "/dashboard", None, Some(&writer)).await;
+    assert_eq!(reply.body["drafts"][0]["id"], contact.body["id"]);
+    assert_eq!(reply.body["drafts"][0]["kind"], "importantContact");
+    assert_eq!(reply.body["drafts"][0]["title"], "Puskesmas");
+    let logo = app
+        .upload("/partners/logo", common::png(32, 32), &writer)
+        .await;
+    let partner = app
+        .call(
+            "POST",
+            "/partners",
+            Some(&json!({ "name": "Bank Desa", "logo": logo.body["id"] })),
+            Some(&writer),
+        )
+        .await;
+    let reply = app.call("GET", "/dashboard", None, Some(&writer)).await;
+    assert_eq!(reply.body["drafts"][0]["id"], partner.body["id"]);
+    assert_eq!(reply.body["drafts"][0]["kind"], "partner");
 }
 
 #[sqlx::test]

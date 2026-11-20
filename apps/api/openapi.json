@@ -5771,7 +5771,9 @@
           "announcement",
           "event",
           "page",
-          "album"
+          "album",
+          "importantContact",
+          "partner"
         ]
       },
       "DraftSummary": {

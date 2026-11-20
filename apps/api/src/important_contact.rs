@@ -526,7 +526,7 @@ pub(crate) async fn update(
     saved(
         sqlx::query!(
             "UPDATE important_contacts SET name = $1, category_id = $2, phone = $3, note = $4,
-             sort_order = $5 WHERE id = $6",
+             sort_order = $5, updated_at = now() WHERE id = $6",
             new.name,
             new.category,
             new.phone,

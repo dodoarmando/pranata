@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE partners SET name = $1, logo_file_id = $2, url = $3, updated_at = now()\n             WHERE id = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Text", "Uuid", "Text", "Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "1a496849e2a15aca56dd9f9ebf2bb4af39c717c25bdeeaa4b19921b7066c1fa2"
+}
