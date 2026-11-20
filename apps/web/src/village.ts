@@ -19,3 +19,7 @@ export const ianaZones: Record<TimeZone, string> = {
   WITA: 'Asia/Makassar',
   WIT: 'Asia/Jayapura',
 };
+
+/** Today's `YYYY-MM-DD` in the Village's time zone, WIB before its code is set. */
+export const villageToday = (zone: TimeZone = 'WIB', now = new Date()) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: ianaZones[zone] }).format(now);
