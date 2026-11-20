@@ -19,6 +19,7 @@ import { Route as PublicPemerintahanRouteImport } from './routes/_public/pemerin
 import { Route as PublicProfilRouteImport } from './routes/_public/profil'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAkunRouteImport } from './routes/admin/akun'
+import { Route as AdminLembagaDesaRouteImport } from './routes/admin/lembaga-desa'
 import { Route as AdminLogAuditRouteImport } from './routes/admin/log-audit'
 import { Route as AdminPemerintahanRouteImport } from './routes/admin/pemerintahan'
 import { Route as AdminPenggunaRouteImport } from './routes/admin/pengguna'
@@ -76,6 +77,11 @@ const AdminAkunRoute = AdminAkunRouteImport.update({
   path: '/akun',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminLembagaDesaRoute = AdminLembagaDesaRouteImport.update({
+  id: '/lembaga-desa',
+  path: '/lembaga-desa',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminLogAuditRoute = AdminLogAuditRouteImport.update({
   id: '/log-audit',
   path: '/log-audit',
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/pemerintahan': typeof PublicPemerintahanRoute
   '/profil': typeof PublicProfilRoute
   '/admin/akun': typeof AdminAkunRoute
+  '/admin/lembaga-desa': typeof AdminLembagaDesaRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
   '/admin/pemerintahan': typeof AdminPemerintahanRoute
   '/admin/pengguna': typeof AdminPenggunaRoute
@@ -137,6 +144,7 @@ export interface FileRoutesByTo {
   '/pemerintahan': typeof PublicPemerintahanRoute
   '/profil': typeof PublicProfilRoute
   '/admin/akun': typeof AdminAkunRoute
+  '/admin/lembaga-desa': typeof AdminLembagaDesaRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
   '/admin/pemerintahan': typeof AdminPemerintahanRoute
   '/admin/pengguna': typeof AdminPenggunaRoute
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/_public/pemerintahan': typeof PublicPemerintahanRoute
   '/_public/profil': typeof PublicProfilRoute
   '/admin/akun': typeof AdminAkunRoute
+  '/admin/lembaga-desa': typeof AdminLembagaDesaRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
   '/admin/pemerintahan': typeof AdminPemerintahanRoute
   '/admin/pengguna': typeof AdminPenggunaRoute
@@ -178,6 +187,7 @@ export interface FileRouteTypes {
     | '/pemerintahan'
     | '/profil'
     | '/admin/akun'
+    | '/admin/lembaga-desa'
     | '/admin/log-audit'
     | '/admin/pemerintahan'
     | '/admin/pengguna'
@@ -194,6 +204,7 @@ export interface FileRouteTypes {
     | '/pemerintahan'
     | '/profil'
     | '/admin/akun'
+    | '/admin/lembaga-desa'
     | '/admin/log-audit'
     | '/admin/pemerintahan'
     | '/admin/pengguna'
@@ -213,6 +224,7 @@ export interface FileRouteTypes {
     | '/_public/pemerintahan'
     | '/_public/profil'
     | '/admin/akun'
+    | '/admin/lembaga-desa'
     | '/admin/log-audit'
     | '/admin/pemerintahan'
     | '/admin/pengguna'
@@ -304,6 +316,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAkunRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/lembaga-desa': {
+      id: '/admin/lembaga-desa'
+      path: '/lembaga-desa'
+      fullPath: '/admin/lembaga-desa'
+      preLoaderRoute: typeof AdminLembagaDesaRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/log-audit': {
       id: '/admin/log-audit'
       path: '/log-audit'
@@ -358,6 +377,7 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteRouteChildren {
   AdminAkunRoute: typeof AdminAkunRoute
+  AdminLembagaDesaRoute: typeof AdminLembagaDesaRoute
   AdminLogAuditRoute: typeof AdminLogAuditRoute
   AdminPemerintahanRoute: typeof AdminPemerintahanRoute
   AdminPenggunaRoute: typeof AdminPenggunaRoute
@@ -369,6 +389,7 @@ interface AdminRouteRouteChildren {
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAkunRoute: AdminAkunRoute,
+  AdminLembagaDesaRoute: AdminLembagaDesaRoute,
   AdminLogAuditRoute: AdminLogAuditRoute,
   AdminPemerintahanRoute: AdminPemerintahanRoute,
   AdminPenggunaRoute: AdminPenggunaRoute,
