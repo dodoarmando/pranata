@@ -24,6 +24,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAkunRouteImport } from './routes/admin/akun'
 import { Route as AdminApbdesRouteImport } from './routes/admin/apbdes'
 import { Route as AdminDokumenRouteImport } from './routes/admin/dokumen'
+import { Route as AdminHalamanDepanRouteImport } from './routes/admin/halaman-depan'
 import { Route as AdminIndeksDesaRouteImport } from './routes/admin/indeks-desa'
 import { Route as AdminKontakPentingRouteImport } from './routes/admin/kontak-penting'
 import { Route as AdminLembagaDesaRouteImport } from './routes/admin/lembaga-desa'
@@ -125,6 +126,11 @@ const AdminApbdesRoute = AdminApbdesRouteImport.update({
 const AdminDokumenRoute = AdminDokumenRouteImport.update({
   id: '/dokumen',
   path: '/dokumen',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminHalamanDepanRoute = AdminHalamanDepanRouteImport.update({
+  id: '/halaman-depan',
+  path: '/halaman-depan',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminIndeksDesaRoute = AdminIndeksDesaRouteImport.update({
@@ -282,6 +288,7 @@ export interface FileRoutesByFullPath {
   '/admin/akun': typeof AdminAkunRoute
   '/admin/apbdes': typeof AdminApbdesRoute
   '/admin/dokumen': typeof AdminDokumenRoute
+  '/admin/halaman-depan': typeof AdminHalamanDepanRoute
   '/admin/indeks-desa': typeof AdminIndeksDesaRoute
   '/admin/kontak-penting': typeof AdminKontakPentingRoute
   '/admin/lembaga-desa': typeof AdminLembagaDesaRoute
@@ -324,6 +331,7 @@ export interface FileRoutesByTo {
   '/admin/akun': typeof AdminAkunRoute
   '/admin/apbdes': typeof AdminApbdesRoute
   '/admin/dokumen': typeof AdminDokumenRoute
+  '/admin/halaman-depan': typeof AdminHalamanDepanRoute
   '/admin/indeks-desa': typeof AdminIndeksDesaRoute
   '/admin/kontak-penting': typeof AdminKontakPentingRoute
   '/admin/lembaga-desa': typeof AdminLembagaDesaRoute
@@ -370,6 +378,7 @@ export interface FileRoutesById {
   '/admin/akun': typeof AdminAkunRoute
   '/admin/apbdes': typeof AdminApbdesRoute
   '/admin/dokumen': typeof AdminDokumenRoute
+  '/admin/halaman-depan': typeof AdminHalamanDepanRoute
   '/admin/indeks-desa': typeof AdminIndeksDesaRoute
   '/admin/kontak-penting': typeof AdminKontakPentingRoute
   '/admin/lembaga-desa': typeof AdminLembagaDesaRoute
@@ -417,6 +426,7 @@ export interface FileRouteTypes {
     | '/admin/akun'
     | '/admin/apbdes'
     | '/admin/dokumen'
+    | '/admin/halaman-depan'
     | '/admin/indeks-desa'
     | '/admin/kontak-penting'
     | '/admin/lembaga-desa'
@@ -459,6 +469,7 @@ export interface FileRouteTypes {
     | '/admin/akun'
     | '/admin/apbdes'
     | '/admin/dokumen'
+    | '/admin/halaman-depan'
     | '/admin/indeks-desa'
     | '/admin/kontak-penting'
     | '/admin/lembaga-desa'
@@ -504,6 +515,7 @@ export interface FileRouteTypes {
     | '/admin/akun'
     | '/admin/apbdes'
     | '/admin/dokumen'
+    | '/admin/halaman-depan'
     | '/admin/indeks-desa'
     | '/admin/kontak-penting'
     | '/admin/lembaga-desa'
@@ -649,6 +661,13 @@ declare module '@tanstack/react-router' {
       path: '/dokumen'
       fullPath: '/admin/dokumen'
       preLoaderRoute: typeof AdminDokumenRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/halaman-depan': {
+      id: '/admin/halaman-depan'
+      path: '/halaman-depan'
+      fullPath: '/admin/halaman-depan'
+      preLoaderRoute: typeof AdminHalamanDepanRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/indeks-desa': {
@@ -854,6 +873,7 @@ interface AdminRouteRouteChildren {
   AdminAkunRoute: typeof AdminAkunRoute
   AdminApbdesRoute: typeof AdminApbdesRoute
   AdminDokumenRoute: typeof AdminDokumenRoute
+  AdminHalamanDepanRoute: typeof AdminHalamanDepanRoute
   AdminIndeksDesaRoute: typeof AdminIndeksDesaRoute
   AdminKontakPentingRoute: typeof AdminKontakPentingRoute
   AdminLembagaDesaRoute: typeof AdminLembagaDesaRoute
@@ -881,6 +901,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAkunRoute: AdminAkunRoute,
   AdminApbdesRoute: AdminApbdesRoute,
   AdminDokumenRoute: AdminDokumenRoute,
+  AdminHalamanDepanRoute: AdminHalamanDepanRoute,
   AdminIndeksDesaRoute: AdminIndeksDesaRoute,
   AdminKontakPentingRoute: AdminKontakPentingRoute,
   AdminLembagaDesaRoute: AdminLembagaDesaRoute,
