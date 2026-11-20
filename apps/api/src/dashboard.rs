@@ -33,6 +33,7 @@ pub struct Dashboard {
 pub enum DraftKind {
     NewsPost,
     Announcement,
+    Event,
 }
 
 /// A Draft waiting to be published.
@@ -122,7 +123,9 @@ pub async fn get(
                    FROM (SELECT id, 'news_post' AS kind, title, updated_at FROM news_posts
                          WHERE NOT published
                          UNION ALL SELECT id, 'announcement', title, updated_at
-                         FROM announcements WHERE NOT published) drafts
+                         FROM announcements WHERE NOT published
+                         UNION ALL SELECT id, 'event', title, updated_at
+                         FROM events WHERE NOT published) drafts
                    ORDER BY updated_at DESC, id DESC"#
             )
             .fetch_all(&pool)
