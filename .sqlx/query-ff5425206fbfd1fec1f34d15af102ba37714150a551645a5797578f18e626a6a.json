@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO institutions (name, abbreviation, description, logo_file_id)\n             VALUES ($1, $2, $3, $4) RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "institutions",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Text", "Text", "Text", "Uuid"]
+    },
+    "nullable": [false]
+  },
+  "hash": "ff5425206fbfd1fec1f34d15af102ba37714150a551645a5797578f18e626a6a"
+}

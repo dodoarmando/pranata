@@ -502,7 +502,8 @@ pub struct Upload {
     pub(crate) id: Uuid,
 }
 
-/// Stores a Village logo, a PNG or SVG of at most 2 MiB, for saving into the profile.
+/// Stores a logo, a PNG or SVG of at most 2 MiB, for saving into the profile or an
+/// Institution.
 ///
 /// # Errors
 /// `401` without a live session, `403` without `village.manage`, `413` over 2 MiB, `415`
