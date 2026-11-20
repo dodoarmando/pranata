@@ -52,6 +52,13 @@ test('the canonical URL is absolute on the public origin and keeps only the page
     href: 'https://desa.example/berita?halaman=2',
   });
   expect(meta(head, 'og:url')).toBe('https://desa.example/berita?halaman=2');
+  const filtered = pageHead(context('/dokumen', { tahun: 2025 }), { title: 'Dokumen' });
+  expect(filtered.links).toContainEqual({ rel: 'canonical', href: 'https://desa.example/dokumen' });
+  const year = pageHead(context('/apbdes', { tahun: 2025 }), { canonicalSearch: ['tahun'] });
+  expect(year.links).toContainEqual({
+    rel: 'canonical',
+    href: 'https://desa.example/apbdes?tahun=2025',
+  });
 });
 
 test('the share image is the cover, then the hero, then the logo', () => {
