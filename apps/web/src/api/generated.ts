@@ -1072,6 +1072,29 @@ export interface PageSummary {
 }
 
 /**
+ * What a User writes in a Partner.
+ */
+export interface PartnerFields {
+  /** The logo, uploaded at `/partners/logo`. */
+  logo: string;
+  /** 1–100 characters; the logo's alt text. */
+  name: string;
+  /**
+     * The Partner's website, `http(s)://` and at most 300 characters.
+     * @nullable
+     */
+  url?: string | null;
+}
+
+/**
+ * A Partner as the admin area lists and edits it.
+ */
+export type Partner = PartnerFields & {
+  id: string;
+  published: boolean;
+};
+
+/**
  * A WebAuthn ceremony's options for the browser, and its id to finish it with.
  */
 export interface PasskeyChallenge {
@@ -1264,6 +1287,17 @@ export interface PublishedPage {
   title: string;
   /** The last save, shown as "last updated". */
   updatedAt: string;
+}
+
+/**
+ * A Published Partner in the home page partner strip.
+ */
+export interface PublishedPartner {
+  /** Served at `/media/{logo}/{variant}`. */
+  logo: string;
+  name: string;
+  /** @nullable */
+  url?: string | null;
 }
 
 export interface Reauthenticate {
@@ -6641,6 +6675,517 @@ export const getUnpublishPageUrl = (id: string,) => {
 export const unpublishPage = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<unpublishPageResponse> => {
 
   return apiFetch<unpublishPageResponse>(getUnpublishPageUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type listPartnersResponse200 = {
+  data: Partner[]
+  status: 200
+}
+
+export type listPartnersResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listPartnersResponse403 = {
+  data: void
+  status: 403
+}
+
+export type listPartnersResponseSuccess = (listPartnersResponse200) & {
+  headers: Headers;
+};
+export type listPartnersResponseError = (listPartnersResponse401 | listPartnersResponse403) & {
+  headers: Headers;
+};
+
+export type listPartnersResponse = (listPartnersResponseSuccess | listPartnersResponseError)
+
+export const getListPartnersUrl = () => {
+
+
+
+
+  return `/partners`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`.
+ * @summary Every Partner, Drafts and Published, in order.
+ */
+export const listPartners = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listPartnersResponse> => {
+
+  return apiFetch<listPartnersResponse>(getListPartnersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createPartnerResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createPartnerResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createPartnerResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createPartnerResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createPartnerResponseSuccess = (createPartnerResponse201) & {
+  headers: Headers;
+};
+export type createPartnerResponseError = (createPartnerResponse401 | createPartnerResponse403 | createPartnerResponse422) & {
+  headers: Headers;
+};
+
+export type createPartnerResponse = (createPartnerResponseSuccess | createPartnerResponseError)
+
+export const getCreatePartnerUrl = () => {
+
+
+
+
+  return `/partners`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `422`
+ * for a blank name, an unknown logo or a URL that is not `http(s)://`.
+ * @summary Saves a new Partner as a Draft, last.
+ */
+export const createPartner = async (partnerFields: PartnerFields, options?: Parameters<typeof apiFetch>[1]): Promise<createPartnerResponse> => {
+
+  return apiFetch<createPartnerResponse>(getCreatePartnerUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(partnerFields)
+  }
+);}
+
+
+
+export type uploadPartnerLogoResponse201 = {
+  data: Upload
+  status: 201
+}
+
+export type uploadPartnerLogoResponse401 = {
+  data: void
+  status: 401
+}
+
+export type uploadPartnerLogoResponse403 = {
+  data: void
+  status: 403
+}
+
+export type uploadPartnerLogoResponse413 = {
+  data: void
+  status: 413
+}
+
+export type uploadPartnerLogoResponse415 = {
+  data: void
+  status: 415
+}
+
+export type uploadPartnerLogoResponse422 = {
+  data: void
+  status: 422
+}
+
+export type uploadPartnerLogoResponseSuccess = (uploadPartnerLogoResponse201) & {
+  headers: Headers;
+};
+export type uploadPartnerLogoResponseError = (uploadPartnerLogoResponse401 | uploadPartnerLogoResponse403 | uploadPartnerLogoResponse413 | uploadPartnerLogoResponse415 | uploadPartnerLogoResponse422) & {
+  headers: Headers;
+};
+
+export type uploadPartnerLogoResponse = (uploadPartnerLogoResponseSuccess | uploadPartnerLogoResponseError)
+
+export const getUploadPartnerLogoUrl = () => {
+
+
+
+
+  return `/partners/logo`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `413`
+ * over 2 MiB, `415` for content that is not PNG or SVG, `422` over 40 megapixels or
+ * undecodable.
+ * @summary Stores a logo, a PNG (or an SVG, rasterised) of at most 2 MiB, for saving into a Partner.
+ */
+export const uploadPartnerLogo = async (uploadPartnerLogoBody: Blob, options?: Parameters<typeof apiFetch>[1]): Promise<uploadPartnerLogoResponse> => {
+
+  return apiFetch<uploadPartnerLogoResponse>(getUploadPartnerLogoUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/octet-stream' }, options?.headers),
+    body: uploadPartnerLogoBody
+  }
+);}
+
+
+
+export type orderPartnersResponse204 = {
+  data: void
+  status: 204
+}
+
+export type orderPartnersResponse401 = {
+  data: void
+  status: 401
+}
+
+export type orderPartnersResponse403 = {
+  data: void
+  status: 403
+}
+
+export type orderPartnersResponse422 = {
+  data: void
+  status: 422
+}
+
+export type orderPartnersResponseSuccess = (orderPartnersResponse204) & {
+  headers: Headers;
+};
+export type orderPartnersResponseError = (orderPartnersResponse401 | orderPartnersResponse403 | orderPartnersResponse422) & {
+  headers: Headers;
+};
+
+export type orderPartnersResponse = (orderPartnersResponseSuccess | orderPartnersResponseError)
+
+export const getOrderPartnersUrl = () => {
+
+
+
+
+  return `/partners/order`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `422` unless the list holds
+ * every Partner exactly once.
+ * @summary Puts every Partner, Draft and Published, in a new order.
+ */
+export const orderPartners = async (order: Order, options?: Parameters<typeof apiFetch>[1]): Promise<orderPartnersResponse> => {
+
+  return apiFetch<orderPartnersResponse>(getOrderPartnersUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(order)
+  }
+);}
+
+
+
+export type listPublishedPartnersResponse200 = {
+  data: PublishedPartner[]
+  status: 200
+}
+
+export type listPublishedPartnersResponseSuccess = (listPublishedPartnersResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listPublishedPartnersResponse = (listPublishedPartnersResponseSuccess)
+
+export const getListPublishedPartnersUrl = () => {
+
+
+
+
+  return `/partners/published`
+}
+
+/**
+ * @summary Published Partners in order, for the home page partner strip.
+ */
+export const listPublishedPartners = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listPublishedPartnersResponse> => {
+
+  return apiFetch<listPublishedPartnersResponse>(getListPublishedPartnersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type updatePartnerResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updatePartnerResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updatePartnerResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updatePartnerResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updatePartnerResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updatePartnerResponseSuccess = (updatePartnerResponse204) & {
+  headers: Headers;
+};
+export type updatePartnerResponseError = (updatePartnerResponse401 | updatePartnerResponse403 | updatePartnerResponse404 | updatePartnerResponse422) & {
+  headers: Headers;
+};
+
+export type updatePartnerResponse = (updatePartnerResponseSuccess | updatePartnerResponseError)
+
+export const getUpdatePartnerUrl = (id: string,) => {
+
+
+
+
+  return `/partners/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` (or `content.publish`) for a
+ * Draft or without `content.publish` for a Published Partner, `404` for an unknown Partner,
+ * `422` for a blank name, an unknown logo or a URL that is not `http(s)://`.
+ * @summary Saves a Partner, a Draft or a Published one live.
+ */
+export const updatePartner = async (id: string,
+    partnerFields: PartnerFields, options?: Parameters<typeof apiFetch>[1]): Promise<updatePartnerResponse> => {
+
+  return apiFetch<updatePartnerResponse>(getUpdatePartnerUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(partnerFields)
+  }
+);}
+
+
+
+export type deletePartnerResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deletePartnerResponse401 = {
+  data: void
+  status: 401
+}
+
+export type deletePartnerResponse403 = {
+  data: void
+  status: 403
+}
+
+export type deletePartnerResponse404 = {
+  data: void
+  status: 404
+}
+
+export type deletePartnerResponse409 = {
+  data: void
+  status: 409
+}
+
+export type deletePartnerResponseSuccess = (deletePartnerResponse204) & {
+  headers: Headers;
+};
+export type deletePartnerResponseError = (deletePartnerResponse401 | deletePartnerResponse403 | deletePartnerResponse404 | deletePartnerResponse409) & {
+  headers: Headers;
+};
+
+export type deletePartnerResponse = (deletePartnerResponseSuccess | deletePartnerResponseError)
+
+export const getDeletePartnerUrl = (id: string,) => {
+
+
+
+
+  return `/partners/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * Partner, `409` when it is Published.
+ * @summary Deletes a Draft for good. A Published Partner is unpublished first.
+ */
+export const deletePartner = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deletePartnerResponse> => {
+
+  return apiFetch<deletePartnerResponse>(getDeletePartnerUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type publishPartnerResponse204 = {
+  data: void
+  status: 204
+}
+
+export type publishPartnerResponse401 = {
+  data: void
+  status: 401
+}
+
+export type publishPartnerResponse403 = {
+  data: void
+  status: 403
+}
+
+export type publishPartnerResponse404 = {
+  data: void
+  status: 404
+}
+
+export type publishPartnerResponse409 = {
+  data: void
+  status: 409
+}
+
+export type publishPartnerResponseSuccess = (publishPartnerResponse204) & {
+  headers: Headers;
+};
+export type publishPartnerResponseError = (publishPartnerResponse401 | publishPartnerResponse403 | publishPartnerResponse404 | publishPartnerResponse409) & {
+  headers: Headers;
+};
+
+export type publishPartnerResponse = (publishPartnerResponseSuccess | publishPartnerResponseError)
+
+export const getPublishPartnerUrl = (id: string,) => {
+
+
+
+
+  return `/partners/${id}/publish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * Partner, `409` when it is already Published.
+ * @summary Puts a Draft in the home page partner strip.
+ */
+export const publishPartner = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<publishPartnerResponse> => {
+
+  return apiFetch<publishPartnerResponse>(getPublishPartnerUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type unpublishPartnerResponse204 = {
+  data: void
+  status: 204
+}
+
+export type unpublishPartnerResponse401 = {
+  data: void
+  status: 401
+}
+
+export type unpublishPartnerResponse403 = {
+  data: void
+  status: 403
+}
+
+export type unpublishPartnerResponse404 = {
+  data: void
+  status: 404
+}
+
+export type unpublishPartnerResponse409 = {
+  data: void
+  status: 409
+}
+
+export type unpublishPartnerResponseSuccess = (unpublishPartnerResponse204) & {
+  headers: Headers;
+};
+export type unpublishPartnerResponseError = (unpublishPartnerResponse401 | unpublishPartnerResponse403 | unpublishPartnerResponse404 | unpublishPartnerResponse409) & {
+  headers: Headers;
+};
+
+export type unpublishPartnerResponse = (unpublishPartnerResponseSuccess | unpublishPartnerResponseError)
+
+export const getUnpublishPartnerUrl = (id: string,) => {
+
+
+
+
+  return `/partners/${id}/unpublish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * Partner, `409` when it is a Draft.
+ * @summary Takes a Published Partner out of the partner strip, back to Draft.
+ */
+export const unpublishPartner = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<unpublishPartnerResponse> => {
+
+  return apiFetch<unpublishPartnerResponse>(getUnpublishPartnerUrl(id),
   {
     ...options,
     method: 'POST'

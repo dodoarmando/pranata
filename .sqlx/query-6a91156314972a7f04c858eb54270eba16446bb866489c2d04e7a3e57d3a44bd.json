@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO partners (name, logo_file_id, url, sort_order)\n             VALUES ($1, $2, $3, (SELECT coalesce(max(sort_order), 0) + 1 FROM partners))\n             RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "partners",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Text", "Uuid", "Text"]
+    },
+    "nullable": [false]
+  },
+  "hash": "6a91156314972a7f04c858eb54270eba16446bb866489c2d04e7a3e57d3a44bd"
+}

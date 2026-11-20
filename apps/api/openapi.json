@@ -3588,6 +3588,350 @@
         }
       }
     },
+    "/partners": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Every Partner, Drafts and Published, in order.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`.",
+        "operationId": "listPartners",
+        "responses": {
+          "200": {
+            "description": "Every Partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Partner"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Saves a new Partner as a Draft, last.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `422`\nfor a blank name, an unknown logo or a URL that is not `http(s)://`.",
+        "operationId": "createPartner",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "422": {
+            "description": "A field is malformed or unknown"
+          }
+        }
+      }
+    },
+    "/partners/logo": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Stores a logo, a PNG (or an SVG, rasterised) of at most 2 MiB, for saving into a Partner.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `413`\nover 2 MiB, `415` for content that is not PNG or SVG, `422` over 40 megapixels or\nundecodable.",
+        "operationId": "uploadPartnerLogo",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The stored logo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upload"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "413": {
+            "description": "The file is over 2 MiB"
+          },
+          "415": {
+            "description": "The file is not PNG or SVG"
+          },
+          "422": {
+            "description": "The image is too large or broken"
+          }
+        }
+      }
+    },
+    "/partners/order": {
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Puts every Partner, Draft and Published, in a new order.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `422` unless the list holds\nevery Partner exactly once.",
+        "operationId": "orderPartners",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Order"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Partners are reordered"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "422": {
+            "description": "The list is not every Partner exactly once"
+          }
+        }
+      }
+    },
+    "/partners/published": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Published Partners in order, for the home page partner strip.",
+        "operationId": "listPublishedPartners",
+        "responses": {
+          "200": {
+            "description": "Every Published Partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublishedPartner"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/partners/{id}": {
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Saves a Partner, a Draft or a Published one live.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` (or `content.publish`) for a\nDraft or without `content.publish` for a Published Partner, `404` for an unknown Partner,\n`422` for a blank name, an unknown logo or a URL that is not `http(s)://`.",
+        "operationId": "updatePartner",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Partner",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Partner is saved"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not change this Partner"
+          },
+          "404": {
+            "description": "There is no such Partner"
+          },
+          "422": {
+            "description": "A field is malformed or unknown"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Deletes a Draft for good. A Published Partner is unpublished first.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\nPartner, `409` when it is Published.",
+        "operationId": "deletePartner",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Partner",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Draft is deleted"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Partner"
+          },
+          "409": {
+            "description": "The Partner is Published"
+          }
+        }
+      }
+    },
+    "/partners/{id}/publish": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Puts a Draft in the home page partner strip.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\nPartner, `409` when it is already Published.",
+        "operationId": "publishPartner",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Partner",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Partner is Published"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Partner"
+          },
+          "409": {
+            "description": "The Partner is already Published"
+          }
+        }
+      }
+    },
+    "/partners/{id}/unpublish": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Takes a Published Partner out of the partner strip, back to Draft.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\nPartner, `409` when it is a Draft.",
+        "operationId": "unpublishPartner",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Partner",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Partner is a Draft again"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Partner"
+          },
+          "409": {
+            "description": "The Partner is a Draft"
+          }
+        }
+      }
+    },
     "/positions": {
       "get": {
         "tags": [
@@ -6659,6 +7003,56 @@
           }
         }
       },
+      "Partner": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PartnerFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "published"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "published": {
+                "type": "boolean"
+              }
+            }
+          }
+        ],
+        "description": "A Partner as the admin area lists and edits it."
+      },
+      "PartnerFields": {
+        "type": "object",
+        "description": "What a User writes in a Partner.",
+        "required": [
+          "name",
+          "logo"
+        ],
+        "properties": {
+          "logo": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The logo, uploaded at `/partners/logo`."
+          },
+          "name": {
+            "type": "string",
+            "description": "1–100 characters; the logo's alt text."
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The Partner's website, `http(s)://` and at most 300 characters."
+          }
+        }
+      },
       "PasskeyChallenge": {
         "type": "object",
         "description": "A WebAuthn ceremony's options for the browser, and its id to finish it with.",
@@ -7075,6 +7469,30 @@
             "type": "string",
             "format": "date-time",
             "description": "The last save, shown as \"last updated\"."
+          }
+        }
+      },
+      "PublishedPartner": {
+        "type": "object",
+        "description": "A Published Partner in the home page partner strip.",
+        "required": [
+          "name",
+          "logo"
+        ],
+        "properties": {
+          "logo": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Served at `/media/{logo}/{variant}`."
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
