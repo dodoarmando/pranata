@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT users.id, username, role_id, roles.name AS role, active,\n                  (SELECT count(*) FROM passkeys WHERE user_id = users.id) AS \"passkeys!\"\n           FROM users JOIN roles ON roles.id = role_id ORDER BY users.id",
+  "query": "SELECT users.id, username, role_id, roles.name AS role, active,\n                  (SELECT count(*) FROM passkeys WHERE user_id = users.id) AS \"passkeys!\",\n                  official_id\n           FROM users JOIN roles ON roles.id = role_id ORDER BY users.id",
   "describe": {
     "columns": [
       {
@@ -63,12 +63,23 @@
         "name": "passkeys!",
         "type_info": "Int8",
         "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "official_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "official_id"
+          }
+        }
       }
     ],
     "parameters": {
       "Left": []
     },
-    "nullable": [false, false, false, false, false, null]
+    "nullable": [false, false, false, false, false, null, true]
   },
-  "hash": "1f544ab51c30cb3b2f99a4cfa2e6c15721f935fac1474e015d248e753a9abbc3"
+  "hash": "4d3e4ee49e87c823641c29ac5041abe18d9cffd434fa46aa86eaf82132caa3ed"
 }

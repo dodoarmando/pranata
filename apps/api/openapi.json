@@ -1572,6 +1572,61 @@
         }
       }
     },
+    "/users/{id}/official": {
+      "put": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Links a User to the Official they are, or unlinks them; an Official stands behind at most\none User.",
+        "description": "# Errors\n`401` without a live session, `403` outside the Administrator Role, `404` for an unknown\nUser, `409` for an Official linked to another User, `422` for an unknown Official, `428`\noutside sudo mode.",
+        "operationId": "linkUserOfficial",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The User",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfficialLink"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The User is linked or unlinked"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User is not an Administrator"
+          },
+          "404": {
+            "description": "There is no such User"
+          },
+          "409": {
+            "description": "The Official is linked to another User"
+          },
+          "422": {
+            "description": "The Official is unknown"
+          },
+          "428": {
+            "description": "The User must re-authenticate first"
+          }
+        }
+      }
+    },
     "/users/{id}/passkeys": {
       "delete": {
         "tags": [
@@ -2244,6 +2299,19 @@
           }
         }
       },
+      "OfficialLink": {
+        "type": "object",
+        "properties": {
+          "officialId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The Official the User stands for, or null for none."
+          }
+        }
+      },
       "PasskeyChallenge": {
         "type": "object",
         "description": "A WebAuthn ceremony's options for the browser, and its id to finish it with.",
@@ -2836,6 +2904,14 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "officialId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The Official the User stands for, if any."
           },
           "passkeys": {
             "type": "integer",

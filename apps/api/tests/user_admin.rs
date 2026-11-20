@@ -522,3 +522,72 @@ async fn an_inactive_user_gets_no_access_link_until_reactivated(pool: PgPool) {
     patch(&app, &cookie, &id, json!({ "active": true })).await;
     assert_eq!(reset().await.status, StatusCode::CREATED);
 }
+
+#[sqlx::test]
+async fn the_administrator_links_a_user_to_one_official(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    let cookie = admin(&app, &pool).await;
+    let operator = role_id(&pool, "Operator").await;
+    let (kaur, _) = create_user(&app, &cookie, "kaur", operator).await;
+    let (sekdes, _) = create_user(&app, &cookie, "sekdes", operator).await;
+    let budi: Uuid =
+        sqlx::query_scalar("INSERT INTO officials (name) VALUES ('Budi') RETURNING id")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    let link = |id: &str, official: Value| {
+        let (app, cookie, path) = (&app, &cookie, format!("/users/{id}/official"));
+        async move {
+            app.call(
+                "PUT",
+                &path,
+                Some(&json!({ "officialId": official })),
+                Some(cookie),
+            )
+            .await
+            .status
+        }
+    };
+
+    assert_eq!(link(&kaur, json!(budi)).await, StatusCode::NO_CONTENT);
+    let users = app.call("GET", "/users", None, Some(&cookie)).await.body;
+    let linked = users
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|user| user["id"] == kaur);
+    assert_eq!(linked.unwrap()["officialId"], json!(budi));
+    assert_eq!(
+        last_changes(&pool, &kaur).await,
+        (
+            "user.link_official".to_owned(),
+            json!([{ "field": "officialId", "from": null, "to": budi }])
+        )
+    );
+
+    // An Official stands behind at most one User, and must exist.
+    assert_eq!(link(&sekdes, json!(budi)).await, StatusCode::CONFLICT);
+    assert_eq!(
+        link(&sekdes, json!(Uuid::nil())).await,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+    assert_eq!(
+        link(&Uuid::nil().to_string(), json!(budi)).await,
+        StatusCode::NOT_FOUND
+    );
+
+    assert_eq!(link(&kaur, Value::Null).await, StatusCode::NO_CONTENT);
+    assert_eq!(link(&sekdes, json!(budi)).await, StatusCode::NO_CONTENT);
+
+    let kades = app.user_with(&pool, "kades", &["village.manage"]).await;
+    let path = format!("/users/{kaur}/official");
+    let reply = app
+        .call(
+            "PUT",
+            &path,
+            Some(&json!({ "officialId": null })),
+            Some(&kades),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::FORBIDDEN);
+}
