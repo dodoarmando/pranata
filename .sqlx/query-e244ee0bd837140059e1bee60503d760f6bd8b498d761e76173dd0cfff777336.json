@@ -1,0 +1,90 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT photo_file_id, photo_alt, title, subtitle, button_label, button_path,\n           quick_links AS \"quick_links: Jsonb<Vec<QuickLink>>\"\n           FROM home_hero",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "photo_file_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "home_hero",
+            "name": "photo_file_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "photo_alt",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "home_hero",
+            "name": "photo_alt"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "home_hero",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "subtitle",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "home_hero",
+            "name": "subtitle"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "button_label",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "home_hero",
+            "name": "button_label"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "button_path",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "home_hero",
+            "name": "button_path"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "quick_links: Jsonb<Vec<QuickLink>>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "home_hero",
+            "name": "quick_links"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, false, false, true, true, true, false]
+  },
+  "hash": "e244ee0bd837140059e1bee60503d760f6bd8b498d761e76173dd0cfff777336"
+}

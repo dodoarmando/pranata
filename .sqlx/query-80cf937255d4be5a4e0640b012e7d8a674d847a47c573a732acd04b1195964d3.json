@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO home_hero (photo_file_id, photo_alt, title, subtitle, button_label,\n             button_path, quick_links) VALUES ($1, $2, $3, $4, $5, $6, $7)\n             ON CONFLICT (singleton) DO UPDATE SET photo_file_id = EXCLUDED.photo_file_id,\n             photo_alt = EXCLUDED.photo_alt, title = EXCLUDED.title,\n             subtitle = EXCLUDED.subtitle, button_label = EXCLUDED.button_label,\n             button_path = EXCLUDED.button_path, quick_links = EXCLUDED.quick_links",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Uuid", "Text", "Text", "Text", "Text", "Text", "Jsonb"]
+    },
+    "nullable": []
+  },
+  "hash": "80cf937255d4be5a4e0640b012e7d8a674d847a47c573a732acd04b1195964d3"
+}

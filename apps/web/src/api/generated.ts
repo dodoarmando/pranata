@@ -663,6 +663,45 @@ export interface Health {
 }
 
 /**
+ * A shortcut under the home page search box.
+ */
+export interface QuickLink {
+  /** 1–40 characters. */
+  label: string;
+  /** A path on the public site, such as `/berita`. */
+  path: string;
+}
+
+/**
+ * The home page hero.
+ */
+export interface HomeHero {
+  /**
+     * Up to 40 characters; the button shows only with a label and a path.
+     * @nullable
+     */
+  buttonLabel?: string | null;
+  /**
+     * A path on the public site, such as `/profil`.
+     * @nullable
+     */
+  buttonPath?: string | null;
+  /** Uploaded at `/home/hero/photo`; served up to `/media/{photo}/2400`. */
+  photo: string;
+  /** 1–200 characters. */
+  photoAlt: string;
+  /** At most four, in order. */
+  quickLinks?: QuickLink[];
+  /**
+     * Up to 200 characters.
+     * @nullable
+     */
+  subtitle?: string | null;
+  /** 1–100 characters. */
+  title: string;
+}
+
+/**
  * What a User writes in an Important Contact.
  */
 export interface ImportantContactFields {
@@ -5317,6 +5356,174 @@ export const getHealth = async ( options?: Parameters<typeof apiFetch>[1]): Prom
 
 
 
+export type getHomeHeroResponse200 = {
+  data: HomeHero
+  status: 200
+}
+
+export type getHomeHeroResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getHomeHeroResponseSuccess = (getHomeHeroResponse200) & {
+  headers: Headers;
+};
+export type getHomeHeroResponseError = (getHomeHeroResponse404) & {
+  headers: Headers;
+};
+
+export type getHomeHeroResponse = (getHomeHeroResponseSuccess | getHomeHeroResponseError)
+
+export const getGetHomeHeroUrl = () => {
+
+
+
+
+  return `/home/hero`
+}
+
+/**
+ * # Errors
+ * `404` before it is first saved.
+ * @summary The home page hero, for the public site and the admin area alike.
+ */
+export const getHomeHero = async ( options?: Parameters<typeof apiFetch>[1]): Promise<getHomeHeroResponse> => {
+
+  return apiFetch<getHomeHeroResponse>(getGetHomeHeroUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type updateHomeHeroResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateHomeHeroResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateHomeHeroResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateHomeHeroResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateHomeHeroResponseSuccess = (updateHomeHeroResponse204) & {
+  headers: Headers;
+};
+export type updateHomeHeroResponseError = (updateHomeHeroResponse401 | updateHomeHeroResponse403 | updateHomeHeroResponse422) & {
+  headers: Headers;
+};
+
+export type updateHomeHeroResponse = (updateHomeHeroResponseSuccess | updateHomeHeroResponseError)
+
+export const getUpdateHomeHeroUrl = () => {
+
+
+
+
+  return `/home/hero`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `422` for a blank or
+ * overlong text, an unknown photo, a button with a label or a path alone, a path off the
+ * public site, or over four Quick Links.
+ * @summary Saves the home page hero live.
+ */
+export const updateHomeHero = async (homeHero: HomeHero, options?: Parameters<typeof apiFetch>[1]): Promise<updateHomeHeroResponse> => {
+
+  return apiFetch<updateHomeHeroResponse>(getUpdateHomeHeroUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(homeHero)
+  }
+);}
+
+
+
+export type uploadHomeHeroPhotoResponse201 = {
+  data: Upload
+  status: 201
+}
+
+export type uploadHomeHeroPhotoResponse401 = {
+  data: void
+  status: 401
+}
+
+export type uploadHomeHeroPhotoResponse403 = {
+  data: void
+  status: 403
+}
+
+export type uploadHomeHeroPhotoResponse413 = {
+  data: void
+  status: 413
+}
+
+export type uploadHomeHeroPhotoResponse415 = {
+  data: void
+  status: 415
+}
+
+export type uploadHomeHeroPhotoResponse422 = {
+  data: void
+  status: 422
+}
+
+export type uploadHomeHeroPhotoResponseSuccess = (uploadHomeHeroPhotoResponse201) & {
+  headers: Headers;
+};
+export type uploadHomeHeroPhotoResponseError = (uploadHomeHeroPhotoResponse401 | uploadHomeHeroPhotoResponse403 | uploadHomeHeroPhotoResponse413 | uploadHomeHeroPhotoResponse415 | uploadHomeHeroPhotoResponse422) & {
+  headers: Headers;
+};
+
+export type uploadHomeHeroPhotoResponse = (uploadHomeHeroPhotoResponseSuccess | uploadHomeHeroPhotoResponseError)
+
+export const getUploadHomeHeroPhotoUrl = () => {
+
+
+
+
+  return `/home/hero/photo`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `413` over 10 MiB, `415`
+ * for content that is not JPEG, PNG or WebP, `422` over 40 megapixels or undecodable.
+ * @summary Stores a hero photo, a JPEG, PNG or WebP of at most 10 MiB, with its 2400 px variant.
+ */
+export const uploadHomeHeroPhoto = async (uploadHomeHeroPhotoBody: Blob, options?: Parameters<typeof apiFetch>[1]): Promise<uploadHomeHeroPhotoResponse> => {
+
+  return apiFetch<uploadHomeHeroPhotoResponse>(getUploadHomeHeroPhotoUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/octet-stream' }, options?.headers),
+    body: uploadHomeHeroPhotoBody
+  }
+);}
+
+
+
 export type listImportantContactsResponse200 = {
   data: ImportantContact[]
   status: 200
@@ -6178,9 +6385,9 @@ export const getGetMediaUrl = (id: string,
 /**
  * # Errors
  * `404` for an unknown file or variant.
- * @summary An image's public rendition, `480`, `960` or `1600` (WebP) or `share` (JPEG), or a stored
-PDF as `pdf`. Cached forever, since a file never changes; only files that hold no personal
-data come here. Nothing served may be sniffed or run as a page.
+ * @summary An image's public rendition, `480`, `960`, `1600` or, for a hero, `2400` (WebP) or `share`
+(JPEG), or a stored PDF as `pdf`. Cached forever, since a file never changes; only files
+that hold no personal data come here. Nothing served may be sniffed or run as a page.
  */
 export const getMedia = async (id: string,
     variant: string, options?: Parameters<typeof apiFetch>[1]): Promise<getMediaResponse> => {
