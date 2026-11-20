@@ -10,6 +10,7 @@ import {
 import { createServerFn, useServerFn } from '@tanstack/react-start';
 import {
   Building2,
+  ChartLine,
   ChevronRight,
   Handshake,
   House,
@@ -46,6 +47,7 @@ const pages = [
   { group: 'Desa', to: '/admin/wilayah', label: 'Wilayah', icon: MapPinned },
   { group: 'Desa', to: '/admin/pemerintahan', label: 'Pemerintahan', icon: Building2 },
   { group: 'Desa', to: '/admin/lembaga-desa', label: 'Lembaga desa', icon: Handshake },
+  { group: 'Desa', to: '/admin/indeks-desa', label: 'Indeks Desa', icon: ChartLine },
   { group: 'Sistem', to: '/admin/pengguna', label: 'Pengguna', icon: Users },
   { group: 'Sistem', to: '/admin/peran', label: 'Peran', icon: ShieldCheck },
   { group: 'Sistem', to: '/admin/log-audit', label: 'Log audit', icon: ScrollText },
