@@ -13,6 +13,7 @@ import {
   listContactCategories,
   listImportantContacts,
   orderContactCategories,
+  orderImportantContacts,
   publishImportantContact,
   unpublishImportantContact,
   updateContactCategory,
@@ -83,6 +84,12 @@ const deleteCategoryFn = createServerFn({ method: 'POST' })
   .validator((id: string) => id)
   .handler(async ({ data }) => (await deleteContactCategory(data)).status);
 
+const orderContactsFn = createServerFn({ method: 'POST' })
+  .validator((data: { category: string; ids: string[] }) => data)
+  .handler(
+    async ({ data }) => (await orderImportantContacts(data.category, { ids: data.ids })).status,
+  );
+
 const orderCategoriesFn = createServerFn({ method: 'POST' })
   .validator((ids: string[]) => ids)
   .handler(async ({ data }) => (await orderContactCategories({ ids: data })).status);
@@ -100,7 +107,7 @@ const importantContactErrors: Record<number, string> = {
   403: publisherOnly,
   404: 'Kontak ini sudah dihapus.',
   409: 'Status kontak sudah berubah; muat ulang.',
-  422: 'Periksa lagi isian: nama wajib diisi (paling banyak 100 karakter), kategori wajib dipilih, nomor telepon minimal 3 angka (hanya angka, spasi, dan + - ( )), dan keterangan paling banyak 150 karakter.',
+  422: 'Periksa lagi isian: nama wajib diisi (paling banyak 100 karakter), kategori wajib dipilih, nomor telepon minimal 3 angka (hanya angka, spasi, dan + - ( )), dan keterangan paling banyak 150 karakter. Bila mengurutkan, muat ulang dulu.',
 };
 
 const categoryErrors: Record<number, string> = {
@@ -120,6 +127,7 @@ function ImportantContacts() {
   const renameCategory = useServerFn(renameCategoryFn);
   const removeCategory = useServerFn(deleteCategoryFn);
   const orderCategories = useServerFn(orderCategoriesFn);
+  const orderContacts = useServerFn(orderContactsFn);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
   // The contact being edited, or null for a new one; undefined while the dialog is closed.
   const [editing, setEditing] = useState<ImportantContact | null | undefined>(undefined);
@@ -151,17 +159,12 @@ function ImportantContacts() {
     if (editing === undefined) return;
     const form = new FormData(event.currentTarget);
     const text = (name: string) => String(form.get(name) ?? '').trim();
-    const order = text('order');
-    const category = text('category');
-    // A contact moved to another category with its old place untouched goes last there.
-    const moved =
-      editing !== null && category !== editing.category && order === String(editing.order);
+    // No order: a new contact, or one moved to another category, goes last there.
     const contact: ImportantContactFields = {
       name: text('name'),
-      category,
+      category: text('category'),
       phone: text('phone'),
       note: text('note') || null,
-      order: order && !moved ? Number(order) : null,
     };
     const status = await saveContact({ data: { id: editing?.id ?? null, contact } });
     if (status >= 300) {
@@ -214,6 +217,20 @@ function ImportantContacts() {
     await result(await removeCategory({ data: category.id }), 'Kategori dihapus.', categoryErrors);
   }
 
+  async function onMoveContact(listed: ImportantContact[], index: number, by: number) {
+    const ids = moved(
+      listed.map((contact) => contact.id),
+      index,
+      index + by,
+    );
+    const category = listed[index]?.category ?? '';
+    await result(
+      await orderContacts({ data: { category, ids } }),
+      'Urutan kontak diubah.',
+      importantContactErrors,
+    );
+  }
+
   async function onMoveCategory(index: number, by: number) {
     const ids = moved(
       categories.map((category) => category.id),
@@ -263,7 +280,6 @@ function ImportantContacts() {
               <DataTable>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Urutan</TableHead>
                     <TableHead>Nama</TableHead>
                     <TableHead>Telepon</TableHead>
                     <TableHead>Keterangan</TableHead>
@@ -274,9 +290,8 @@ function ImportantContacts() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {listed.map((contact) => (
+                  {listed.map((contact, index) => (
                     <TableRow key={contact.id}>
-                      <TableCell>{contact.order}</TableCell>
                       <TableCell className="font-medium">{contact.name}</TableCell>
                       <TableCell>{contact.phone}</TableCell>
                       <TableCell className="max-w-64 truncate">{contact.note ?? '—'}</TableCell>
@@ -287,6 +302,26 @@ function ImportantContacts() {
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            aria-label={`Naikkan ${contact.name}`}
+                            disabled={index === 0}
+                            onClick={() => onMoveContact(listed, index, -1)}
+                          >
+                            <ArrowUp aria-hidden="true" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            aria-label={`Turunkan ${contact.name}`}
+                            disabled={index === listed.length - 1}
+                            onClick={() => onMoveContact(listed, index, 1)}
+                          >
+                            <ArrowDown aria-hidden="true" />
+                          </Button>
                           <Button type="button" variant="outline" onClick={() => open(contact)}>
                             Ubah
                           </Button>
@@ -424,20 +459,6 @@ function ImportantContacts() {
                   placeholder="mis. Buka 24 jam"
                   defaultValue={editing?.note ?? ''}
                 />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="contact-order">Urutan dalam kategori (opsional)</Label>
-                <Input
-                  id="contact-order"
-                  name="order"
-                  type="number"
-                  step={1}
-                  className="w-32"
-                  defaultValue={editing?.order ?? ''}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Angka kecil tampil lebih dulu. Kosongkan untuk menaruh kontak baru di akhir.
-                </p>
               </div>
               {dialogError && <Notice error>{dialogError}</Notice>}
               <DialogFooter>
