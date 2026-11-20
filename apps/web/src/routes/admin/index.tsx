@@ -1,7 +1,7 @@
 import { createFileRoute, getRouteApi, Link } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { calendarDate } from '../../announcement';
-import { getDashboard } from '../../api/generated';
+import { type DraftKind, getDashboard } from '../../api/generated';
 import { PageHead } from '../../components/admin';
 import { Card } from '../../components/ui/card';
 import { ianaZones } from '../../village';
@@ -13,6 +13,12 @@ const fetchDashboard = createServerFn({ method: 'GET' }).handler(async () => {
 });
 
 const root = getRouteApi('__root__');
+
+const draftKinds = {
+  newsPost: { label: 'Berita', to: '/admin/berita/$id' },
+  announcement: { label: 'Pengumuman', to: '/admin/pengumuman/$id' },
+  event: { label: 'Agenda', to: '/admin/agenda/$id' },
+} as const satisfies Record<DraftKind, { label: string; to: string }>;
 
 export const Route = createFileRoute('/admin/')({
   loader: () => fetchDashboard(),
@@ -84,19 +90,14 @@ function Dashboard() {
                   {dashboard.drafts.map((draft) => (
                     <li key={draft.id} className="flex flex-wrap justify-between gap-x-3">
                       <Link
-                        to={
-                          draft.kind === 'announcement'
-                            ? '/admin/pengumuman/$id'
-                            : '/admin/berita/$id'
-                        }
+                        to={draftKinds[draft.kind].to}
                         params={{ id: draft.id }}
                         className="min-w-0 truncate font-medium underline-offset-4 hover:underline"
                       >
                         {draft.title}
                       </Link>
                       <span className="text-sm text-muted-foreground">
-                        {draft.kind === 'announcement' ? 'Pengumuman' : 'Berita'} ·{' '}
-                        {date.format(new Date(draft.updatedAt))}
+                        {draftKinds[draft.kind].label} · {date.format(new Date(draft.updatedAt))}
                       </span>
                     </li>
                   ))}

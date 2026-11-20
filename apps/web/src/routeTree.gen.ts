@@ -31,6 +31,8 @@ import { Route as PublicBeritaIndexRouteImport } from './routes/_public/berita/i
 import { Route as PublicBeritaSlugRouteImport } from './routes/_public/berita/$slug'
 import { Route as PublicPengumumanIndexRouteImport } from './routes/_public/pengumuman/index'
 import { Route as PublicPengumumanSlugRouteImport } from './routes/_public/pengumuman/$slug'
+import { Route as AdminAgendaIndexRouteImport } from './routes/admin/agenda/index'
+import { Route as AdminAgendaIdRouteImport } from './routes/admin/agenda/$id'
 import { Route as AdminBeritaIndexRouteImport } from './routes/admin/berita/index'
 import { Route as AdminBeritaIdRouteImport } from './routes/admin/berita/$id'
 import { Route as AdminPengumumanIndexRouteImport } from './routes/admin/pengumuman/index'
@@ -146,6 +148,16 @@ const PublicPengumumanSlugRoute = PublicPengumumanSlugRouteImport.update({
   path: '/pengumuman/$slug',
   getParentRoute: () => PublicRoute,
 } as any)
+const AdminAgendaIndexRoute = AdminAgendaIndexRouteImport.update({
+  id: '/agenda/',
+  path: '/agenda/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAgendaIdRoute = AdminAgendaIdRouteImport.update({
+  id: '/agenda/$id',
+  path: '/agenda/$id',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminBeritaIndexRoute = AdminBeritaIndexRouteImport.update({
   id: '/berita/',
   path: '/berita/',
@@ -192,11 +204,13 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/berita/$slug': typeof PublicBeritaSlugRoute
   '/pengumuman/$slug': typeof PublicPengumumanSlugRoute
+  '/admin/agenda/$id': typeof AdminAgendaIdRoute
   '/admin/berita/$id': typeof AdminBeritaIdRoute
   '/admin/pengumuman/$id': typeof AdminPengumumanIdRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
   '/berita/': typeof PublicBeritaIndexRoute
   '/pengumuman/': typeof PublicPengumumanIndexRoute
+  '/admin/agenda/': typeof AdminAgendaIndexRoute
   '/admin/berita/': typeof AdminBeritaIndexRoute
   '/admin/pengumuman/': typeof AdminPengumumanIndexRoute
 }
@@ -219,11 +233,13 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/berita/$slug': typeof PublicBeritaSlugRoute
   '/pengumuman/$slug': typeof PublicPengumumanSlugRoute
+  '/admin/agenda/$id': typeof AdminAgendaIdRoute
   '/admin/berita/$id': typeof AdminBeritaIdRoute
   '/admin/pengumuman/$id': typeof AdminPengumumanIdRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
   '/berita': typeof PublicBeritaIndexRoute
   '/pengumuman': typeof PublicPengumumanIndexRoute
+  '/admin/agenda': typeof AdminAgendaIndexRoute
   '/admin/berita': typeof AdminBeritaIndexRoute
   '/admin/pengumuman': typeof AdminPengumumanIndexRoute
 }
@@ -249,11 +265,13 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/_public/berita/$slug': typeof PublicBeritaSlugRoute
   '/_public/pengumuman/$slug': typeof PublicPengumumanSlugRoute
+  '/admin/agenda/$id': typeof AdminAgendaIdRoute
   '/admin/berita/$id': typeof AdminBeritaIdRoute
   '/admin/pengumuman/$id': typeof AdminPengumumanIdRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
   '/_public/berita/': typeof PublicBeritaIndexRoute
   '/_public/pengumuman/': typeof PublicPengumumanIndexRoute
+  '/admin/agenda/': typeof AdminAgendaIndexRoute
   '/admin/berita/': typeof AdminBeritaIndexRoute
   '/admin/pengumuman/': typeof AdminPengumumanIndexRoute
 }
@@ -279,11 +297,13 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/berita/$slug'
     | '/pengumuman/$slug'
+    | '/admin/agenda/$id'
     | '/admin/berita/$id'
     | '/admin/pengumuman/$id'
     | '/media/$id/$variant'
     | '/berita/'
     | '/pengumuman/'
+    | '/admin/agenda/'
     | '/admin/berita/'
     | '/admin/pengumuman/'
   fileRoutesByTo: FileRoutesByTo
@@ -306,11 +326,13 @@ export interface FileRouteTypes {
     | '/admin'
     | '/berita/$slug'
     | '/pengumuman/$slug'
+    | '/admin/agenda/$id'
     | '/admin/berita/$id'
     | '/admin/pengumuman/$id'
     | '/media/$id/$variant'
     | '/berita'
     | '/pengumuman'
+    | '/admin/agenda'
     | '/admin/berita'
     | '/admin/pengumuman'
   id:
@@ -335,11 +357,13 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/_public/berita/$slug'
     | '/_public/pengumuman/$slug'
+    | '/admin/agenda/$id'
     | '/admin/berita/$id'
     | '/admin/pengumuman/$id'
     | '/media/$id/$variant'
     | '/_public/berita/'
     | '/_public/pengumuman/'
+    | '/admin/agenda/'
     | '/admin/berita/'
     | '/admin/pengumuman/'
   fileRoutesById: FileRoutesById
@@ -508,6 +532,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicPengumumanSlugRouteImport
       parentRoute: typeof PublicRoute
     }
+    '/admin/agenda/': {
+      id: '/admin/agenda/'
+      path: '/agenda'
+      fullPath: '/admin/agenda/'
+      preLoaderRoute: typeof AdminAgendaIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/agenda/$id': {
+      id: '/admin/agenda/$id'
+      path: '/agenda/$id'
+      fullPath: '/admin/agenda/$id'
+      preLoaderRoute: typeof AdminAgendaIdRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/berita/': {
       id: '/admin/berita/'
       path: '/berita'
@@ -557,8 +595,10 @@ interface AdminRouteRouteChildren {
   AdminProfilDesaRoute: typeof AdminProfilDesaRoute
   AdminWilayahRoute: typeof AdminWilayahRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminAgendaIdRoute: typeof AdminAgendaIdRoute
   AdminBeritaIdRoute: typeof AdminBeritaIdRoute
   AdminPengumumanIdRoute: typeof AdminPengumumanIdRoute
+  AdminAgendaIndexRoute: typeof AdminAgendaIndexRoute
   AdminBeritaIndexRoute: typeof AdminBeritaIndexRoute
   AdminPengumumanIndexRoute: typeof AdminPengumumanIndexRoute
 }
@@ -574,8 +614,10 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminProfilDesaRoute: AdminProfilDesaRoute,
   AdminWilayahRoute: AdminWilayahRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminAgendaIdRoute: AdminAgendaIdRoute,
   AdminBeritaIdRoute: AdminBeritaIdRoute,
   AdminPengumumanIdRoute: AdminPengumumanIdRoute,
+  AdminAgendaIndexRoute: AdminAgendaIndexRoute,
   AdminBeritaIndexRoute: AdminBeritaIndexRoute,
   AdminPengumumanIndexRoute: AdminPengumumanIndexRoute,
 }
