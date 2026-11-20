@@ -1,0 +1,146 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT slug, title, summary AS \"summary!\", category_id AS \"category_id!\",\n           categories.name AS category, cover_file_id AS \"cover!\", cover_caption,\n           cover_alt AS \"cover_alt!\", body, reading_minutes,\n           first_published_at AS \"published_at!\",\n           coalesce(officials.name, users.username) AS \"author!\",\n           (SELECT coalesce(positions.name,\n                'Kepala ' || initcap(village.hamlet_label) || ' ' || hamlets.name)\n            FROM tenures JOIN positions ON positions.id = position_id\n            LEFT JOIN region_units hamlets ON hamlets.id = hamlet_id\n            LEFT JOIN village ON true\n            WHERE tenures.official_id = users.official_id AND start_date <= current_date\n            AND (end_date IS NULL OR end_date >= current_date)\n            ORDER BY start_date DESC LIMIT 1) AS position\n           FROM news_posts JOIN categories ON categories.id = category_id\n           JOIN users ON users.id = author_id\n           LEFT JOIN officials ON officials.id = users.official_id\n           WHERE published AND slug = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "summary!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "category_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "category_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "category",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "categories",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "cover!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "cover_file_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "cover_caption",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "cover_caption"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "cover_alt!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "cover_alt"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "body",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "body"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "reading_minutes",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "reading_minutes"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "published_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "first_published_at"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "author!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 12,
+        "name": "position",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": ["Text"]
+    },
+    "nullable": [false, false, true, true, false, true, true, true, false, false, true, null, null]
+  },
+  "hash": "8ece0b520af956e6b2c75ce37b5b77642ff46e377a24f1dde28ca8bb48b80868"
+}

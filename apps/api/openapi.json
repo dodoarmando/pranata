@@ -1209,6 +1209,422 @@
         }
       }
     },
+    "/news-posts": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Every News Post, Drafts and Published, the latest changed first.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`.",
+        "operationId": "listNewsPosts",
+        "responses": {
+          "200": {
+            "description": "Every News Post",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NewsPostSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Starts a Draft written by the signed-in User; only the title is required.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `409`\nwhen another News Post takes the slug meanwhile, `422` for a blank title, a malformed\nfield, a body outside the allowlist, or an unknown Category or cover.",
+        "operationId": "createNewsPost",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewsPostFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "409": {
+            "description": "Another News Post took the slug meanwhile"
+          },
+          "422": {
+            "description": "A field is malformed or unknown"
+          }
+        }
+      }
+    },
+    "/news-posts/cover": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Stores a cover photo, a JPEG, PNG or WebP of at most 10 MiB, for saving into a News Post.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `413`\nover 10 MiB, `415` for content that is not JPEG, PNG or WebP, `422` over 40 megapixels or\nundecodable.",
+        "operationId": "uploadNewsPostCover",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The stored photo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upload"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "413": {
+            "description": "The file is over 10 MiB"
+          },
+          "415": {
+            "description": "The file is not JPEG, PNG or WebP"
+          },
+          "422": {
+            "description": "The image is too large or broken"
+          }
+        }
+      }
+    },
+    "/news-posts/published": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Published News Posts, the first published first, a page at a time.",
+        "operationId": "listPublishedNewsPosts",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "description": "Only News Posts filed under this Category.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "From 1, the default.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of Published News Posts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/news-posts/published/{slug}": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "One Published News Post by its slug.",
+        "description": "# Errors\n`404` for a slug no Published News Post has, such as a Draft's or a deleted one's.",
+        "operationId": "getPublishedNewsPost",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "The News Post's slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The News Post",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedNewsPost"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Published News Post has the slug"
+          }
+        }
+      }
+    },
+    "/news-posts/{id}": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "One News Post, Draft or Published, for editing.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `404`\nfor an unknown News Post.",
+        "operationId": "getNewsPost",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The News Post",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The News Post",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsPost"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "404": {
+            "description": "There is no such News Post"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Saves a News Post: a Draft as it autosaves, a Published one live.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` (or `content.publish`) for a\nDraft or without `content.publish` for a Published post, `404` for an unknown News Post,\n`409` for a new slug once first published or one another News Post takes meanwhile, `422`\nfor a blank title, a malformed field, a body outside the allowlist, an unknown Category\nor cover, or a Published post missing what publishing requires.",
+        "operationId": "updateNewsPost",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The News Post",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewsPostFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The News Post is saved"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not change this News Post"
+          },
+          "404": {
+            "description": "There is no such News Post"
+          },
+          "409": {
+            "description": "The slug is locked or taken"
+          },
+          "422": {
+            "description": "A field is malformed, unknown or missing"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Deletes a Draft for good; its slug is free again. A Published post is unpublished first.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown News\nPost, `409` when it is Published.",
+        "operationId": "deleteNewsPost",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The News Post",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Draft is deleted"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such News Post"
+          },
+          "409": {
+            "description": "The News Post is Published"
+          }
+        }
+      }
+    },
+    "/news-posts/{id}/publish": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Puts a Draft on the public site; the first publication fixes its date and locks its slug.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown News\nPost, `409` when it is already Published, `422` when it lacks a Category, summary, cover\nor the cover's alt text.",
+        "operationId": "publishNewsPost",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The News Post",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The News Post is Published"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such News Post"
+          },
+          "409": {
+            "description": "The News Post is already Published"
+          },
+          "422": {
+            "description": "A field publishing requires is missing"
+          }
+        }
+      }
+    },
+    "/news-posts/{id}/unpublish": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Takes a Published post off the public site, back to Draft; it keeps its date and slug.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown News\nPost, `409` when it is a Draft.",
+        "operationId": "unpublishNewsPost",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The News Post",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The News Post is a Draft again"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such News Post"
+          },
+          "409": {
+            "description": "The News Post is a Draft"
+          }
+        }
+      }
+    },
     "/positions": {
       "get": {
         "tags": [
@@ -2462,6 +2878,26 @@
           }
         }
       },
+      "Author": {
+        "type": "object",
+        "description": "Who wrote a News Post, as the public sees them.",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The linked Official's name, or else the User's username."
+          },
+          "position": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The linked Official's Position today, if any."
+          }
+        }
+      },
       "Category": {
         "type": "object",
         "required": [
@@ -2487,6 +2923,22 @@
           "name": {
             "type": "string",
             "description": "1–50 characters, unique whatever the case."
+          }
+        }
+      },
+      "CategoryRef": {
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
           }
         }
       },
@@ -2972,6 +3424,224 @@
           }
         }
       },
+      "NewsCard": {
+        "type": "object",
+        "description": "A Published News Post in the public list.",
+        "required": [
+          "slug",
+          "title",
+          "summary",
+          "category",
+          "cover",
+          "coverAlt",
+          "publishedAt",
+          "readingMinutes"
+        ],
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "The Category's name."
+          },
+          "cover": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "coverAlt": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The first publication."
+          },
+          "readingMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "NewsPage": {
+        "type": "object",
+        "description": "One page of the public News Post list.",
+        "required": [
+          "posts",
+          "total",
+          "pageSize"
+        ],
+        "properties": {
+          "pageSize": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "posts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NewsCard"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many Published News Posts match, over every page."
+          }
+        }
+      },
+      "NewsPost": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/NewsPostFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "published",
+              "updatedAt"
+            ],
+            "properties": {
+              "firstPublishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "The public date, kept through an unpublish; null until first published, and the slug is\nlocked once set."
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "published": {
+                "type": "boolean"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ],
+        "description": "A News Post as the admin area edits it."
+      },
+      "NewsPostFields": {
+        "type": "object",
+        "description": "What a User writes in a News Post. A Draft may leave out what publishing requires.",
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "body": {
+            "type": "object",
+            "description": "Tiptap JSON of the allowed nodes and marks only: paragraph, h2–h3, bold, italic, link\n(`http(s):`, `mailto:`, `tel:`), bullet and ordered list, blockquote, table and `YouTube`."
+          },
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Required to publish."
+          },
+          "cover": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The cover photo, uploaded at `/news-posts/cover`; required to publish."
+          },
+          "coverAlt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The cover's alt text, up to 300 characters; required to publish."
+          },
+          "coverCaption": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Up to 300 characters."
+          },
+          "slug": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Made from the title when blank; transliterated, and locked once first published."
+          },
+          "summary": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The lede and meta description, about 200 characters and at most 250; required to\npublish."
+          },
+          "title": {
+            "type": "string",
+            "description": "1–150 characters."
+          }
+        }
+      },
+      "NewsPostSummary": {
+        "type": "object",
+        "description": "A line of the admin area's News Post list.",
+        "required": [
+          "id",
+          "title",
+          "slug",
+          "published",
+          "updatedAt",
+          "author"
+        ],
+        "properties": {
+          "author": {
+            "type": "string",
+            "description": "The creating User's username."
+          },
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The Category's name."
+          },
+          "firstPublishedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "published": {
+            "type": "boolean"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "OfficialLink": {
         "type": "object",
         "properties": {
@@ -3173,6 +3843,65 @@
             "format": "uuid"
           },
           "name": {
+            "type": "string"
+          }
+        }
+      },
+      "PublishedNewsPost": {
+        "type": "object",
+        "description": "A Published News Post as the public reads it.",
+        "required": [
+          "slug",
+          "title",
+          "summary",
+          "category",
+          "cover",
+          "coverAlt",
+          "body",
+          "readingMinutes",
+          "publishedAt",
+          "author"
+        ],
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/Author"
+          },
+          "body": {
+            "type": "object",
+            "description": "Tiptap JSON of the allowed nodes and marks only."
+          },
+          "category": {
+            "$ref": "#/components/schemas/CategoryRef"
+          },
+          "cover": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "coverAlt": {
+            "type": "string"
+          },
+          "coverCaption": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The first publication."
+          },
+          "readingMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "title": {
             "type": "string"
           }
         }

@@ -1,0 +1,134 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT title, slug, category_id, summary, cover_file_id, cover_caption, cover_alt, body,\n         published, first_published_at, updated_at FROM news_posts WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "category_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "category_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "summary",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "cover_file_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "cover_file_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "cover_caption",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "cover_caption"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "cover_alt",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "cover_alt"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "body",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "body"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "published",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "published"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "first_published_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "first_published_at"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": [false, false, true, true, true, true, true, false, false, true, false]
+  },
+  "hash": "e5482a521308af0929bfa7ed6864d4cd8c89788dd534cb7ed09439086beb254f"
+}

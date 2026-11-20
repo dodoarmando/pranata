@@ -72,6 +72,7 @@ pub async fn sweep(pool: &PgPool, dir: &Path) -> anyhow::Result<usize> {
          AND id NOT IN (SELECT logo_file_id FROM village WHERE logo_file_id IS NOT NULL)
          AND id NOT IN (SELECT photo_file_id FROM tenures WHERE photo_file_id IS NOT NULL)
          AND id NOT IN (SELECT logo_file_id FROM institutions WHERE logo_file_id IS NOT NULL)
+         AND id NOT IN (SELECT cover_file_id FROM news_posts WHERE cover_file_id IS NOT NULL)
          RETURNING id"
     )
     .fetch_all(pool)

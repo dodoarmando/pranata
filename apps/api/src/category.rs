@@ -42,7 +42,7 @@ impl CategoryFields {
 }
 
 /// Managing Categories is publishing's, not writing's.
-fn ensure_publisher(session: &Session) -> Result<(), ApiError> {
+pub(crate) fn ensure_publisher(session: &Session) -> Result<(), ApiError> {
     if session.holds(Permission::ContentPublish) {
         Ok(())
     } else {

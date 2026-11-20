@@ -9,10 +9,13 @@ mod health;
 mod imaging;
 mod index_edition;
 mod institution;
+mod news_post;
 mod passkey;
 mod password;
 mod region;
+mod rich_text;
 mod role;
+mod slug;
 pub mod storage;
 mod throttle;
 pub mod user;
@@ -104,6 +107,17 @@ fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(index_edition::update, index_edition::delete))
         .routes(routes!(category::list, category::create))
         .routes(routes!(category::update, category::delete))
+        .routes(routes!(news_post::list, news_post::create))
+        .routes(routes!(
+            news_post::get,
+            news_post::update,
+            news_post::delete
+        ))
+        .routes(routes!(news_post::publish))
+        .routes(routes!(news_post::unpublish))
+        .routes(routes!(news_post::upload_cover))
+        .routes(routes!(news_post::list_published))
+        .routes(routes!(news_post::get_published))
         .routes(routes!(storage::get_media))
         .routes(routes!(auth::use_access_link))
         .routes(routes!(auth::sign_in))
