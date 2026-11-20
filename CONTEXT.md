@@ -261,8 +261,12 @@ An ordered set of photos from one village occasion.
 _Avoid_: Gallery (for a single album), galeri (in code)
 
 **Important Contact**:
-A phone number residents may need, grouped by contact category.
+A phone number residents may need, grouped by Contact Category.
 _Avoid_: Contact, kontak penting (in code)
+
+**Contact Category**:
+A Village-defined, ordered label that Important Contacts are grouped under on the public site; one in use is kept.
+_Avoid_: Category (reserved for News Posts and Events), kategori kontak (in code)
 
 **Partner**:
 An organisation whose logo appears in the home page partner strip.
