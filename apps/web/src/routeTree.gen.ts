@@ -37,6 +37,8 @@ import { Route as AdminAgendaIndexRouteImport } from './routes/admin/agenda/inde
 import { Route as AdminAgendaIdRouteImport } from './routes/admin/agenda/$id'
 import { Route as AdminBeritaIndexRouteImport } from './routes/admin/berita/index'
 import { Route as AdminBeritaIdRouteImport } from './routes/admin/berita/$id'
+import { Route as AdminGaleriIndexRouteImport } from './routes/admin/galeri/index'
+import { Route as AdminGaleriIdRouteImport } from './routes/admin/galeri/$id'
 import { Route as AdminHalamanIndexRouteImport } from './routes/admin/halaman/index'
 import { Route as AdminHalamanIdRouteImport } from './routes/admin/halaman/$id'
 import { Route as AdminPengumumanIndexRouteImport } from './routes/admin/pengumuman/index'
@@ -182,6 +184,16 @@ const AdminBeritaIdRoute = AdminBeritaIdRouteImport.update({
   path: '/berita/$id',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminGaleriIndexRoute = AdminGaleriIndexRouteImport.update({
+  id: '/galeri/',
+  path: '/galeri/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminGaleriIdRoute = AdminGaleriIdRouteImport.update({
+  id: '/galeri/$id',
+  path: '/galeri/$id',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminHalamanIndexRoute = AdminHalamanIndexRouteImport.update({
   id: '/halaman/',
   path: '/halaman/',
@@ -232,6 +244,7 @@ export interface FileRoutesByFullPath {
   '/pengumuman/$slug': typeof PublicPengumumanSlugRoute
   '/admin/agenda/$id': typeof AdminAgendaIdRoute
   '/admin/berita/$id': typeof AdminBeritaIdRoute
+  '/admin/galeri/$id': typeof AdminGaleriIdRoute
   '/admin/halaman/$id': typeof AdminHalamanIdRoute
   '/admin/pengumuman/$id': typeof AdminPengumumanIdRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
@@ -239,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/pengumuman/': typeof PublicPengumumanIndexRoute
   '/admin/agenda/': typeof AdminAgendaIndexRoute
   '/admin/berita/': typeof AdminBeritaIndexRoute
+  '/admin/galeri/': typeof AdminGaleriIndexRoute
   '/admin/halaman/': typeof AdminHalamanIndexRoute
   '/admin/pengumuman/': typeof AdminPengumumanIndexRoute
 }
@@ -265,6 +279,7 @@ export interface FileRoutesByTo {
   '/pengumuman/$slug': typeof PublicPengumumanSlugRoute
   '/admin/agenda/$id': typeof AdminAgendaIdRoute
   '/admin/berita/$id': typeof AdminBeritaIdRoute
+  '/admin/galeri/$id': typeof AdminGaleriIdRoute
   '/admin/halaman/$id': typeof AdminHalamanIdRoute
   '/admin/pengumuman/$id': typeof AdminPengumumanIdRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
@@ -272,6 +287,7 @@ export interface FileRoutesByTo {
   '/pengumuman': typeof PublicPengumumanIndexRoute
   '/admin/agenda': typeof AdminAgendaIndexRoute
   '/admin/berita': typeof AdminBeritaIndexRoute
+  '/admin/galeri': typeof AdminGaleriIndexRoute
   '/admin/halaman': typeof AdminHalamanIndexRoute
   '/admin/pengumuman': typeof AdminPengumumanIndexRoute
 }
@@ -301,6 +317,7 @@ export interface FileRoutesById {
   '/_public/pengumuman/$slug': typeof PublicPengumumanSlugRoute
   '/admin/agenda/$id': typeof AdminAgendaIdRoute
   '/admin/berita/$id': typeof AdminBeritaIdRoute
+  '/admin/galeri/$id': typeof AdminGaleriIdRoute
   '/admin/halaman/$id': typeof AdminHalamanIdRoute
   '/admin/pengumuman/$id': typeof AdminPengumumanIdRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
@@ -308,6 +325,7 @@ export interface FileRoutesById {
   '/_public/pengumuman/': typeof PublicPengumumanIndexRoute
   '/admin/agenda/': typeof AdminAgendaIndexRoute
   '/admin/berita/': typeof AdminBeritaIndexRoute
+  '/admin/galeri/': typeof AdminGaleriIndexRoute
   '/admin/halaman/': typeof AdminHalamanIndexRoute
   '/admin/pengumuman/': typeof AdminPengumumanIndexRoute
 }
@@ -337,6 +355,7 @@ export interface FileRouteTypes {
     | '/pengumuman/$slug'
     | '/admin/agenda/$id'
     | '/admin/berita/$id'
+    | '/admin/galeri/$id'
     | '/admin/halaman/$id'
     | '/admin/pengumuman/$id'
     | '/media/$id/$variant'
@@ -344,6 +363,7 @@ export interface FileRouteTypes {
     | '/pengumuman/'
     | '/admin/agenda/'
     | '/admin/berita/'
+    | '/admin/galeri/'
     | '/admin/halaman/'
     | '/admin/pengumuman/'
   fileRoutesByTo: FileRoutesByTo
@@ -370,6 +390,7 @@ export interface FileRouteTypes {
     | '/pengumuman/$slug'
     | '/admin/agenda/$id'
     | '/admin/berita/$id'
+    | '/admin/galeri/$id'
     | '/admin/halaman/$id'
     | '/admin/pengumuman/$id'
     | '/media/$id/$variant'
@@ -377,6 +398,7 @@ export interface FileRouteTypes {
     | '/pengumuman'
     | '/admin/agenda'
     | '/admin/berita'
+    | '/admin/galeri'
     | '/admin/halaman'
     | '/admin/pengumuman'
   id:
@@ -405,6 +427,7 @@ export interface FileRouteTypes {
     | '/_public/pengumuman/$slug'
     | '/admin/agenda/$id'
     | '/admin/berita/$id'
+    | '/admin/galeri/$id'
     | '/admin/halaman/$id'
     | '/admin/pengumuman/$id'
     | '/media/$id/$variant'
@@ -412,6 +435,7 @@ export interface FileRouteTypes {
     | '/_public/pengumuman/'
     | '/admin/agenda/'
     | '/admin/berita/'
+    | '/admin/galeri/'
     | '/admin/halaman/'
     | '/admin/pengumuman/'
   fileRoutesById: FileRoutesById
@@ -622,6 +646,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBeritaIdRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/galeri/': {
+      id: '/admin/galeri/'
+      path: '/galeri'
+      fullPath: '/admin/galeri/'
+      preLoaderRoute: typeof AdminGaleriIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/galeri/$id': {
+      id: '/admin/galeri/$id'
+      path: '/galeri/$id'
+      fullPath: '/admin/galeri/$id'
+      preLoaderRoute: typeof AdminGaleriIdRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/halaman/': {
       id: '/admin/halaman/'
       path: '/halaman'
@@ -673,10 +711,12 @@ interface AdminRouteRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   AdminAgendaIdRoute: typeof AdminAgendaIdRoute
   AdminBeritaIdRoute: typeof AdminBeritaIdRoute
+  AdminGaleriIdRoute: typeof AdminGaleriIdRoute
   AdminHalamanIdRoute: typeof AdminHalamanIdRoute
   AdminPengumumanIdRoute: typeof AdminPengumumanIdRoute
   AdminAgendaIndexRoute: typeof AdminAgendaIndexRoute
   AdminBeritaIndexRoute: typeof AdminBeritaIndexRoute
+  AdminGaleriIndexRoute: typeof AdminGaleriIndexRoute
   AdminHalamanIndexRoute: typeof AdminHalamanIndexRoute
   AdminPengumumanIndexRoute: typeof AdminPengumumanIndexRoute
 }
@@ -694,10 +734,12 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   AdminAgendaIdRoute: AdminAgendaIdRoute,
   AdminBeritaIdRoute: AdminBeritaIdRoute,
+  AdminGaleriIdRoute: AdminGaleriIdRoute,
   AdminHalamanIdRoute: AdminHalamanIdRoute,
   AdminPengumumanIdRoute: AdminPengumumanIdRoute,
   AdminAgendaIndexRoute: AdminAgendaIndexRoute,
   AdminBeritaIndexRoute: AdminBeritaIndexRoute,
+  AdminGaleriIndexRoute: AdminGaleriIndexRoute,
   AdminHalamanIndexRoute: AdminHalamanIndexRoute,
   AdminPengumumanIndexRoute: AdminPengumumanIndexRoute,
 }
