@@ -164,7 +164,7 @@ pub fn regenerate(dir: &Path) -> anyhow::Result<usize> {
         let image =
             image::open(&master).with_context(|| format!("cannot decode {}", master.display()))?;
         // A hero keeps its 2400 px variant; no other image gains one.
-        for variant in Variant::HERO {
+        for variant in Variant::EVERY {
             if variant == Variant::W2400 && !file.join(variant.file_name()).exists() {
                 continue;
             }
@@ -239,7 +239,7 @@ pub(crate) async fn get_media(
     let (file_name, content_type) = if name == "pdf" {
         (PDF_FILE, "application/pdf")
     } else {
-        let variant = Variant::HERO
+        let variant = Variant::EVERY
             .into_iter()
             .find(|variant| variant.name() == name)
             .ok_or(ApiError::Status(StatusCode::NOT_FOUND))?;
