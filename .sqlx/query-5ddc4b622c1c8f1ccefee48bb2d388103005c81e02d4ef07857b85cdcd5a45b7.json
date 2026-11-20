@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO transparency_documents (title, document_type, fiscal_year, file_id)\n             VALUES ($1, $2, $3, $4) RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "transparency_documents",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        {
+          "Custom": {
+            "name": "document_type",
+            "kind": {
+              "Enum": [
+                "apbdes",
+                "apbdes_amendment",
+                "realisation_report",
+                "rkpdes",
+                "rpjmdes",
+                "village_regulation",
+                "other"
+              ]
+            }
+          }
+        },
+        "Int4",
+        "Uuid"
+      ]
+    },
+    "nullable": [false]
+  },
+  "hash": "5ddc4b622c1c8f1ccefee48bb2d388103005c81e02d4ef07857b85cdcd5a45b7"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE transparency_documents SET published = $1 WHERE id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Bool", "Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "16447b24497f6ef68ce2849383f0211d736a6882c6efb63604069291e24948e2"
+}

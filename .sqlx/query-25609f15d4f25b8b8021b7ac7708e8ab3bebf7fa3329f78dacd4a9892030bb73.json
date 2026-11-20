@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT fiscal_year FROM transparency_documents WHERE published\n         ORDER BY fiscal_year DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiscal_year",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "transparency_documents",
+            "name": "fiscal_year"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false]
+  },
+  "hash": "25609f15d4f25b8b8021b7ac7708e8ab3bebf7fa3329f78dacd4a9892030bb73"
+}

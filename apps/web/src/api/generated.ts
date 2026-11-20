@@ -404,6 +404,46 @@ export const DevelopmentStatus = {
 } as const;
 
 /**
+ * A Transparency Document's type, from a fixed catalog.
+ */
+export type DocumentType = typeof DocumentType[keyof typeof DocumentType];
+
+
+export const DocumentType = {
+  apbdes: 'apbdes',
+  apbdesAmendment: 'apbdesAmendment',
+  realisationReport: 'realisationReport',
+  rkpdes: 'rkpdes',
+  rpjmdes: 'rpjmdes',
+  villageRegulation: 'villageRegulation',
+  other: 'other',
+} as const;
+
+/**
+ * A Published Transparency Document on `/dokumen`.
+ */
+export interface DocumentCard {
+  byteSize: number;
+  documentType: DocumentType;
+  /** Served at `/media/{file}/pdf`. */
+  file: string;
+  fiscalYear: number;
+  title: string;
+}
+
+/**
+ * One page of `/dokumen`.
+ */
+export interface DocumentPage {
+  documents: DocumentCard[];
+  /** Every fiscal year with a Published document, the latest first, for the year filter. */
+  fiscalYears: number[];
+  pageSize: number;
+  /** How many Published documents match, over every page. */
+  total: number;
+}
+
+/**
  * An exported file, encrypted; only `password` opens it.
  */
 export interface EncryptedFile {
@@ -1385,6 +1425,29 @@ export const TimeZone = {
   WIT: 'WIT',
 } as const;
 
+/**
+ * What a User writes in a Transparency Document.
+ */
+export interface TransparencyDocumentFields {
+  documentType: DocumentType;
+  /** The PDF, uploaded at `/transparency-documents/file`. */
+  file: string;
+  /** 2000–2100. */
+  fiscalYear: number;
+  /** 1–200 characters. */
+  title: string;
+}
+
+/**
+ * A Transparency Document as the admin area lists and edits it.
+ */
+export type TransparencyDocument = TransparencyDocumentFields & {
+  /** The PDF's size. */
+  byteSize: number;
+  id: string;
+  published: boolean;
+};
+
 export interface Upload {
   /** The stored file, unreferenced until saved into its owner and swept after 24 h if not. */
   id: string;
@@ -1545,6 +1608,28 @@ export type ListPublishedNewsPostsParams = {
    */
   page?: number;
 };
+
+export type ListPublishedTransparencyDocumentsParams = {
+  /** A public filter over document types. */
+  group?: ListPublishedTransparencyDocumentsGroup;
+  /** Only documents of this fiscal year. */
+  fiscalYear?: number;
+  /**
+   * From 1, the default.
+   * @minimum 0
+   */
+  page?: number;
+};
+
+export type ListPublishedTransparencyDocumentsGroup = typeof ListPublishedTransparencyDocumentsGroup[keyof typeof ListPublishedTransparencyDocumentsGroup];
+
+
+export const ListPublishedTransparencyDocumentsGroup = {
+  budget: 'budget',
+  realisation: 'realisation',
+  planning: 'planning',
+  regulation: 'regulation',
+} as const;
 
 const getHeaders = (...sources: (RequestInit['headers'] | Record<string, string | undefined>)[]) => {
   const seen = new Set<string>();
@@ -5559,12 +5644,17 @@ export type getMediaResponse200ImageJpeg = {
   status: 200
 }
 
+export type getMediaResponse200ApplicationPdf = {
+  data: Blob
+  status: 200
+}
+
 export type getMediaResponse404 = {
   data: void
   status: 404
 }
 
-export type getMediaResponseSuccess = (getMediaResponse200ImageWebp | getMediaResponse200ImageJpeg) & {
+export type getMediaResponseSuccess = (getMediaResponse200ImageWebp | getMediaResponse200ImageJpeg | getMediaResponse200ApplicationPdf) & {
   headers: Headers;
 };
 export type getMediaResponseError = (getMediaResponse404) & {
@@ -5585,8 +5675,9 @@ export const getGetMediaUrl = (id: string,
 /**
  * # Errors
  * `404` for an unknown file or variant.
- * @summary An image's public rendition: `480`, `960` or `1600` (WebP) or `share` (JPEG). Cached
-forever, since a file never changes; only images that hold no personal data come here.
+ * @summary An image's public rendition, `480`, `960` or `1600` (WebP) or `share` (JPEG), or a stored
+PDF as `pdf`. Cached forever, since a file never changes; only files that hold no personal
+data come here. Nothing served may be sniffed or run as a page.
  */
 export const getMedia = async (id: string,
     variant: string, options?: Parameters<typeof apiFetch>[1]): Promise<getMediaResponse> => {
@@ -8198,6 +8289,471 @@ export const updateTenure = async (id: string,
     method: 'PUT',
     headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
     body: JSON.stringify(tenureFields)
+  }
+);}
+
+
+
+export type listTransparencyDocumentsResponse200 = {
+  data: TransparencyDocument[]
+  status: 200
+}
+
+export type listTransparencyDocumentsResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listTransparencyDocumentsResponse403 = {
+  data: void
+  status: 403
+}
+
+export type listTransparencyDocumentsResponseSuccess = (listTransparencyDocumentsResponse200) & {
+  headers: Headers;
+};
+export type listTransparencyDocumentsResponseError = (listTransparencyDocumentsResponse401 | listTransparencyDocumentsResponse403) & {
+  headers: Headers;
+};
+
+export type listTransparencyDocumentsResponse = (listTransparencyDocumentsResponseSuccess | listTransparencyDocumentsResponseError)
+
+export const getListTransparencyDocumentsUrl = () => {
+
+
+
+
+  return `/transparency-documents`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`.
+ * @summary Every Transparency Document, Drafts and Published, the latest fiscal year first.
+ */
+export const listTransparencyDocuments = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listTransparencyDocumentsResponse> => {
+
+  return apiFetch<listTransparencyDocumentsResponse>(getListTransparencyDocumentsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createTransparencyDocumentResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createTransparencyDocumentResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createTransparencyDocumentResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createTransparencyDocumentResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createTransparencyDocumentResponseSuccess = (createTransparencyDocumentResponse201) & {
+  headers: Headers;
+};
+export type createTransparencyDocumentResponseError = (createTransparencyDocumentResponse401 | createTransparencyDocumentResponse403 | createTransparencyDocumentResponse422) & {
+  headers: Headers;
+};
+
+export type createTransparencyDocumentResponse = (createTransparencyDocumentResponseSuccess | createTransparencyDocumentResponseError)
+
+export const getCreateTransparencyDocumentUrl = () => {
+
+
+
+
+  return `/transparency-documents`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `422`
+ * for a blank title, a type outside the catalog, a fiscal year outside 2000–2100 or a file
+ * that is not an uploaded PDF.
+ * @summary Saves a new Transparency Document as a Draft.
+ */
+export const createTransparencyDocument = async (transparencyDocumentFields: TransparencyDocumentFields, options?: Parameters<typeof apiFetch>[1]): Promise<createTransparencyDocumentResponse> => {
+
+  return apiFetch<createTransparencyDocumentResponse>(getCreateTransparencyDocumentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(transparencyDocumentFields)
+  }
+);}
+
+
+
+export type uploadTransparencyDocumentFileResponse201 = {
+  data: Upload
+  status: 201
+}
+
+export type uploadTransparencyDocumentFileResponse401 = {
+  data: void
+  status: 401
+}
+
+export type uploadTransparencyDocumentFileResponse403 = {
+  data: void
+  status: 403
+}
+
+export type uploadTransparencyDocumentFileResponse413 = {
+  data: void
+  status: 413
+}
+
+export type uploadTransparencyDocumentFileResponse415 = {
+  data: void
+  status: 415
+}
+
+export type uploadTransparencyDocumentFileResponseSuccess = (uploadTransparencyDocumentFileResponse201) & {
+  headers: Headers;
+};
+export type uploadTransparencyDocumentFileResponseError = (uploadTransparencyDocumentFileResponse401 | uploadTransparencyDocumentFileResponse403 | uploadTransparencyDocumentFileResponse413 | uploadTransparencyDocumentFileResponse415) & {
+  headers: Headers;
+};
+
+export type uploadTransparencyDocumentFileResponse = (uploadTransparencyDocumentFileResponseSuccess | uploadTransparencyDocumentFileResponseError)
+
+export const getUploadTransparencyDocumentFileUrl = () => {
+
+
+
+
+  return `/transparency-documents/file`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `413`
+ * over 25 MiB, `415` for content that is not a PDF.
+ * @summary Stores a PDF of at most 25 MiB, for saving into a Transparency Document.
+ */
+export const uploadTransparencyDocumentFile = async (uploadTransparencyDocumentFileBody: Blob, options?: Parameters<typeof apiFetch>[1]): Promise<uploadTransparencyDocumentFileResponse> => {
+
+  return apiFetch<uploadTransparencyDocumentFileResponse>(getUploadTransparencyDocumentFileUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/octet-stream' }, options?.headers),
+    body: uploadTransparencyDocumentFileBody
+  }
+);}
+
+
+
+export type listPublishedTransparencyDocumentsResponse200 = {
+  data: DocumentPage
+  status: 200
+}
+
+export type listPublishedTransparencyDocumentsResponse400 = {
+  data: void
+  status: 400
+}
+
+export type listPublishedTransparencyDocumentsResponseSuccess = (listPublishedTransparencyDocumentsResponse200) & {
+  headers: Headers;
+};
+export type listPublishedTransparencyDocumentsResponseError = (listPublishedTransparencyDocumentsResponse400) & {
+  headers: Headers;
+};
+
+export type listPublishedTransparencyDocumentsResponse = (listPublishedTransparencyDocumentsResponseSuccess | listPublishedTransparencyDocumentsResponseError)
+
+export const getListPublishedTransparencyDocumentsUrl = (params?: ListPublishedTransparencyDocumentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/transparency-documents/published?${stringifiedParams}` : `/transparency-documents/published`
+}
+
+/**
+ * @summary Published Transparency Documents, the latest fiscal year first, a page at a time.
+ */
+export const listPublishedTransparencyDocuments = async (params?: ListPublishedTransparencyDocumentsParams, options?: Parameters<typeof apiFetch>[1]): Promise<listPublishedTransparencyDocumentsResponse> => {
+
+  return apiFetch<listPublishedTransparencyDocumentsResponse>(getListPublishedTransparencyDocumentsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type updateTransparencyDocumentResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateTransparencyDocumentResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateTransparencyDocumentResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateTransparencyDocumentResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateTransparencyDocumentResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateTransparencyDocumentResponseSuccess = (updateTransparencyDocumentResponse204) & {
+  headers: Headers;
+};
+export type updateTransparencyDocumentResponseError = (updateTransparencyDocumentResponse401 | updateTransparencyDocumentResponse403 | updateTransparencyDocumentResponse404 | updateTransparencyDocumentResponse422) & {
+  headers: Headers;
+};
+
+export type updateTransparencyDocumentResponse = (updateTransparencyDocumentResponseSuccess | updateTransparencyDocumentResponseError)
+
+export const getUpdateTransparencyDocumentUrl = (id: string,) => {
+
+
+
+
+  return `/transparency-documents/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` (or `content.publish`) for a
+ * Draft or without `content.publish` for a Published document, `404` for an unknown
+ * document, `422` for a blank title, a type outside the catalog, a fiscal year outside
+ * 2000–2100 or a file that is not an uploaded PDF.
+ * @summary Saves a Transparency Document, a Draft or a Published one live.
+ */
+export const updateTransparencyDocument = async (id: string,
+    transparencyDocumentFields: TransparencyDocumentFields, options?: Parameters<typeof apiFetch>[1]): Promise<updateTransparencyDocumentResponse> => {
+
+  return apiFetch<updateTransparencyDocumentResponse>(getUpdateTransparencyDocumentUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(transparencyDocumentFields)
+  }
+);}
+
+
+
+export type deleteTransparencyDocumentResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteTransparencyDocumentResponse401 = {
+  data: void
+  status: 401
+}
+
+export type deleteTransparencyDocumentResponse403 = {
+  data: void
+  status: 403
+}
+
+export type deleteTransparencyDocumentResponse404 = {
+  data: void
+  status: 404
+}
+
+export type deleteTransparencyDocumentResponse409 = {
+  data: void
+  status: 409
+}
+
+export type deleteTransparencyDocumentResponseSuccess = (deleteTransparencyDocumentResponse204) & {
+  headers: Headers;
+};
+export type deleteTransparencyDocumentResponseError = (deleteTransparencyDocumentResponse401 | deleteTransparencyDocumentResponse403 | deleteTransparencyDocumentResponse404 | deleteTransparencyDocumentResponse409) & {
+  headers: Headers;
+};
+
+export type deleteTransparencyDocumentResponse = (deleteTransparencyDocumentResponseSuccess | deleteTransparencyDocumentResponseError)
+
+export const getDeleteTransparencyDocumentUrl = (id: string,) => {
+
+
+
+
+  return `/transparency-documents/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * document, `409` when it is Published.
+ * @summary Deletes a Draft for good. A Published document is unpublished first.
+ */
+export const deleteTransparencyDocument = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deleteTransparencyDocumentResponse> => {
+
+  return apiFetch<deleteTransparencyDocumentResponse>(getDeleteTransparencyDocumentUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type publishTransparencyDocumentResponse204 = {
+  data: void
+  status: 204
+}
+
+export type publishTransparencyDocumentResponse401 = {
+  data: void
+  status: 401
+}
+
+export type publishTransparencyDocumentResponse403 = {
+  data: void
+  status: 403
+}
+
+export type publishTransparencyDocumentResponse404 = {
+  data: void
+  status: 404
+}
+
+export type publishTransparencyDocumentResponse409 = {
+  data: void
+  status: 409
+}
+
+export type publishTransparencyDocumentResponseSuccess = (publishTransparencyDocumentResponse204) & {
+  headers: Headers;
+};
+export type publishTransparencyDocumentResponseError = (publishTransparencyDocumentResponse401 | publishTransparencyDocumentResponse403 | publishTransparencyDocumentResponse404 | publishTransparencyDocumentResponse409) & {
+  headers: Headers;
+};
+
+export type publishTransparencyDocumentResponse = (publishTransparencyDocumentResponseSuccess | publishTransparencyDocumentResponseError)
+
+export const getPublishTransparencyDocumentUrl = (id: string,) => {
+
+
+
+
+  return `/transparency-documents/${id}/publish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * document, `409` when it is already Published.
+ * @summary Puts a Draft on `/dokumen`.
+ */
+export const publishTransparencyDocument = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<publishTransparencyDocumentResponse> => {
+
+  return apiFetch<publishTransparencyDocumentResponse>(getPublishTransparencyDocumentUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type unpublishTransparencyDocumentResponse204 = {
+  data: void
+  status: 204
+}
+
+export type unpublishTransparencyDocumentResponse401 = {
+  data: void
+  status: 401
+}
+
+export type unpublishTransparencyDocumentResponse403 = {
+  data: void
+  status: 403
+}
+
+export type unpublishTransparencyDocumentResponse404 = {
+  data: void
+  status: 404
+}
+
+export type unpublishTransparencyDocumentResponse409 = {
+  data: void
+  status: 409
+}
+
+export type unpublishTransparencyDocumentResponseSuccess = (unpublishTransparencyDocumentResponse204) & {
+  headers: Headers;
+};
+export type unpublishTransparencyDocumentResponseError = (unpublishTransparencyDocumentResponse401 | unpublishTransparencyDocumentResponse403 | unpublishTransparencyDocumentResponse404 | unpublishTransparencyDocumentResponse409) & {
+  headers: Headers;
+};
+
+export type unpublishTransparencyDocumentResponse = (unpublishTransparencyDocumentResponseSuccess | unpublishTransparencyDocumentResponseError)
+
+export const getUnpublishTransparencyDocumentUrl = (id: string,) => {
+
+
+
+
+  return `/transparency-documents/${id}/unpublish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * document, `409` when it is a Draft.
+ * @summary Takes a Published Transparency Document off `/dokumen`, back to Draft.
+ */
+export const unpublishTransparencyDocument = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<unpublishTransparencyDocumentResponse> => {
+
+  return apiFetch<unpublishTransparencyDocumentResponse>(getUnpublishTransparencyDocumentUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
   }
 );}
 

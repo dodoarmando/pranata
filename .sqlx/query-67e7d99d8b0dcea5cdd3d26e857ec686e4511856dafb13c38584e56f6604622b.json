@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM transparency_documents WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "67e7d99d8b0dcea5cdd3d26e857ec686e4511856dafb13c38584e56f6604622b"
+}

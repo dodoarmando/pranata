@@ -2787,7 +2787,7 @@
         "tags": [
           "media"
         ],
-        "summary": "An image's public rendition: `480`, `960` or `1600` (WebP) or `share` (JPEG). Cached\nforever, since a file never changes; only images that hold no personal data come here.",
+        "summary": "An image's public rendition, `480`, `960` or `1600` (WebP) or `share` (JPEG), or a stored\nPDF as `pdf`. Cached forever, since a file never changes; only files that hold no personal\ndata come here. Nothing served may be sniffed or run as a page.",
         "description": "# Errors\n`404` for an unknown file or variant.",
         "operationId": "getMedia",
         "parameters": [
@@ -2804,7 +2804,7 @@
           {
             "name": "variant",
             "in": "path",
-            "description": "`480`, `960`, `1600` or `share`",
+            "description": "`480`, `960`, `1600`, `share` or `pdf`",
             "required": true,
             "schema": {
               "type": "string"
@@ -2813,10 +2813,11 @@
         ],
         "responses": {
           "200": {
-            "description": "The image",
+            "description": "The file",
             "content": {
               "image/webp": {},
-              "image/jpeg": {}
+              "image/jpeg": {},
+              "application/pdf": {}
             }
           },
           "404": {
@@ -4617,6 +4618,352 @@
         }
       }
     },
+    "/transparency-documents": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Every Transparency Document, Drafts and Published, the latest fiscal year first.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`.",
+        "operationId": "listTransparencyDocuments",
+        "responses": {
+          "200": {
+            "description": "Every Transparency Document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransparencyDocument"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Saves a new Transparency Document as a Draft.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `422`\nfor a blank title, a type outside the catalog, a fiscal year outside 2000–2100 or a file\nthat is not an uploaded PDF.",
+        "operationId": "createTransparencyDocument",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransparencyDocumentFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "422": {
+            "description": "A field is malformed or unknown"
+          }
+        }
+      }
+    },
+    "/transparency-documents/file": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Stores a PDF of at most 25 MiB, for saving into a Transparency Document.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `413`\nover 25 MiB, `415` for content that is not a PDF.",
+        "operationId": "uploadTransparencyDocumentFile",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The stored PDF",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upload"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "413": {
+            "description": "The file is over 25 MiB"
+          },
+          "415": {
+            "description": "The file is not a PDF"
+          }
+        }
+      }
+    },
+    "/transparency-documents/published": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Published Transparency Documents, the latest fiscal year first, a page at a time.",
+        "operationId": "listPublishedTransparencyDocuments",
+        "parameters": [
+          {
+            "name": "group",
+            "in": "query",
+            "description": "Only documents of this group's types.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "A public filter over document types.",
+              "enum": [
+                "budget",
+                "realisation",
+                "planning",
+                "regulation"
+              ]
+            }
+          },
+          {
+            "name": "fiscalYear",
+            "in": "query",
+            "description": "Only documents of this fiscal year.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "From 1, the default.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of Published Transparency Documents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The filter is malformed"
+          }
+        }
+      }
+    },
+    "/transparency-documents/{id}": {
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Saves a Transparency Document, a Draft or a Published one live.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` (or `content.publish`) for a\nDraft or without `content.publish` for a Published document, `404` for an unknown\ndocument, `422` for a blank title, a type outside the catalog, a fiscal year outside\n2000–2100 or a file that is not an uploaded PDF.",
+        "operationId": "updateTransparencyDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Transparency Document",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransparencyDocumentFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The document is saved"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not change this document"
+          },
+          "404": {
+            "description": "There is no such document"
+          },
+          "422": {
+            "description": "A field is malformed or unknown"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Deletes a Draft for good. A Published document is unpublished first.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\ndocument, `409` when it is Published.",
+        "operationId": "deleteTransparencyDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Transparency Document",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Draft is deleted"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such document"
+          },
+          "409": {
+            "description": "The document is Published"
+          }
+        }
+      }
+    },
+    "/transparency-documents/{id}/publish": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Puts a Draft on `/dokumen`.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\ndocument, `409` when it is already Published.",
+        "operationId": "publishTransparencyDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Transparency Document",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The document is Published"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such document"
+          },
+          "409": {
+            "description": "The document is already Published"
+          }
+        }
+      }
+    },
+    "/transparency-documents/{id}/unpublish": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Takes a Published Transparency Document off `/dokumen`, back to Draft.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\ndocument, `409` when it is a Draft.",
+        "operationId": "unpublishTransparencyDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Transparency Document",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The document is a Draft again"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such document"
+          },
+          "409": {
+            "description": "The document is a Draft"
+          }
+        }
+      }
+    },
     "/users": {
       "get": {
         "tags": [
@@ -5810,6 +6157,86 @@
           "developing",
           "underdeveloped",
           "very_underdeveloped"
+        ]
+      },
+      "DocumentCard": {
+        "type": "object",
+        "description": "A Published Transparency Document on `/dokumen`.",
+        "required": [
+          "title",
+          "documentType",
+          "fiscalYear",
+          "file",
+          "byteSize"
+        ],
+        "properties": {
+          "byteSize": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "documentType": {
+            "$ref": "#/components/schemas/DocumentType"
+          },
+          "file": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Served at `/media/{file}/pdf`."
+          },
+          "fiscalYear": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "DocumentPage": {
+        "type": "object",
+        "description": "One page of `/dokumen`.",
+        "required": [
+          "documents",
+          "total",
+          "pageSize",
+          "fiscalYears"
+        ],
+        "properties": {
+          "documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DocumentCard"
+            }
+          },
+          "fiscalYears": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "Every fiscal year with a Published document, the latest first, for the year filter."
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many Published documents match, over every page."
+          }
+        }
+      },
+      "DocumentType": {
+        "type": "string",
+        "description": "A Transparency Document's type, from a fixed catalog.",
+        "enum": [
+          "apbdes",
+          "apbdesAmendment",
+          "realisationReport",
+          "rkpdes",
+          "rpjmdes",
+          "villageRegulation",
+          "other"
         ]
       },
       "DraftKind": {
@@ -7936,6 +8363,65 @@
           "WITA",
           "WIT"
         ]
+      },
+      "TransparencyDocument": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TransparencyDocumentFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "byteSize",
+              "published"
+            ],
+            "properties": {
+              "byteSize": {
+                "type": "integer",
+                "format": "int64",
+                "description": "The PDF's size."
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "published": {
+                "type": "boolean"
+              }
+            }
+          }
+        ],
+        "description": "A Transparency Document as the admin area lists and edits it."
+      },
+      "TransparencyDocumentFields": {
+        "type": "object",
+        "description": "What a User writes in a Transparency Document.",
+        "required": [
+          "title",
+          "documentType",
+          "fiscalYear",
+          "file"
+        ],
+        "properties": {
+          "documentType": {
+            "$ref": "#/components/schemas/DocumentType"
+          },
+          "file": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The PDF, uploaded at `/transparency-documents/file`."
+          },
+          "fiscalYear": {
+            "type": "integer",
+            "format": "int32",
+            "description": "2000–2100."
+          },
+          "title": {
+            "type": "string",
+            "description": "1–200 characters."
+          }
+        }
       },
       "Upload": {
         "type": "object",

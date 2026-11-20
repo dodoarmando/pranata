@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE transparency_documents SET title = $1, document_type = $2, fiscal_year = $3,\n             file_id = $4, updated_at = now() WHERE id = $5",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        {
+          "Custom": {
+            "name": "document_type",
+            "kind": {
+              "Enum": [
+                "apbdes",
+                "apbdes_amendment",
+                "realisation_report",
+                "rkpdes",
+                "rpjmdes",
+                "village_regulation",
+                "other"
+              ]
+            }
+          }
+        },
+        "Int4",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "28011619f25c1fcb37f4d2d8f8d1098f6cbe4e8254048af3472a7d85f901350e"
+}
