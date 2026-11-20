@@ -273,8 +273,8 @@ function Form({ event, categories }: { event: Event; categories: Category[] }) {
             </div>
           </div>
           <p id="event-end-hint" className="text-sm text-muted-foreground">
-            Boleh berhari-hari. Tanpa waktu selesai, kegiatan dianggap selesai di akhir hari
-            mulainya.
+            Boleh berhari-hari. Tanpa waktu selesai, kegiatan pindah ke daftar yang sudah lewat
+            begitu waktu mulainya tiba.
           </p>
         </fieldset>
         <div className="grid gap-2">
