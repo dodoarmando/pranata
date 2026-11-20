@@ -1,6 +1,7 @@
-import { createFileRoute, getRouteApi, Link, notFound } from '@tanstack/react-router';
+import { createFileRoute, getRouteApi, notFound } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { getPublishedPage } from '../../api/generated';
+import { NotFound } from '../../components/not-found';
 import { RichTextBody } from '../../components/rich-text-body';
 import { newsDate } from '../../news';
 import { pageMenus } from '../../page';
@@ -77,18 +78,9 @@ function PageView() {
 
 function PageNotFound() {
   return (
-    <main className="site-container grid gap-4 pt-10 pb-sec md:pt-16">
-      <h1 className="text-[2rem] leading-tight font-semibold tracking-tight">
-        Halaman tidak ditemukan
-      </h1>
-      <p className="text-muted-foreground">
-        Halaman ini mungkin sudah tidak diterbitkan atau alamatnya salah.
-      </p>
-      <p>
-        <Link to="/" className="font-medium text-primary">
-          Kembali ke beranda
-        </Link>
-      </p>
-    </main>
+    <NotFound
+      title="Halaman tidak ditemukan"
+      text="Halaman ini mungkin sudah tidak diterbitkan atau alamatnya salah."
+    />
   );
 }

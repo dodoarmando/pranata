@@ -16,6 +16,7 @@ import { Route as MasukRouteImport } from './routes/masuk'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PublicIndexRouteImport } from './routes/_public/index'
+import { Route as PublicSplatRouteImport } from './routes/_public/$'
 import { Route as PublicAgendaRouteImport } from './routes/_public/agenda'
 import { Route as PublicApbdesRouteImport } from './routes/_public/apbdes'
 import { Route as PublicCariRouteImport } from './routes/_public/cari'
@@ -90,6 +91,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const PublicIndexRoute = PublicIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicSplatRoute = PublicSplatRouteImport.update({
+  id: '/$',
+  path: '/$',
   getParentRoute: () => PublicRoute,
 } as any)
 const PublicAgendaRoute = PublicAgendaRouteImport.update({
@@ -305,6 +311,7 @@ export interface FileRoutesByFullPath {
   '/masuk': typeof MasukRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/$': typeof PublicSplatRoute
   '/agenda': typeof PublicAgendaRoute
   '/apbdes': typeof PublicApbdesRoute
   '/cari': typeof PublicCariRoute
@@ -352,6 +359,7 @@ export interface FileRoutesByTo {
   '/masuk': typeof MasukRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/$': typeof PublicSplatRoute
   '/agenda': typeof PublicAgendaRoute
   '/apbdes': typeof PublicApbdesRoute
   '/cari': typeof PublicCariRoute
@@ -403,6 +411,7 @@ export interface FileRoutesById {
   '/masuk': typeof MasukRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/_public/$': typeof PublicSplatRoute
   '/_public/agenda': typeof PublicAgendaRoute
   '/_public/apbdes': typeof PublicApbdesRoute
   '/_public/cari': typeof PublicCariRoute
@@ -455,6 +464,7 @@ export interface FileRouteTypes {
     | '/masuk'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/$'
     | '/agenda'
     | '/apbdes'
     | '/cari'
@@ -502,6 +512,7 @@ export interface FileRouteTypes {
     | '/masuk'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/$'
     | '/agenda'
     | '/apbdes'
     | '/cari'
@@ -552,6 +563,7 @@ export interface FileRouteTypes {
     | '/masuk'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/_public/$'
     | '/_public/agenda'
     | '/_public/apbdes'
     | '/_public/cari'
@@ -656,6 +668,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof PublicIndexRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/$': {
+      id: '/_public/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof PublicSplatRouteImport
       parentRoute: typeof PublicRoute
     }
     '/_public/agenda': {
@@ -1009,6 +1028,7 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
 )
 
 interface PublicRouteChildren {
+  PublicSplatRoute: typeof PublicSplatRoute
   PublicAgendaRoute: typeof PublicAgendaRoute
   PublicApbdesRoute: typeof PublicApbdesRoute
   PublicCariRoute: typeof PublicCariRoute
@@ -1027,6 +1047,7 @@ interface PublicRouteChildren {
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
+  PublicSplatRoute: PublicSplatRoute,
   PublicAgendaRoute: PublicAgendaRoute,
   PublicApbdesRoute: PublicApbdesRoute,
   PublicCariRoute: PublicCariRoute,
