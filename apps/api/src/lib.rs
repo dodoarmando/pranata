@@ -24,6 +24,7 @@ mod password;
 mod region;
 mod rich_text;
 mod role;
+mod search;
 mod slug;
 pub mod storage;
 mod throttle;
@@ -109,6 +110,7 @@ fn modules() -> OpenApiRouter<AppState> {
         .merge(apbdes_summary::routes())
         .merge(transparency_document::routes())
         .merge(home::routes())
+        .merge(search::routes())
 }
 
 fn api() -> OpenApiRouter<AppState> {

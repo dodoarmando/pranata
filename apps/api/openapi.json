@@ -4968,6 +4968,65 @@
         }
       }
     },
+    "/search": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Published items matching the query, the best match first and then the newest, a page at a\ntime. Ended Announcements are included.",
+        "description": "# Errors\n`400` without a query or for an unknown kind, `422` for a query outside 2–100 characters.",
+        "operationId": "search",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "What the resident typed, 2–100 characters once trimmed; the last word matches as a\nprefix.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Only results of this kind.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SearchKind"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "From 1, the default.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query is missing or the kind unknown"
+          },
+          "422": {
+            "description": "The query is too short or too long"
+          }
+        }
+      }
+    },
     "/tenures": {
       "post": {
         "tags": [
@@ -8938,6 +8997,116 @@
             "items": {
               "$ref": "#/components/schemas/Permission"
             }
+          }
+        }
+      },
+      "SearchKind": {
+        "type": "string",
+        "description": "What kind of item a result is.",
+        "enum": [
+          "newsPost",
+          "announcement",
+          "page",
+          "transparencyDocument"
+        ]
+      },
+      "SearchPage": {
+        "type": "object",
+        "description": "One page of search results.",
+        "required": [
+          "results",
+          "total",
+          "pageSize"
+        ],
+        "properties": {
+          "pageSize": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchResult"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many results match, over every page."
+          }
+        }
+      },
+      "SearchResult": {
+        "type": "object",
+        "description": "One search result, with what its link needs.",
+        "required": [
+          "kind",
+          "title",
+          "datedAt"
+        ],
+        "properties": {
+          "datedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The first publication; a Transparency Document's creation."
+          },
+          "documentType": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TransparencyDocumentType",
+                "description": "Transparency Documents."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "file": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Transparency Documents: the PDF, served at `/media/{file}/pdf`."
+          },
+          "fiscalYear": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Transparency Documents."
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchKind"
+          },
+          "menu": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PageMenu",
+                "description": "Pages."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "slug": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "News Posts, Pages and Announcements that have a body."
+          },
+          "summary": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "News Posts, Announcements and Pages."
+          },
+          "title": {
+            "type": "string"
           }
         }
       },

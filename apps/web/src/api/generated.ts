@@ -1535,6 +1535,61 @@ export interface RoleInput {
   permissions: Permission[];
 }
 
+/**
+ * What kind of item a result is.
+ */
+export type SearchKind = typeof SearchKind[keyof typeof SearchKind];
+
+
+export const SearchKind = {
+  newsPost: 'newsPost',
+  announcement: 'announcement',
+  page: 'page',
+  transparencyDocument: 'transparencyDocument',
+} as const;
+
+/**
+ * One search result, with what its link needs.
+ */
+export interface SearchResult {
+  /** The first publication; a Transparency Document's creation. */
+  datedAt: string;
+  documentType?: TransparencyDocumentType | null;
+  /**
+     * Transparency Documents: the PDF, served at `/media/{file}/pdf`.
+     * @nullable
+     */
+  file?: string | null;
+  /**
+     * Transparency Documents.
+     * @nullable
+     */
+  fiscalYear?: number | null;
+  kind: SearchKind;
+  menu?: PageMenu | null;
+  /**
+     * News Posts, Pages and Announcements that have a body.
+     * @nullable
+     */
+  slug?: string | null;
+  /**
+     * News Posts, Announcements and Pages.
+     * @nullable
+     */
+  summary?: string | null;
+  title: string;
+}
+
+/**
+ * One page of search results.
+ */
+export interface SearchPage {
+  pageSize: number;
+  results: SearchResult[];
+  /** How many results match, over every page. */
+  total: number;
+}
+
 export interface SignIn {
   password: string;
   /** "Ingat saya": 7 days idle and 30 days absolute instead of 30 minutes and 12 hours. */
@@ -1748,6 +1803,21 @@ export type ListPastEventsParams = {
 export type ListPublishedNewsPostsParams = {
   /** Only News Posts filed under this Category. */
   category?: string;
+  /**
+   * From 1, the default.
+   * @minimum 0
+   */
+  page?: number;
+};
+
+export type SearchParams = {
+  /**
+   * What the resident typed, 2–100 characters once trimmed; the last word matches as a
+   * prefix.
+   */
+  q: string;
+  /** Only results of this kind. */
+  type?: SearchKind;
   /**
    * From 1, the default.
    * @minimum 0
@@ -8993,6 +9063,64 @@ export const updateRole = async (id: string,
     method: 'PUT',
     headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
     body: JSON.stringify(roleInput)
+  }
+);}
+
+
+
+export type searchResponse200 = {
+  data: SearchPage
+  status: 200
+}
+
+export type searchResponse400 = {
+  data: void
+  status: 400
+}
+
+export type searchResponse422 = {
+  data: void
+  status: 422
+}
+
+export type searchResponseSuccess = (searchResponse200) & {
+  headers: Headers;
+};
+export type searchResponseError = (searchResponse400 | searchResponse422) & {
+  headers: Headers;
+};
+
+export type searchResponse = (searchResponseSuccess | searchResponseError)
+
+export const getSearchUrl = (params: SearchParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/search?${stringifiedParams}` : `/search`
+}
+
+/**
+ * # Errors
+ * `400` without a query or for an unknown kind, `422` for a query outside 2–100 characters.
+ * @summary Published items matching the query, the best match first and then the newest, a page at a
+time. Ended Announcements are included.
+ */
+export const search = async (params: SearchParams, options?: Parameters<typeof apiFetch>[1]): Promise<searchResponse> => {
+
+  return apiFetch<searchResponse>(getSearchUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
   }
 );}
 
