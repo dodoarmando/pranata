@@ -318,6 +318,7 @@ export const DraftKind = {
   announcement: 'announcement',
   event: 'event',
   page: 'page',
+  album: 'album',
 } as const;
 
 /**

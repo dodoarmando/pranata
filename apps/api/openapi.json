@@ -4949,7 +4949,8 @@
           "newsPost",
           "announcement",
           "event",
-          "page"
+          "page",
+          "album"
         ]
       },
       "DraftSummary": {
