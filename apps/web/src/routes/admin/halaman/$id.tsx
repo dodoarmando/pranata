@@ -314,7 +314,9 @@ function Form({ page }: { page: Page & { body: JSONContent } }) {
             id="page-menu"
             value={fields.menu}
             disabled={locked}
-            onChange={(event) => change({ menu: event.currentTarget.value as PageMenu })}
+            onChange={(event) =>
+              change({ menu: event.currentTarget.value as PageMenu, order: null })
+            }
           >
             {Object.entries(pageMenus).map(([menu, { label }]) => (
               <NativeSelectOption key={menu} value={menu}>
@@ -338,7 +340,8 @@ function Form({ page }: { page: Page & { body: JSONContent } }) {
             }}
           />
           <p id="page-order-hint" className="text-sm text-muted-foreground">
-            Halaman dengan nomor terkecil tampil paling atas di menunya.
+            Halaman dengan nomor terkecil tampil paling atas di menunya; kosongkan agar berada
+            paling bawah saat pindah menu.
           </p>
         </div>
         <div className="grid gap-2">
