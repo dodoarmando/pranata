@@ -13,6 +13,8 @@ import { Route as PublicRouteImport } from './routes/_public'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as AksesRouteImport } from './routes/akses'
 import { Route as MasukRouteImport } from './routes/masuk'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PublicIndexRouteImport } from './routes/_public/index'
 import { Route as PublicAgendaRouteImport } from './routes/_public/agenda'
 import { Route as PublicApbdesRouteImport } from './routes/_public/apbdes'
@@ -72,6 +74,16 @@ const AksesRoute = AksesRouteImport.update({
 const MasukRoute = MasukRouteImport.update({
   id: '/masuk',
   path: '/masuk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PublicIndexRoute = PublicIndexRouteImport.update({
@@ -285,6 +297,8 @@ export interface FileRoutesByFullPath {
   '/': typeof PublicIndexRoute
   '/akses': typeof AksesRoute
   '/masuk': typeof MasukRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/agenda': typeof PublicAgendaRoute
   '/apbdes': typeof PublicApbdesRoute
   '/cari': typeof PublicCariRoute
@@ -329,6 +343,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/akses': typeof AksesRoute
   '/masuk': typeof MasukRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/agenda': typeof PublicAgendaRoute
   '/apbdes': typeof PublicApbdesRoute
   '/cari': typeof PublicCariRoute
@@ -377,6 +393,8 @@ export interface FileRoutesById {
   '/_public': typeof PublicRouteWithChildren
   '/akses': typeof AksesRoute
   '/masuk': typeof MasukRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_public/agenda': typeof PublicAgendaRoute
   '/_public/apbdes': typeof PublicApbdesRoute
   '/_public/cari': typeof PublicCariRoute
@@ -426,6 +444,8 @@ export interface FileRouteTypes {
     | '/'
     | '/akses'
     | '/masuk'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/agenda'
     | '/apbdes'
     | '/cari'
@@ -470,6 +490,8 @@ export interface FileRouteTypes {
   to:
     | '/akses'
     | '/masuk'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/agenda'
     | '/apbdes'
     | '/cari'
@@ -517,6 +539,8 @@ export interface FileRouteTypes {
     | '/_public'
     | '/akses'
     | '/masuk'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/_public/agenda'
     | '/_public/apbdes'
     | '/_public/cari'
@@ -565,6 +589,8 @@ export interface RootRouteChildren {
   PublicRoute: typeof PublicRouteWithChildren
   AksesRoute: typeof AksesRoute
   MasukRoute: typeof MasukRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   MediaIdVariantRoute: typeof MediaIdVariantRoute
 }
 
@@ -596,6 +622,20 @@ declare module '@tanstack/react-router' {
       path: '/masuk'
       fullPath: '/masuk'
       preLoaderRoute: typeof MasukRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_public/': {
@@ -992,6 +1032,8 @@ const rootRouteChildren: RootRouteChildren = {
   PublicRoute: PublicRouteWithChildren,
   AksesRoute: AksesRoute,
   MasukRoute: MasukRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   MediaIdVariantRoute: MediaIdVariantRoute,
 }
 export const routeTree = rootRouteImport
