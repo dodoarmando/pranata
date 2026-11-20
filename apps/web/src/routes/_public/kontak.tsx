@@ -1,11 +1,25 @@
 import { createFileRoute, getRouteApi } from '@tanstack/react-router';
+import { createServerFn } from '@tanstack/react-start';
 import { ExternalLink, Mail, MapPin, Phone } from 'lucide-react';
-import type { Village } from '../../api/generated';
+import { listPublishedImportantContacts, type Village } from '../../api/generated';
 import { regencyShort, villageTitle } from '../../village';
 
 const root = getRouteApi('__root__');
 
+// Server-only so the browser never needs to reach the API directly.
+const fetchContacts = createServerFn({ method: 'GET' }).handler(async () => {
+  try {
+    const response = await listPublishedImportantContacts();
+    return response.status === 200 ? response.data : [];
+  } catch {
+    return [];
+  }
+});
+
+const telHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, '')}`;
+
 export const Route = createFileRoute('/_public/kontak')({
+  loader: () => fetchContacts(),
   head: ({ matches }) => {
     // The root match comes first; its loader data is typed only through getRouteApi.
     const village = matches[0]?.loaderData as Village | null | undefined;
@@ -16,6 +30,7 @@ export const Route = createFileRoute('/_public/kontak')({
 
 function ContactPage() {
   const village = root.useLoaderData();
+  const groups = Route.useLoaderData();
   const maps =
     village?.latitude != null && village.longitude != null
       ? `https://www.google.com/maps/search/?api=1&query=${village.latitude},${village.longitude}`
@@ -52,7 +67,7 @@ function ContactPage() {
           {village.phone && (
             <p className="flex gap-3">
               <Phone className="mt-1 size-5 flex-none text-primary" aria-hidden="true" />
-              <a href={`tel:${village.phone.replace(/[^\d+]/g, '')}`}>{village.phone}</a>
+              <a href={telHref(village.phone)}>{village.phone}</a>
             </p>
           )}
           {village.email && (
@@ -64,6 +79,38 @@ function ContactPage() {
         </address>
       ) : (
         <p className="text-muted-foreground">Informasi kontak belum tersedia.</p>
+      )}
+      {groups.length > 0 && (
+        <section aria-labelledby="important-contacts" className="grid gap-6">
+          <h2 id="important-contacts" className="text-2xl font-semibold tracking-tight">
+            Kontak penting
+          </h2>
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {groups.map((group) => (
+              <section key={group.category} aria-label={group.category} className="grid gap-3">
+                <h3 className="font-semibold">{group.category}</h3>
+                <ul className="grid gap-3">
+                  {group.contacts.map((contact) => (
+                    <li key={`${contact.name}-${contact.phone}`} className="flex gap-3">
+                      <Phone className="mt-1 size-4 flex-none text-primary" aria-hidden="true" />
+                      <span>
+                        {contact.name}
+                        <a href={telHref(contact.phone)} className="block font-medium">
+                          {contact.phone}
+                        </a>
+                        {contact.note && (
+                          <span className="block text-sm text-muted-foreground">
+                            {contact.note}
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        </section>
       )}
     </main>
   );
