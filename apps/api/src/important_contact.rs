@@ -1,8 +1,8 @@
 //! Important Contacts: phone numbers residents may need, grouped by the Village's ordered
-//! contact categories, saved as Drafts and then Published.
+//! Contact Categories, saved as Drafts and then Published.
 //!
 //! `content.write` creates and edits Drafts; `content.publish` also publishes, unpublishes,
-//! edits Published contacts, deletes Drafts and manages the contact categories.
+//! edits Published contacts, deletes Drafts and manages the Contact Categories.
 
 use axum::{
     Json,
@@ -20,7 +20,7 @@ use crate::{
     ApiError, AppState,
     audit::{self, Actor},
     auth::Session,
-    category::{Category, CategoryFields, ensure_publisher, unique_name},
+    category::{ensure_publisher, label, unique_name},
     government::Created,
     news_post::{ensure_writer, saved},
     village::diff,
@@ -54,19 +54,33 @@ impl Order {
     }
 }
 
-/// Every contact category in order, for the public site and the admin area.
+/// One of the Village's ordered labels Important Contacts are grouped under.
+#[derive(Serialize, ToSchema)]
+pub struct ContactCategory {
+    id: Uuid,
+    name: String,
+}
+
+/// What a publisher writes in a Contact Category.
+#[derive(Deserialize, ToSchema)]
+pub struct ContactCategoryFields {
+    /// 1–50 characters, unique whatever the case.
+    name: String,
+}
+
+/// Every Contact Category in order, for the public site and the admin area.
 #[utoipa::path(
     get,
     path = "/contact-categories",
     operation_id = "listContactCategories",
     tag = "content",
-    responses((status = OK, description = "Every contact category", body = Vec<Category>)),
+    responses((status = OK, description = "Every Contact Category", body = Vec<ContactCategory>)),
 )]
 pub(crate) async fn list_categories(
     State(pool): State<PgPool>,
-) -> Result<Json<Vec<Category>>, ApiError> {
+) -> Result<Json<Vec<ContactCategory>>, ApiError> {
     let categories = sqlx::query_as!(
-        Category,
+        ContactCategory,
         "SELECT id, name FROM contact_categories ORDER BY sort_order, id"
     )
     .fetch_all(&pool)
@@ -74,7 +88,7 @@ pub(crate) async fn list_categories(
     Ok(Json(categories))
 }
 
-/// Adds a contact category, last.
+/// Adds a Contact Category, last.
 ///
 /// # Errors
 /// `401` without a live session, `403` without `content.publish`, `409` for a name in use,
@@ -84,22 +98,22 @@ pub(crate) async fn list_categories(
     path = "/contact-categories",
     operation_id = "createContactCategory",
     tag = "content",
-    request_body = CategoryFields,
+    request_body = ContactCategoryFields,
     responses(
-        (status = CREATED, description = "The new contact category", body = Created),
+        (status = CREATED, description = "The new Contact Category", body = Created),
         (status = UNAUTHORIZED, description = "There is no live session"),
         (status = FORBIDDEN, description = "The User may not publish content"),
-        (status = CONFLICT, description = "Another contact category has the name"),
+        (status = CONFLICT, description = "Another Contact Category has the name"),
         (status = UNPROCESSABLE_ENTITY, description = "The name is blank or too long"),
     ),
 )]
 pub(crate) async fn create_category(
     State(pool): State<PgPool>,
     session: Session,
-    Json(body): Json<CategoryFields>,
+    Json(body): Json<ContactCategoryFields>,
 ) -> Result<(StatusCode, Json<Created>), ApiError> {
     ensure_publisher(&session)?;
-    let name = body.name()?;
+    let name = label(&body.name)?;
     let mut tx = pool.begin().await?;
     let id = unique_name(
         sqlx::query_scalar!(
@@ -123,25 +137,25 @@ pub(crate) async fn create_category(
     Ok((StatusCode::CREATED, Json(Created { id })))
 }
 
-/// Renames a contact category.
+/// Renames a Contact Category.
 ///
 /// # Errors
 /// `401` without a live session, `403` without `content.publish`, `404` for an unknown
-/// contact category, `409` for a name in use, `422` for a blank name or one over 50
+/// Contact Category, `409` for a name in use, `422` for a blank name or one over 50
 /// characters.
 #[utoipa::path(
     put,
     path = "/contact-categories/{id}",
     operation_id = "updateContactCategory",
     tag = "content",
-    params(("id" = Uuid, Path, description = "The contact category")),
-    request_body = CategoryFields,
+    params(("id" = Uuid, Path, description = "The Contact Category")),
+    request_body = ContactCategoryFields,
     responses(
-        (status = NO_CONTENT, description = "The contact category is renamed"),
+        (status = NO_CONTENT, description = "The Contact Category is renamed"),
         (status = UNAUTHORIZED, description = "There is no live session"),
         (status = FORBIDDEN, description = "The User may not publish content"),
-        (status = NOT_FOUND, description = "There is no such contact category"),
-        (status = CONFLICT, description = "Another contact category has the name"),
+        (status = NOT_FOUND, description = "There is no such Contact Category"),
+        (status = CONFLICT, description = "Another Contact Category has the name"),
         (status = UNPROCESSABLE_ENTITY, description = "The name is blank or too long"),
     ),
 )]
@@ -149,10 +163,10 @@ pub(crate) async fn update_category(
     State(pool): State<PgPool>,
     session: Session,
     Path(id): Path<Uuid>,
-    Json(body): Json<CategoryFields>,
+    Json(body): Json<ContactCategoryFields>,
 ) -> Result<StatusCode, ApiError> {
     ensure_publisher(&session)?;
-    let name = body.name()?;
+    let name = label(&body.name)?;
     let mut tx = pool.begin().await?;
     let old = sqlx::query_scalar!(
         "SELECT name FROM contact_categories WHERE id = $1 FOR UPDATE",
@@ -184,23 +198,23 @@ pub(crate) async fn update_category(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Deletes a contact category no contact, Draft or Published, is filed under.
+/// Deletes a Contact Category no contact, Draft or Published, is filed under.
 ///
 /// # Errors
 /// `401` without a live session, `403` without `content.publish`, `404` for an unknown
-/// contact category, `409` while a contact is filed under it.
+/// Contact Category, `409` while a contact is filed under it.
 #[utoipa::path(
     delete,
     path = "/contact-categories/{id}",
     operation_id = "deleteContactCategory",
     tag = "content",
-    params(("id" = Uuid, Path, description = "The contact category")),
+    params(("id" = Uuid, Path, description = "The Contact Category")),
     responses(
-        (status = NO_CONTENT, description = "The contact category is deleted"),
+        (status = NO_CONTENT, description = "The Contact Category is deleted"),
         (status = UNAUTHORIZED, description = "There is no live session"),
         (status = FORBIDDEN, description = "The User may not publish content"),
-        (status = NOT_FOUND, description = "There is no such contact category"),
-        (status = CONFLICT, description = "A contact is filed under the contact category"),
+        (status = NOT_FOUND, description = "There is no such Contact Category"),
+        (status = CONFLICT, description = "A contact is filed under the Contact Category"),
     ),
 )]
 pub(crate) async fn delete_category(
@@ -234,11 +248,11 @@ pub(crate) async fn delete_category(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Puts every contact category in a new order.
+/// Puts every Contact Category in a new order.
 ///
 /// # Errors
 /// `401` without a live session, `403` without `content.publish`, `422` unless the list holds
-/// every contact category exactly once.
+/// every Contact Category exactly once.
 #[utoipa::path(
     put,
     path = "/contact-categories/order",
@@ -246,10 +260,10 @@ pub(crate) async fn delete_category(
     tag = "content",
     request_body = Order,
     responses(
-        (status = NO_CONTENT, description = "The contact categories are reordered"),
+        (status = NO_CONTENT, description = "The Contact Categories are reordered"),
         (status = UNAUTHORIZED, description = "There is no live session"),
         (status = FORBIDDEN, description = "The User may not publish content"),
-        (status = UNPROCESSABLE_ENTITY, description = "The list is not every contact category exactly once"),
+        (status = UNPROCESSABLE_ENTITY, description = "The list is not every Contact Category exactly once"),
     ),
 )]
 pub(crate) async fn order_categories(
@@ -294,7 +308,7 @@ pub(crate) async fn order_categories(
 pub struct ImportantContactFields {
     /// 1–100 characters.
     name: String,
-    /// The contact category it is listed under.
+    /// The Contact Category it is listed under.
     category: Uuid,
     /// Up to 30 characters with at least three digits, such as 112, and only digits, spaces
     /// and `+-()`.
@@ -694,17 +708,17 @@ pub(crate) async fn delete(
 
 /// A Published Important Contact as the public reads it.
 #[derive(Serialize, ToSchema)]
-pub struct PublishedContact {
+pub struct PublishedImportantContact {
     name: String,
     phone: String,
     note: Option<String>,
 }
 
-/// One contact category's Published contacts, in order.
+/// One Contact Category's Published contacts, in order.
 #[derive(Serialize, ToSchema)]
-pub struct ContactGroup {
+pub struct ImportantContactGroup {
     category: String,
-    contacts: Vec<PublishedContact>,
+    contacts: Vec<PublishedImportantContact>,
 }
 
 /// Published Important Contacts grouped by category, each in order; a category without a
@@ -714,11 +728,11 @@ pub struct ContactGroup {
     path = "/important-contacts/published",
     operation_id = "listPublishedImportantContacts",
     tag = "content",
-    responses((status = OK, description = "Every Published Important Contact", body = Vec<ContactGroup>)),
+    responses((status = OK, description = "Every Published Important Contact", body = Vec<ImportantContactGroup>)),
 )]
 pub(crate) async fn list_published(
     State(pool): State<PgPool>,
-) -> Result<Json<Vec<ContactGroup>>, ApiError> {
+) -> Result<Json<Vec<ImportantContactGroup>>, ApiError> {
     let rows = sqlx::query!(
         r#"SELECT category.name AS category, contact.name, phone, note
            FROM important_contacts contact
@@ -729,9 +743,9 @@ pub(crate) async fn list_published(
     )
     .fetch_all(&pool)
     .await?;
-    let mut groups: Vec<ContactGroup> = Vec::new();
+    let mut groups: Vec<ImportantContactGroup> = Vec::new();
     for row in rows {
-        let contact = PublishedContact {
+        let contact = PublishedImportantContact {
             name: row.name,
             phone: row.phone,
             note: row.note,
@@ -739,7 +753,7 @@ pub(crate) async fn list_published(
         // Category names are unique, so a new name starts the next group.
         match groups.last_mut() {
             Some(group) if group.category == row.category => group.contacts.push(contact),
-            _ => groups.push(ContactGroup {
+            _ => groups.push(ImportantContactGroup {
                 category: row.category,
                 contacts: vec![contact],
             }),

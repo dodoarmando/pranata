@@ -1576,17 +1576,17 @@
         "tags": [
           "content"
         ],
-        "summary": "Every contact category in order, for the public site and the admin area.",
+        "summary": "Every Contact Category in order, for the public site and the admin area.",
         "operationId": "listContactCategories",
         "responses": {
           "200": {
-            "description": "Every contact category",
+            "description": "Every Contact Category",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Category"
+                    "$ref": "#/components/schemas/ContactCategory"
                   }
                 }
               }
@@ -1598,14 +1598,14 @@
         "tags": [
           "content"
         ],
-        "summary": "Adds a contact category, last.",
+        "summary": "Adds a Contact Category, last.",
         "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `409` for a name in use,\n`422` for a blank name or one over 50 characters.",
         "operationId": "createContactCategory",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CategoryFields"
+                "$ref": "#/components/schemas/ContactCategoryFields"
               }
             }
           },
@@ -1613,7 +1613,7 @@
         },
         "responses": {
           "201": {
-            "description": "The new contact category",
+            "description": "The new Contact Category",
             "content": {
               "application/json": {
                 "schema": {
@@ -1629,7 +1629,7 @@
             "description": "The User may not publish content"
           },
           "409": {
-            "description": "Another contact category has the name"
+            "description": "Another Contact Category has the name"
           },
           "422": {
             "description": "The name is blank or too long"
@@ -1642,8 +1642,8 @@
         "tags": [
           "content"
         ],
-        "summary": "Puts every contact category in a new order.",
-        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `422` unless the list holds\nevery contact category exactly once.",
+        "summary": "Puts every Contact Category in a new order.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `422` unless the list holds\nevery Contact Category exactly once.",
         "operationId": "orderContactCategories",
         "requestBody": {
           "content": {
@@ -1657,7 +1657,7 @@
         },
         "responses": {
           "204": {
-            "description": "The contact categories are reordered"
+            "description": "The Contact Categories are reordered"
           },
           "401": {
             "description": "There is no live session"
@@ -1666,7 +1666,7 @@
             "description": "The User may not publish content"
           },
           "422": {
-            "description": "The list is not every contact category exactly once"
+            "description": "The list is not every Contact Category exactly once"
           }
         }
       }
@@ -1676,14 +1676,14 @@
         "tags": [
           "content"
         ],
-        "summary": "Renames a contact category.",
-        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\ncontact category, `409` for a name in use, `422` for a blank name or one over 50\ncharacters.",
+        "summary": "Renames a Contact Category.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\nContact Category, `409` for a name in use, `422` for a blank name or one over 50\ncharacters.",
         "operationId": "updateContactCategory",
         "parameters": [
           {
             "name": "id",
             "in": "path",
-            "description": "The contact category",
+            "description": "The Contact Category",
             "required": true,
             "schema": {
               "type": "string",
@@ -1695,7 +1695,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CategoryFields"
+                "$ref": "#/components/schemas/ContactCategoryFields"
               }
             }
           },
@@ -1703,7 +1703,7 @@
         },
         "responses": {
           "204": {
-            "description": "The contact category is renamed"
+            "description": "The Contact Category is renamed"
           },
           "401": {
             "description": "There is no live session"
@@ -1712,10 +1712,10 @@
             "description": "The User may not publish content"
           },
           "404": {
-            "description": "There is no such contact category"
+            "description": "There is no such Contact Category"
           },
           "409": {
-            "description": "Another contact category has the name"
+            "description": "Another Contact Category has the name"
           },
           "422": {
             "description": "The name is blank or too long"
@@ -1726,14 +1726,14 @@
         "tags": [
           "content"
         ],
-        "summary": "Deletes a contact category no contact, Draft or Published, is filed under.",
-        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\ncontact category, `409` while a contact is filed under it.",
+        "summary": "Deletes a Contact Category no contact, Draft or Published, is filed under.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\nContact Category, `409` while a contact is filed under it.",
         "operationId": "deleteContactCategory",
         "parameters": [
           {
             "name": "id",
             "in": "path",
-            "description": "The contact category",
+            "description": "The Contact Category",
             "required": true,
             "schema": {
               "type": "string",
@@ -1743,7 +1743,7 @@
         ],
         "responses": {
           "204": {
-            "description": "The contact category is deleted"
+            "description": "The Contact Category is deleted"
           },
           "401": {
             "description": "There is no live session"
@@ -1752,10 +1752,10 @@
             "description": "The User may not publish content"
           },
           "404": {
-            "description": "There is no such contact category"
+            "description": "There is no such Contact Category"
           },
           "409": {
-            "description": "A contact is filed under the contact category"
+            "description": "A contact is filed under the Contact Category"
           }
         }
       }
@@ -2262,7 +2262,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ContactGroup"
+                    "$ref": "#/components/schemas/ImportantContactGroup"
                   }
                 }
               }
@@ -5673,22 +5673,33 @@
           }
         }
       },
-      "ContactGroup": {
+      "ContactCategory": {
         "type": "object",
-        "description": "One contact category's Published contacts, in order.",
+        "description": "One of the Village's ordered labels Important Contacts are grouped under.",
         "required": [
-          "category",
-          "contacts"
+          "id",
+          "name"
         ],
         "properties": {
-          "category": {
-            "type": "string"
+          "id": {
+            "type": "string",
+            "format": "uuid"
           },
-          "contacts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PublishedContact"
-            }
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "ContactCategoryFields": {
+        "type": "object",
+        "description": "What a publisher writes in a Contact Category.",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "1–50 characters, unique whatever the case."
           }
         }
       },
@@ -6234,7 +6245,7 @@
           "category": {
             "type": "string",
             "format": "uuid",
-            "description": "The contact category it is listed under."
+            "description": "The Contact Category it is listed under."
           },
           "name": {
             "type": "string",
@@ -6258,6 +6269,25 @@
           "phone": {
             "type": "string",
             "description": "Up to 30 characters with at least three digits, such as 112, and only digits, spaces\nand `+-()`."
+          }
+        }
+      },
+      "ImportantContactGroup": {
+        "type": "object",
+        "description": "One Contact Category's Published contacts, in order.",
+        "required": [
+          "category",
+          "contacts"
+        ],
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "contacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublishedImportantContact"
+            }
           }
         }
       },
@@ -7337,7 +7367,7 @@
           }
         }
       },
-      "PublishedContact": {
+      "PublishedImportantContact": {
         "type": "object",
         "description": "A Published Important Contact as the public reads it.",
         "required": [

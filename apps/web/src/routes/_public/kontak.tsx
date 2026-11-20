@@ -7,7 +7,7 @@ import { regencyShort, villageTitle } from '../../village';
 const root = getRouteApi('__root__');
 
 // Server-only so the browser never needs to reach the API directly.
-const fetchContacts = createServerFn({ method: 'GET' }).handler(async () => {
+const fetchImportantContacts = createServerFn({ method: 'GET' }).handler(async () => {
   try {
     const response = await listPublishedImportantContacts();
     return response.status === 200 ? response.data : [];
@@ -19,7 +19,7 @@ const fetchContacts = createServerFn({ method: 'GET' }).handler(async () => {
 const telHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, '')}`;
 
 export const Route = createFileRoute('/_public/kontak')({
-  loader: () => fetchContacts(),
+  loader: () => fetchImportantContacts(),
   head: ({ matches }) => {
     // The root match comes first; its loader data is typed only through getRouteApi.
     const village = matches[0]?.loaderData as Village | null | undefined;
