@@ -30,6 +30,116 @@ export interface ActiveSession {
 }
 
 /**
+ * Optional; only an Announcement with a body has a detail page. Tiptap JSON of the same
+ * allowlist as a News Post's body.
+ */
+export type AnnouncementFieldsBody = { [key: string]: unknown };
+
+/**
+ * What a User writes in an Announcement. A Draft may leave out what publishing requires.
+ */
+export interface AnnouncementFields {
+  /**
+     * Optional; only an Announcement with a body has a detail page. Tiptap JSON of the same
+     * allowlist as a News Post's body.
+     */
+  body?: AnnouncementFieldsBody;
+  /**
+     * The last day in effect, inclusive and not before the start; required to publish.
+     * @nullable
+     */
+  endDate?: string | null;
+  /**
+     * Made from the title when blank; transliterated, and locked once first published.
+     * @nullable
+     */
+  slug?: string | null;
+  /**
+     * The first day in effect, in the Village's time zone; required to publish.
+     * @nullable
+     */
+  startDate?: string | null;
+  /**
+     * Plain text, at most 250 characters; required to publish.
+     * @nullable
+     */
+  summary?: string | null;
+  /** 1–150 characters. */
+  title: string;
+}
+
+/**
+ * An Announcement as the admin area edits it.
+ */
+export type Announcement = AnnouncementFields & ({
+  /**
+     * Null until first published; the slug is locked once set.
+     * @nullable
+     */
+  firstPublishedAt?: string | null;
+  id: string;
+  published: boolean;
+  updatedAt: string;
+});
+
+/**
+ * Berlaku, Akan berlaku or Berakhir, on a given day.
+ */
+export type Validity = typeof Validity[keyof typeof Validity];
+
+
+export const Validity = {
+  upcoming: 'upcoming',
+  inEffect: 'inEffect',
+  ended: 'ended',
+} as const;
+
+/**
+ * A Published Announcement in a public list.
+ */
+export interface AnnouncementCard {
+  endDate: string;
+  /** Whether it has a detail page. */
+  hasBody: boolean;
+  slug: string;
+  startDate: string;
+  summary: string;
+  title: string;
+  /** Today's, in the Village's time zone. */
+  validity: Validity;
+}
+
+/**
+ * One page of the public Announcement list.
+ */
+export interface AnnouncementPage {
+  announcements: AnnouncementCard[];
+  pageSize: number;
+  /** How many Published Announcements there are, over every page. */
+  total: number;
+}
+
+/**
+ * A line of the admin area's Announcement list.
+ */
+export interface AnnouncementSummary {
+  /** The creating User's username. */
+  author: string;
+  /** @nullable */
+  endDate?: string | null;
+  /** @nullable */
+  firstPublishedAt?: string | null;
+  id: string;
+  published: boolean;
+  slug: string;
+  /** @nullable */
+  startDate?: string | null;
+  title: string;
+  updatedAt: string;
+  validity?: Validity | null;
+}
+
+/**
  * One field's change in an Audit Entry.
  */
 export interface FieldChange {
@@ -657,6 +767,27 @@ export interface PositionName {
 /**
  * Tiptap JSON of the allowed nodes and marks only.
  */
+export type PublishedAnnouncementBody = { [key: string]: unknown };
+
+/**
+ * A Published Announcement with a body, as the public reads it.
+ */
+export interface PublishedAnnouncement {
+  /** Tiptap JSON of the allowed nodes and marks only. */
+  body: PublishedAnnouncementBody;
+  endDate: string;
+  /** The first publication. */
+  publishedAt: string;
+  slug: string;
+  startDate: string;
+  summary: string;
+  title: string;
+  validity: Validity;
+}
+
+/**
+ * Tiptap JSON of the allowed nodes and marks only.
+ */
 export type PublishedNewsPostBody = { [key: string]: unknown };
 
 /**
@@ -852,6 +983,14 @@ export interface VisionMission {
   vision: string;
 }
 
+export type ListPublishedAnnouncementsParams = {
+  /**
+   * From 1, the default.
+   * @minimum 0
+   */
+  page?: number;
+};
+
 export type ListAuditEntriesParams = {
   objectType?: string;
   objectId?: string;
@@ -907,6 +1046,556 @@ const getHeaders = (...sources: (RequestInit['headers'] | Record<string, string 
   }
   return Object.fromEntries(layers.reverse().flat()) as Extract<RequestInit['headers'], Record<string, unknown>>;
 };
+
+export type listAnnouncementsResponse200 = {
+  data: AnnouncementSummary[]
+  status: 200
+}
+
+export type listAnnouncementsResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listAnnouncementsResponse403 = {
+  data: void
+  status: 403
+}
+
+export type listAnnouncementsResponseSuccess = (listAnnouncementsResponse200) & {
+  headers: Headers;
+};
+export type listAnnouncementsResponseError = (listAnnouncementsResponse401 | listAnnouncementsResponse403) & {
+  headers: Headers;
+};
+
+export type listAnnouncementsResponse = (listAnnouncementsResponseSuccess | listAnnouncementsResponseError)
+
+export const getListAnnouncementsUrl = () => {
+
+
+
+
+  return `/announcements`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`.
+ * @summary Every Announcement, Drafts and Published, the latest changed first.
+ */
+export const listAnnouncements = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listAnnouncementsResponse> => {
+
+  return apiFetch<listAnnouncementsResponse>(getListAnnouncementsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createAnnouncementResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createAnnouncementResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createAnnouncementResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createAnnouncementResponse409 = {
+  data: void
+  status: 409
+}
+
+export type createAnnouncementResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createAnnouncementResponseSuccess = (createAnnouncementResponse201) & {
+  headers: Headers;
+};
+export type createAnnouncementResponseError = (createAnnouncementResponse401 | createAnnouncementResponse403 | createAnnouncementResponse409 | createAnnouncementResponse422) & {
+  headers: Headers;
+};
+
+export type createAnnouncementResponse = (createAnnouncementResponseSuccess | createAnnouncementResponseError)
+
+export const getCreateAnnouncementUrl = () => {
+
+
+
+
+  return `/announcements`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `409`
+ * when another Announcement takes the slug meanwhile, `422` for a blank title, a malformed
+ * field, an end before the start or a body outside the allowlist.
+ * @summary Starts a Draft written by the signed-in User; only the title is required.
+ */
+export const createAnnouncement = async (announcementFields: AnnouncementFields, options?: Parameters<typeof apiFetch>[1]): Promise<createAnnouncementResponse> => {
+
+  return apiFetch<createAnnouncementResponse>(getCreateAnnouncementUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(announcementFields)
+  }
+);}
+
+
+
+export type listAnnouncementsInEffectResponse200 = {
+  data: AnnouncementCard[]
+  status: 200
+}
+
+export type listAnnouncementsInEffectResponseSuccess = (listAnnouncementsInEffectResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listAnnouncementsInEffectResponse = (listAnnouncementsInEffectResponseSuccess)
+
+export const getListAnnouncementsInEffectUrl = () => {
+
+
+
+
+  return `/announcements/in-effect`
+}
+
+/**
+ * @summary The Published Announcements in effect today, the latest start first, for the home page.
+ */
+export const listAnnouncementsInEffect = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listAnnouncementsInEffectResponse> => {
+
+  return apiFetch<listAnnouncementsInEffectResponse>(getListAnnouncementsInEffectUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listPublishedAnnouncementsResponse200 = {
+  data: AnnouncementPage
+  status: 200
+}
+
+export type listPublishedAnnouncementsResponseSuccess = (listPublishedAnnouncementsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listPublishedAnnouncementsResponse = (listPublishedAnnouncementsResponseSuccess)
+
+export const getListPublishedAnnouncementsUrl = (params?: ListPublishedAnnouncementsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/announcements/published?${stringifiedParams}` : `/announcements/published`
+}
+
+/**
+ * @summary Every Published Announcement, ended ones included, the latest start first, a page at a time.
+ */
+export const listPublishedAnnouncements = async (params?: ListPublishedAnnouncementsParams, options?: Parameters<typeof apiFetch>[1]): Promise<listPublishedAnnouncementsResponse> => {
+
+  return apiFetch<listPublishedAnnouncementsResponse>(getListPublishedAnnouncementsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getPublishedAnnouncementResponse200 = {
+  data: PublishedAnnouncement
+  status: 200
+}
+
+export type getPublishedAnnouncementResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getPublishedAnnouncementResponseSuccess = (getPublishedAnnouncementResponse200) & {
+  headers: Headers;
+};
+export type getPublishedAnnouncementResponseError = (getPublishedAnnouncementResponse404) & {
+  headers: Headers;
+};
+
+export type getPublishedAnnouncementResponse = (getPublishedAnnouncementResponseSuccess | getPublishedAnnouncementResponseError)
+
+export const getGetPublishedAnnouncementUrl = (slug: string,) => {
+
+
+
+
+  return `/announcements/published/${slug}`
+}
+
+/**
+ * # Errors
+ * `404` for a slug no Published Announcement with a body has.
+ * @summary One Published Announcement by its slug; only one with a body has a detail page.
+ */
+export const getPublishedAnnouncement = async (slug: string, options?: Parameters<typeof apiFetch>[1]): Promise<getPublishedAnnouncementResponse> => {
+
+  return apiFetch<getPublishedAnnouncementResponse>(getGetPublishedAnnouncementUrl(slug),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getAnnouncementResponse200 = {
+  data: Announcement
+  status: 200
+}
+
+export type getAnnouncementResponse401 = {
+  data: void
+  status: 401
+}
+
+export type getAnnouncementResponse403 = {
+  data: void
+  status: 403
+}
+
+export type getAnnouncementResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getAnnouncementResponseSuccess = (getAnnouncementResponse200) & {
+  headers: Headers;
+};
+export type getAnnouncementResponseError = (getAnnouncementResponse401 | getAnnouncementResponse403 | getAnnouncementResponse404) & {
+  headers: Headers;
+};
+
+export type getAnnouncementResponse = (getAnnouncementResponseSuccess | getAnnouncementResponseError)
+
+export const getGetAnnouncementUrl = (id: string,) => {
+
+
+
+
+  return `/announcements/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `404`
+ * for an unknown Announcement.
+ * @summary One Announcement, Draft or Published, for editing.
+ */
+export const getAnnouncement = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<getAnnouncementResponse> => {
+
+  return apiFetch<getAnnouncementResponse>(getGetAnnouncementUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type updateAnnouncementResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateAnnouncementResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateAnnouncementResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateAnnouncementResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateAnnouncementResponse409 = {
+  data: void
+  status: 409
+}
+
+export type updateAnnouncementResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateAnnouncementResponseSuccess = (updateAnnouncementResponse204) & {
+  headers: Headers;
+};
+export type updateAnnouncementResponseError = (updateAnnouncementResponse401 | updateAnnouncementResponse403 | updateAnnouncementResponse404 | updateAnnouncementResponse409 | updateAnnouncementResponse422) & {
+  headers: Headers;
+};
+
+export type updateAnnouncementResponse = (updateAnnouncementResponseSuccess | updateAnnouncementResponseError)
+
+export const getUpdateAnnouncementUrl = (id: string,) => {
+
+
+
+
+  return `/announcements/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` (or `content.publish`) for a
+ * Draft or without `content.publish` for a Published Announcement, `404` for an unknown
+ * Announcement, `409` for a new slug once first published or one another Announcement takes
+ * meanwhile, `422` for a blank title, a malformed field, an end before the start, a body
+ * outside the allowlist, or a Published Announcement missing what publishing requires.
+ * @summary Saves an Announcement: a Draft as it autosaves, a Published one live.
+ */
+export const updateAnnouncement = async (id: string,
+    announcementFields: AnnouncementFields, options?: Parameters<typeof apiFetch>[1]): Promise<updateAnnouncementResponse> => {
+
+  return apiFetch<updateAnnouncementResponse>(getUpdateAnnouncementUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(announcementFields)
+  }
+);}
+
+
+
+export type deleteAnnouncementResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteAnnouncementResponse401 = {
+  data: void
+  status: 401
+}
+
+export type deleteAnnouncementResponse403 = {
+  data: void
+  status: 403
+}
+
+export type deleteAnnouncementResponse404 = {
+  data: void
+  status: 404
+}
+
+export type deleteAnnouncementResponse409 = {
+  data: void
+  status: 409
+}
+
+export type deleteAnnouncementResponseSuccess = (deleteAnnouncementResponse204) & {
+  headers: Headers;
+};
+export type deleteAnnouncementResponseError = (deleteAnnouncementResponse401 | deleteAnnouncementResponse403 | deleteAnnouncementResponse404 | deleteAnnouncementResponse409) & {
+  headers: Headers;
+};
+
+export type deleteAnnouncementResponse = (deleteAnnouncementResponseSuccess | deleteAnnouncementResponseError)
+
+export const getDeleteAnnouncementUrl = (id: string,) => {
+
+
+
+
+  return `/announcements/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * Announcement, `409` when it is Published.
+ * @summary Deletes a Draft for good; its slug is free again. A Published one is unpublished first.
+ */
+export const deleteAnnouncement = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deleteAnnouncementResponse> => {
+
+  return apiFetch<deleteAnnouncementResponse>(getDeleteAnnouncementUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type publishAnnouncementResponse204 = {
+  data: void
+  status: 204
+}
+
+export type publishAnnouncementResponse401 = {
+  data: void
+  status: 401
+}
+
+export type publishAnnouncementResponse403 = {
+  data: void
+  status: 403
+}
+
+export type publishAnnouncementResponse404 = {
+  data: void
+  status: 404
+}
+
+export type publishAnnouncementResponse409 = {
+  data: void
+  status: 409
+}
+
+export type publishAnnouncementResponse422 = {
+  data: void
+  status: 422
+}
+
+export type publishAnnouncementResponseSuccess = (publishAnnouncementResponse204) & {
+  headers: Headers;
+};
+export type publishAnnouncementResponseError = (publishAnnouncementResponse401 | publishAnnouncementResponse403 | publishAnnouncementResponse404 | publishAnnouncementResponse409 | publishAnnouncementResponse422) & {
+  headers: Headers;
+};
+
+export type publishAnnouncementResponse = (publishAnnouncementResponseSuccess | publishAnnouncementResponseError)
+
+export const getPublishAnnouncementUrl = (id: string,) => {
+
+
+
+
+  return `/announcements/${id}/publish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * Announcement, `409` when it is already Published, `422` when it lacks a summary or a date.
+ * @summary Puts a Draft on the public site; the first publication locks its slug.
+ */
+export const publishAnnouncement = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<publishAnnouncementResponse> => {
+
+  return apiFetch<publishAnnouncementResponse>(getPublishAnnouncementUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type unpublishAnnouncementResponse204 = {
+  data: void
+  status: 204
+}
+
+export type unpublishAnnouncementResponse401 = {
+  data: void
+  status: 401
+}
+
+export type unpublishAnnouncementResponse403 = {
+  data: void
+  status: 403
+}
+
+export type unpublishAnnouncementResponse404 = {
+  data: void
+  status: 404
+}
+
+export type unpublishAnnouncementResponse409 = {
+  data: void
+  status: 409
+}
+
+export type unpublishAnnouncementResponseSuccess = (unpublishAnnouncementResponse204) & {
+  headers: Headers;
+};
+export type unpublishAnnouncementResponseError = (unpublishAnnouncementResponse401 | unpublishAnnouncementResponse403 | unpublishAnnouncementResponse404 | unpublishAnnouncementResponse409) & {
+  headers: Headers;
+};
+
+export type unpublishAnnouncementResponse = (unpublishAnnouncementResponseSuccess | unpublishAnnouncementResponseError)
+
+export const getUnpublishAnnouncementUrl = (id: string,) => {
+
+
+
+
+  return `/announcements/${id}/unpublish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * Announcement, `409` when it is a Draft.
+ * @summary Takes a Published Announcement off the public site, back to Draft; it keeps its slug.
+ */
+export const unpublishAnnouncement = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<unpublishAnnouncementResponse> => {
+
+  return apiFetch<unpublishAnnouncementResponse>(getUnpublishAnnouncementUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
 
 export type listAuditEntriesResponse200 = {
   data: AuditPage

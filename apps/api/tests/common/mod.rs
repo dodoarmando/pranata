@@ -55,9 +55,14 @@ impl Reply {
 
 impl TestApp {
     pub fn new(pool: PgPool) -> Self {
+        Self::at(pool, None)
+    }
+
+    /// An app whose clock stands still at `now`, or runs when `None`.
+    pub fn at(pool: PgPool, now: Option<chrono::DateTime<chrono::Utc>>) -> Self {
         let files = tempfile::tempdir().unwrap();
         Self {
-            router: pranata::app(pool, ORIGIN.to_owned(), files.path().to_owned()).unwrap(),
+            router: pranata::app_at(pool, ORIGIN.to_owned(), files.path().to_owned(), now).unwrap(),
             files,
         }
     }

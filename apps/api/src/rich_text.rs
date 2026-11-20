@@ -168,6 +168,14 @@ impl Doc {
         }
     }
 
+    /// Whether it holds nothing but empty paragraphs, as the editor's blank document does.
+    pub fn is_blank(&self) -> bool {
+        let Self::Doc { content } = self;
+        content
+            .iter()
+            .all(|block| matches!(block, Block::Paragraph { content } if content.is_empty()))
+    }
+
     /// The text alone, one line per block, for reading time and search.
     pub fn plain_text(&self) -> String {
         let Self::Doc { content } = self;

@@ -1,0 +1,79 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT slug, title, summary AS \"summary!\", start_date AS \"start_date!\",\n           end_date AS \"end_date!\", has_body AS \"has_body!\"\n           FROM announcements\n           WHERE published AND ($1::date IS NULL OR end_date >= $1)\n           AND ($2::date IS NULL OR start_date <= $2)\n           ORDER BY start_date DESC, id DESC LIMIT $3 OFFSET $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "announcements",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "announcements",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "summary!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "announcements",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "start_date!",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "announcements",
+            "name": "start_date"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "end_date!",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "announcements",
+            "name": "end_date"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "has_body!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "announcements",
+            "name": "has_body"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Date", "Date", "Int8", "Int8"]
+    },
+    "nullable": [false, false, true, true, true, false]
+  },
+  "hash": "6c56ea4451a1cd15e120f3e26462cb1edb3a972b9e8de5a2d3aa04d6ad167462"
+}

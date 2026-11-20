@@ -1,3 +1,4 @@
+mod announcement;
 mod audit;
 mod auth;
 mod category;
@@ -32,6 +33,7 @@ use axum::{
     middleware::{self, Next},
     response::{IntoResponse, Response},
 };
+use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use utoipa::OpenApi;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -41,13 +43,30 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 struct ApiDoc;
 
 /// What every handler can reach: the database, the passkey ceremonies in flight, the
-/// sign-in throttle and the files volume.
+/// sign-in throttle, the files volume and the clock.
 #[derive(Clone)]
 pub(crate) struct AppState {
     pool: PgPool,
     passkeys: Arc<passkey::Passkeys>,
     throttle: Arc<throttle::Throttle>,
     storage: Arc<storage::Storage>,
+    clock: Clock,
+}
+
+/// What time it is: the system's, or the instant a test pins.
+#[derive(Clone, Copy)]
+pub(crate) struct Clock(Option<DateTime<Utc>>);
+
+impl Clock {
+    pub(crate) fn now(self) -> DateTime<Utc> {
+        self.0.unwrap_or_else(Utc::now)
+    }
+}
+
+impl FromRef<AppState> for Clock {
+    fn from_ref(state: &AppState) -> Self {
+        state.clock
+    }
 }
 
 impl FromRef<AppState> for PgPool {
@@ -118,6 +137,17 @@ fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(news_post::upload_cover))
         .routes(routes!(news_post::list_published))
         .routes(routes!(news_post::get_published))
+        .routes(routes!(announcement::list, announcement::create))
+        .routes(routes!(
+            announcement::get,
+            announcement::update,
+            announcement::delete
+        ))
+        .routes(routes!(announcement::publish))
+        .routes(routes!(announcement::unpublish))
+        .routes(routes!(announcement::list_published))
+        .routes(routes!(announcement::list_in_effect))
+        .routes(routes!(announcement::get_published))
         .routes(routes!(storage::get_media))
         .routes(routes!(auth::use_access_link))
         .routes(routes!(auth::sign_in))
@@ -151,6 +181,19 @@ fn api() -> OpenApiRouter<AppState> {
 /// # Errors
 /// When `public_origin` is not a URL with a domain, which passkeys are bound to.
 pub fn app(pool: PgPool, public_origin: String, files_dir: PathBuf) -> anyhow::Result<Router> {
+    app_at(pool, public_origin, files_dir, None)
+}
+
+/// [`app`] with its clock stopped at `now`, for tests of date rules; `None` is the system clock.
+///
+/// # Errors
+/// As [`app`].
+pub fn app_at(
+    pool: PgPool,
+    public_origin: String,
+    files_dir: PathBuf,
+    now: Option<DateTime<Utc>>,
+) -> anyhow::Result<Router> {
     let passkeys = Arc::new(passkey::Passkeys::new(&public_origin)?);
     Ok(api()
         .split_for_parts()
@@ -164,6 +207,7 @@ pub fn app(pool: PgPool, public_origin: String, files_dir: PathBuf) -> anyhow::R
             passkeys,
             throttle: Arc::default(),
             storage: Arc::new(storage::Storage::new(files_dir)),
+            clock: Clock(now),
         }))
 }
 

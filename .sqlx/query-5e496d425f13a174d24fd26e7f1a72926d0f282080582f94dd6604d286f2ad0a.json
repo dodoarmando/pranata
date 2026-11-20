@@ -1,0 +1,90 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT slug, title, summary AS \"summary!\", start_date AS \"start_date!\",\n           end_date AS \"end_date!\", body, first_published_at AS \"published_at!\"\n           FROM announcements WHERE published AND has_body AND slug = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "announcements",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "announcements",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "summary!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "announcements",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "start_date!",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "announcements",
+            "name": "start_date"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "end_date!",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "announcements",
+            "name": "end_date"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "body",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "announcements",
+            "name": "body"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "published_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "announcements",
+            "name": "first_published_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Text"]
+    },
+    "nullable": [false, false, true, true, true, false, true]
+  },
+  "hash": "5e496d425f13a174d24fd26e7f1a72926d0f282080582f94dd6604d286f2ad0a"
+}
