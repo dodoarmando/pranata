@@ -91,7 +91,7 @@ const partnerErrors: Record<number, string> = {
 const logoErrors: Record<number, string> = {
   403: 'Anda tidak memiliki izin menulis konten.',
   413: 'Logo paling besar 2 MB.',
-  415: 'Logo harus berupa berkas PNG.',
+  415: 'Logo harus berupa berkas PNG atau SVG.',
   422: 'Gambar rusak atau lebih dari 40 megapiksel.',
 };
 
@@ -317,11 +317,11 @@ function Partners() {
                   </span>
                 )}
                 <div className="grid gap-2">
-                  <Label htmlFor="partner-logo">Logo (PNG, paling besar 2 MB)</Label>
+                  <Label htmlFor="partner-logo">Logo (PNG atau SVG, paling besar 2 MB)</Label>
                   <Input
                     id="partner-logo"
                     type="file"
-                    accept="image/png"
+                    accept="image/png,image/svg+xml"
                     onChange={onLogo}
                     disabled={uploading}
                   />
