@@ -14,7 +14,6 @@ import {
   type BudgetLines,
   getPublishedApbdesSummary,
   type PublishedApbdesSummary,
-  type Village,
 } from '../../api/generated';
 import { TransparencyDocumentItem } from '../../components/transparency-document-item';
 import { NativeSelect, NativeSelectOption } from '../../components/ui/native-select';
@@ -26,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table';
-import { villageTitle } from '../../village';
+import { pageHead } from '../../seo';
 
 type Search = { tahun?: number };
 
@@ -51,12 +50,10 @@ export const Route = createFileRoute('/_public/apbdes')({
   },
   loaderDeps: ({ search }) => search,
   loader: ({ deps }) => fetchSummary({ data: deps }),
-  head: ({ matches, loaderData }) => {
-    // The root match comes first; its loader data is typed only through getRouteApi.
-    const village = matches[0]?.loaderData as Village | null | undefined;
-    const title = loaderData ? `APBDes ${loaderData.fiscalYear}` : 'APBDes';
-    return { meta: [{ title: village ? `${title} — ${villageTitle(village)}` : title }] };
-  },
+  head: (context) =>
+    pageHead(context, {
+      title: context.loaderData ? `APBDes ${context.loaderData.fiscalYear}` : 'APBDes',
+    }),
   component: ApbdesPage,
 });
 

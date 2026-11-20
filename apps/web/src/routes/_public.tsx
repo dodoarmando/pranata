@@ -2,25 +2,30 @@ import { createFileRoute, getRouteApi, Link, Outlet } from '@tanstack/react-rout
 import { createServerFn } from '@tanstack/react-start';
 import { ChevronDown } from 'lucide-react';
 import type { MouseEvent } from 'react';
-import { listPublishedPages, type PageLink, type PageMenu } from '../api/generated';
+import { publicOrigin } from '../api/fetch';
+import { getHomeHero, listPublishedPages, type PageLink, type PageMenu } from '../api/generated';
 import { VillageLogo } from '../components/village-logo';
 import { pageMenus } from '../page';
+import type { Site } from '../seo';
 import { regencyShort, villageTitle } from '../village';
 
-// Server-only; empty when the API cannot be reached, so the site still has its menus.
-const fetchPageLinks = createServerFn({ method: 'GET' }).handler(async (): Promise<PageLink[]> => {
-  try {
-    const response = await listPublishedPages();
-    return response.status === 200 ? response.data : [];
-  } catch {
-    return [];
-  }
-});
+// Server-only; the menus are empty and the hero null when the API cannot give them, so the
+// site still renders.
+const fetchSite = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<Site & { pageLinks: PageLink[] }> => {
+    const [pages, hero] = await Promise.allSettled([listPublishedPages(), getHomeHero()]);
+    return {
+      pageLinks: pages.status === 'fulfilled' && pages.value.status === 200 ? pages.value.data : [],
+      origin: publicOrigin,
+      hero: hero.status === 'fulfilled' && hero.value.status === 200 ? hero.value.data.photo : null,
+    };
+  },
+);
 
 const root = getRouteApi('__root__');
 
 export const Route = createFileRoute('/_public')({
-  loader: () => fetchPageLinks(),
+  loader: () => fetchSite(),
   component: PublicLayout,
 });
 
@@ -38,7 +43,7 @@ const closeMenu = (event: MouseEvent<HTMLElement>) =>
 // Only shipped modules get navigation; each slice adds its own entry.
 function PublicLayout() {
   const village = root.useLoaderData();
-  const pageLinks = Route.useLoaderData();
+  const { pageLinks } = Route.useLoaderData();
   const logo = (
     <VillageLogo
       village={village}

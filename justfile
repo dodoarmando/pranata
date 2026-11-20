@@ -90,7 +90,7 @@ e2e-run: db-up
     # Host network reaches the database on 127.0.0.1; ports differ from `just dev`.
     # The origin is `localhost`: passkeys cannot be bound to an IP address.
     api=(--network host -e DATABASE_URL -e PRANATA_LISTEN=127.0.0.1:18080 -e PRANATA_PUBLIC_ORIGIN=http://localhost:13000)
-    web=(--network host -e HOST=127.0.0.1 -e PORT=13000 -e PRANATA_API_URL=http://127.0.0.1:18080)
+    web=(--network host -e HOST=127.0.0.1 -e PORT=13000 -e PRANATA_API_URL=http://127.0.0.1:18080 -e PRANATA_PUBLIC_ORIGIN=http://localhost:13000)
     cleanup() {
         if [ "$1" -ne 0 ]; then podman logs pranata-e2e-api; podman logs pranata-e2e-web; fi || true
         podman rm -fi -t 0 pranata-e2e-api pranata-e2e-web >/dev/null

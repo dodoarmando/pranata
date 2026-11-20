@@ -1,10 +1,10 @@
 import { createFileRoute, getRouteApi, Link, notFound } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import { getPublishedPage, type Village } from '../../api/generated';
+import { getPublishedPage } from '../../api/generated';
 import { RichTextBody } from '../../components/rich-text-body';
 import { newsDate } from '../../news';
 import { pageMenus } from '../../page';
-import { villageTitle } from '../../village';
+import { pageHead } from '../../seo';
 
 // Server-only: the body becomes HTML here, so Tiptap never ships to the browser. Null for a
 // slug no Published Page has; any other failure throws, so it is an error, not a 404.
@@ -28,17 +28,14 @@ export const Route = createFileRoute('/_public/$menu/$slug')({
     if (!page || pageMenus[page.menu].path !== params.menu) throw notFound();
     return page;
   },
-  head: ({ matches, loaderData }) => {
-    // The root match comes first; its loader data is typed only through getRouteApi.
-    const village = matches[0]?.loaderData as Village | null | undefined;
-    if (!loaderData) return {};
-    return {
-      meta: [
-        { title: village ? `${loaderData.title} — ${villageTitle(village)}` : loaderData.title },
-        { name: 'description', content: loaderData.summary },
-      ],
-    };
-  },
+  head: (context) =>
+    context.loaderData
+      ? pageHead(context, {
+          title: context.loaderData.title,
+          description: context.loaderData.summary,
+          image: context.loaderData.cover,
+        })
+      : {},
   component: PageView,
   notFoundComponent: PageNotFound,
 });

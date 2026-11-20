@@ -25,6 +25,7 @@ import { EventCard } from '../../components/event-card';
 import { Button } from '../../components/ui/button';
 import { holderTitle } from '../../government';
 import { newsDate } from '../../news';
+import { governmentOrganization, pageHead, siteOf } from '../../seo';
 import { villageTitle } from '../../village';
 
 type Home = {
@@ -68,6 +69,12 @@ const root = getRouteApi('__root__');
 
 export const Route = createFileRoute('/_public/')({
   loader: () => fetchHome(),
+  head: (context) => {
+    const { village, origin } = siteOf(context.matches);
+    return pageHead(context, {
+      ...(village && { jsonLd: governmentOrganization(village, origin) }),
+    });
+  },
   component: HomePage,
 });
 

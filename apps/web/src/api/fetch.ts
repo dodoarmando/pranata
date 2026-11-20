@@ -3,6 +3,9 @@ import { getRequestHeader, getRequestIP, setResponseHeader } from '@tanstack/rea
 // Server-side base URL of the Pranata API.
 export const baseUrl = process.env.PRANATA_API_URL ?? 'http://127.0.0.1:8080';
 
+// Where residents reach the site, for canonical URLs, link previews, the sitemap and the feed.
+export const publicOrigin = process.env.PRANATA_PUBLIC_ORIGIN ?? 'http://localhost:3000';
+
 // The browser never reaches the API, so its session cookie, the headers the API's CSRF
 // check reads and its user agent travel with each call, and the session cookie the API sets
 // travels back.

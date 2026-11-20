@@ -1,9 +1,9 @@
 import { createFileRoute, getRouteApi, Link, notFound } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import { getPublishedNewsPost, type Village } from '../../../api/generated';
+import { getPublishedNewsPost } from '../../../api/generated';
 import { RichTextBody } from '../../../components/rich-text-body';
 import { newsDate } from '../../../news';
-import { villageTitle } from '../../../village';
+import { governmentOrganization, pageHead, shareImage, siteOf } from '../../../seo';
 
 // Server-only: the body becomes HTML here, so Tiptap never ships to the browser. Null for a
 // slug no Published News Post has; any other failure throws, so it is an error, not a 404.
@@ -26,16 +26,27 @@ export const Route = createFileRoute('/_public/berita/$slug')({
     if (!post) throw notFound();
     return post;
   },
-  head: ({ matches, loaderData }) => {
-    // The root match comes first; its loader data is typed only through getRouteApi.
-    const village = matches[0]?.loaderData as Village | null | undefined;
-    if (!loaderData) return {};
-    return {
-      meta: [
-        { title: village ? `${loaderData.title} — ${villageTitle(village)}` : loaderData.title },
-        { name: 'description', content: loaderData.summary },
-      ],
-    };
+  head: (context) => {
+    const post = context.loaderData;
+    if (!post) return {};
+    const { village, origin } = siteOf(context.matches);
+    return pageHead(context, {
+      title: post.title,
+      description: post.summary,
+      image: post.cover,
+      type: 'article',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@type': 'NewsArticle',
+        headline: post.title,
+        description: post.summary,
+        image: [shareImage(origin, post.cover)],
+        datePublished: post.publishedAt,
+        author: { '@type': 'Person', name: post.author.name },
+        ...(village && { publisher: governmentOrganization(village, origin) }),
+        mainEntityOfPage: `${origin}${context.match.pathname}`,
+      },
+    });
   },
   component: NewsPostPage,
   notFoundComponent: NewsPostNotFound,

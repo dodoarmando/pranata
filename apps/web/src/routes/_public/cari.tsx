@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import type { SearchKind, Village } from '../../api/generated';
+import type { SearchKind } from '../../api/generated';
 import { fetchSearch, SearchForm, SearchResults } from '../../components/search-results';
 import { queryFits, searchKinds, searchQuery } from '../../search';
-import { villageTitle } from '../../village';
+import { pageHead } from '../../seo';
 
 type Jenis = (typeof searchKinds)[SearchKind]['slug'];
 type Search = { q?: string; jenis?: Jenis; halaman?: number };
@@ -28,16 +28,10 @@ export const Route = createFileRoute('/_public/cari')({
       ? fetchSearch({ data: { q, ...(type && { type }), ...(halaman && { page: halaman }) } })
       : null;
   },
-  head: ({ matches }) => {
-    // The root match comes first; its loader data is typed only through getRouteApi.
-    const village = matches[0]?.loaderData as Village | null | undefined;
-    return {
-      meta: [
-        { title: village ? `Pencarian — ${villageTitle(village)}` : 'Pencarian' },
-        // Result pages are not content of their own.
-        { name: 'robots', content: 'noindex' },
-      ],
-    };
+  head: (context) => {
+    const head = pageHead(context, { title: 'Pencarian' });
+    // Result pages are not content of their own.
+    return { ...head, meta: [...head.meta, { name: 'robots', content: 'noindex' }] };
   },
   component: SiteSearch,
 });

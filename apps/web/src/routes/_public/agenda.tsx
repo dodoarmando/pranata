@@ -5,10 +5,9 @@ import {
   type EventPage,
   listPastEvents,
   listUpcomingEvents,
-  type Village,
 } from '../../api/generated';
 import { EventCard } from '../../components/event-card';
-import { villageTitle } from '../../village';
+import { pageHead } from '../../seo';
 
 type Search = { halaman?: number };
 
@@ -38,11 +37,7 @@ export const Route = createFileRoute('/_public/agenda')({
   },
   loaderDeps: ({ search }) => search,
   loader: ({ deps }) => fetchEvents({ data: deps }),
-  head: ({ matches }) => {
-    // The root match comes first; its loader data is typed only through getRouteApi.
-    const village = matches[0]?.loaderData as Village | null | undefined;
-    return { meta: [{ title: village ? `Agenda — ${villageTitle(village)}` : 'Agenda' }] };
-  },
+  head: (context) => pageHead(context, { title: 'Agenda' }),
   component: EventList,
 });
 

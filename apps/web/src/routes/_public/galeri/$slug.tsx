@@ -1,8 +1,8 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { period } from '../../../announcement';
-import { getPublishedAlbum, type Village } from '../../../api/generated';
-import { villageTitle } from '../../../village';
+import { getPublishedAlbum } from '../../../api/generated';
+import { pageHead, truncate } from '../../../seo';
 
 // Server-only. Null for a slug no Published Album has; any other failure throws, so it is an
 // error, not a 404.
@@ -21,18 +21,14 @@ export const Route = createFileRoute('/_public/galeri/$slug')({
     if (!album) throw notFound();
     return album;
   },
-  head: ({ matches, loaderData }) => {
-    // The root match comes first; its loader data is typed only through getRouteApi.
-    const village = matches[0]?.loaderData as Village | null | undefined;
-    if (!loaderData) return {};
-    return {
-      meta: [
-        { title: village ? `${loaderData.title} — ${villageTitle(village)}` : loaderData.title },
-        ...(loaderData.description
-          ? [{ name: 'description', content: loaderData.description }]
-          : []),
-      ],
-    };
+  head: (context) => {
+    const album = context.loaderData;
+    if (!album) return {};
+    return pageHead(context, {
+      title: album.title,
+      ...(album.description && { description: truncate(album.description) }),
+      image: album.cover,
+    });
   },
   component: AlbumPage,
   notFoundComponent: AlbumNotFound,
