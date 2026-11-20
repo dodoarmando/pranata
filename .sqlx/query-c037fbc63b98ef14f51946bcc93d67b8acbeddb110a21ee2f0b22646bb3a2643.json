@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "LOCK TABLE home_welcome IN EXCLUSIVE MODE",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "c037fbc63b98ef14f51946bcc93d67b8acbeddb110a21ee2f0b22646bb3a2643"
+}

@@ -702,6 +702,31 @@ export interface HomeHero {
 }
 
 /**
+ * What a publisher writes in the head-of-village welcome.
+ */
+export interface WelcomeFields {
+  /** Plain text of 1–2,000 characters; blank lines separate paragraphs. */
+  message: string;
+  /** The portrait, uploaded at `/home/welcome/photo`. */
+  photo: string;
+  /** 1–200 characters. */
+  photoAlt: string;
+  /** The signer's Tenure, which must be serving when first chosen. */
+  signer: string;
+}
+
+/**
+ * The head-of-village welcome with its signer as they are today.
+ */
+export type HomeWelcome = WelcomeFields & {
+  signerKind: TenureKind;
+  signerName: string;
+  signerPosition: string;
+  /** Whether the signer's Tenure is still serving today; the welcome shows either way. */
+  signerServing: boolean;
+};
+
+/**
  * What a User writes in an Important Contact.
  */
 export interface ImportantContactFields {
@@ -5519,6 +5544,173 @@ export const uploadHomeHeroPhoto = async (uploadHomeHeroPhotoBody: Blob, options
     method: 'POST',
     headers: getHeaders({ 'Content-Type': 'application/octet-stream' }, options?.headers),
     body: uploadHomeHeroPhotoBody
+  }
+);}
+
+
+
+export type getHomeWelcomeResponse200 = {
+  data: HomeWelcome
+  status: 200
+}
+
+export type getHomeWelcomeResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getHomeWelcomeResponseSuccess = (getHomeWelcomeResponse200) & {
+  headers: Headers;
+};
+export type getHomeWelcomeResponseError = (getHomeWelcomeResponse404) & {
+  headers: Headers;
+};
+
+export type getHomeWelcomeResponse = (getHomeWelcomeResponseSuccess | getHomeWelcomeResponseError)
+
+export const getGetHomeWelcomeUrl = () => {
+
+
+
+
+  return `/home/welcome`
+}
+
+/**
+ * # Errors
+ * `404` before it is first saved.
+ * @summary The head-of-village welcome, for the public site and the admin area alike.
+ */
+export const getHomeWelcome = async ( options?: Parameters<typeof apiFetch>[1]): Promise<getHomeWelcomeResponse> => {
+
+  return apiFetch<getHomeWelcomeResponse>(getGetHomeWelcomeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type updateHomeWelcomeResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateHomeWelcomeResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateHomeWelcomeResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateHomeWelcomeResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateHomeWelcomeResponseSuccess = (updateHomeWelcomeResponse204) & {
+  headers: Headers;
+};
+export type updateHomeWelcomeResponseError = (updateHomeWelcomeResponse401 | updateHomeWelcomeResponse403 | updateHomeWelcomeResponse422) & {
+  headers: Headers;
+};
+
+export type updateHomeWelcomeResponse = (updateHomeWelcomeResponseSuccess | updateHomeWelcomeResponseError)
+
+export const getUpdateHomeWelcomeUrl = () => {
+
+
+
+
+  return `/home/welcome`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `422` for a blank or
+ * overlong text, an unknown photo, or a new signer whose Tenure is unknown or not serving.
+ * @summary Saves the head-of-village welcome live.
+ */
+export const updateHomeWelcome = async (welcomeFields: WelcomeFields, options?: Parameters<typeof apiFetch>[1]): Promise<updateHomeWelcomeResponse> => {
+
+  return apiFetch<updateHomeWelcomeResponse>(getUpdateHomeWelcomeUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(welcomeFields)
+  }
+);}
+
+
+
+export type uploadHomeWelcomePhotoResponse201 = {
+  data: Upload
+  status: 201
+}
+
+export type uploadHomeWelcomePhotoResponse401 = {
+  data: void
+  status: 401
+}
+
+export type uploadHomeWelcomePhotoResponse403 = {
+  data: void
+  status: 403
+}
+
+export type uploadHomeWelcomePhotoResponse413 = {
+  data: void
+  status: 413
+}
+
+export type uploadHomeWelcomePhotoResponse415 = {
+  data: void
+  status: 415
+}
+
+export type uploadHomeWelcomePhotoResponse422 = {
+  data: void
+  status: 422
+}
+
+export type uploadHomeWelcomePhotoResponseSuccess = (uploadHomeWelcomePhotoResponse201) & {
+  headers: Headers;
+};
+export type uploadHomeWelcomePhotoResponseError = (uploadHomeWelcomePhotoResponse401 | uploadHomeWelcomePhotoResponse403 | uploadHomeWelcomePhotoResponse413 | uploadHomeWelcomePhotoResponse415 | uploadHomeWelcomePhotoResponse422) & {
+  headers: Headers;
+};
+
+export type uploadHomeWelcomePhotoResponse = (uploadHomeWelcomePhotoResponseSuccess | uploadHomeWelcomePhotoResponseError)
+
+export const getUploadHomeWelcomePhotoUrl = () => {
+
+
+
+
+  return `/home/welcome/photo`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `413` over 10 MiB, `415`
+ * for content that is not JPEG, PNG or WebP, `422` over 40 megapixels or undecodable.
+ * @summary Stores a welcome portrait, a JPEG, PNG or WebP of at most 10 MiB.
+ */
+export const uploadHomeWelcomePhoto = async (uploadHomeWelcomePhotoBody: Blob, options?: Parameters<typeof apiFetch>[1]): Promise<uploadHomeWelcomePhotoResponse> => {
+
+  return apiFetch<uploadHomeWelcomePhotoResponse>(getUploadHomeWelcomePhotoUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/octet-stream' }, options?.headers),
+    body: uploadHomeWelcomePhotoBody
   }
 );}
 

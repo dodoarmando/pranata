@@ -1,8 +1,10 @@
-//! The home page singletons: the hero with its Quick Links, saved live by `content.publish`.
+//! The home page singletons, the hero with its Quick Links and the head-of-village welcome,
+//! saved live by `content.publish`.
 
 use std::sync::Arc;
 
 use axum::{Json, body::Body, extract::State, http::StatusCode};
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, types::Json as Jsonb};
 use utoipa::ToSchema;
@@ -10,20 +12,23 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
 use crate::{
-    ApiError, AppState,
+    ApiError, AppState, Clock,
     audit::{self, Actor},
     auth::Session,
     category::ensure_publisher,
+    government::TenureKind,
     imaging::Kind,
     news_post::saved,
     storage::{self, Storage},
-    village::{Upload, diff},
+    village::{self, Upload, diff},
 };
 
 pub(crate) fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(get_hero, update_hero))
         .routes(routes!(upload_hero_photo))
+        .routes(routes!(get_welcome, update_welcome))
+        .routes(routes!(upload_welcome_photo))
 }
 
 /// A shortcut under the home page search box.
@@ -274,4 +279,218 @@ async fn upload(
         .map_err(|_| ApiError::Status(StatusCode::PAYLOAD_TOO_LARGE))?;
     let id = storage.save_image(pool, kind, upload.into()).await?;
     Ok((StatusCode::CREATED, Json(Upload { id })))
+}
+
+/// What a publisher writes in the head-of-village welcome.
+#[derive(Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct WelcomeFields {
+    /// The portrait, uploaded at `/home/welcome/photo`.
+    photo: Uuid,
+    /// 1–200 characters.
+    photo_alt: String,
+    /// Plain text of 1–2,000 characters; blank lines separate paragraphs.
+    message: String,
+    /// The signer's Tenure, which must be serving when first chosen.
+    signer: Uuid,
+}
+
+/// The head-of-village welcome with its signer as they are today.
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct HomeWelcome {
+    #[serde(flatten)]
+    fields: WelcomeFields,
+    signer_name: String,
+    signer_position: String,
+    signer_kind: TenureKind,
+    /// Whether the signer's Tenure is still serving today; the welcome shows either way.
+    signer_serving: bool,
+}
+
+/// A signer's Tenure as of `today`.
+struct Signer {
+    name: String,
+    position: String,
+    kind: TenureKind,
+    serving: bool,
+}
+
+async fn signer(
+    conn: &mut sqlx::PgConnection,
+    tenure: Uuid,
+    today: NaiveDate,
+) -> sqlx::Result<Option<Signer>> {
+    sqlx::query_as!(
+        Signer,
+        r#"SELECT officials.name, coalesce(positions.name,
+               'Kepala ' || initcap(village.hamlet_label) || ' ' || hamlets.name) AS "position!",
+           tenures.kind AS "kind: TenureKind",
+           positions.active AND start_date <= $2 AND (end_date IS NULL OR end_date >= $2)
+               AS "serving!"
+           FROM tenures JOIN officials ON officials.id = official_id
+           JOIN positions ON positions.id = position_id
+           LEFT JOIN region_units hamlets ON hamlets.id = hamlet_id
+           LEFT JOIN village ON true
+           WHERE tenures.id = $1"#,
+        tenure,
+        today,
+    )
+    .fetch_optional(conn)
+    .await
+}
+
+async fn welcome(conn: &mut sqlx::PgConnection) -> sqlx::Result<Option<WelcomeFields>> {
+    sqlx::query_as!(
+        WelcomeFields,
+        r#"SELECT photo_file_id AS photo, photo_alt, message, signer_tenure_id AS signer
+           FROM home_welcome"#
+    )
+    .fetch_optional(conn)
+    .await
+}
+
+/// The head-of-village welcome, for the public site and the admin area alike.
+///
+/// # Errors
+/// `404` before it is first saved.
+#[utoipa::path(
+    get,
+    path = "/home/welcome",
+    operation_id = "getHomeWelcome",
+    tag = "content",
+    responses(
+        (status = OK, description = "The welcome", body = HomeWelcome),
+        (status = NOT_FOUND, description = "No welcome is saved yet"),
+    ),
+)]
+pub(crate) async fn get_welcome(
+    State(pool): State<PgPool>,
+    State(clock): State<Clock>,
+) -> Result<Json<HomeWelcome>, ApiError> {
+    let mut conn = pool.acquire().await?;
+    let fields = welcome(&mut conn)
+        .await?
+        .ok_or(ApiError::Status(StatusCode::NOT_FOUND))?;
+    let today = village::today(&pool, clock.now()).await?;
+    let signer = signer(&mut conn, fields.signer, today)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("the welcome's signer Tenure is gone"))?;
+    Ok(Json(HomeWelcome {
+        fields,
+        signer_name: signer.name,
+        signer_position: signer.position,
+        signer_kind: signer.kind,
+        signer_serving: signer.serving,
+    }))
+}
+
+/// Saves the head-of-village welcome live.
+///
+/// # Errors
+/// `401` without a live session, `403` without `content.publish`, `422` for a blank or
+/// overlong text, an unknown photo, or a new signer whose Tenure is unknown or not serving.
+#[utoipa::path(
+    put,
+    path = "/home/welcome",
+    operation_id = "updateHomeWelcome",
+    tag = "content",
+    request_body = WelcomeFields,
+    responses(
+        (status = NO_CONTENT, description = "The welcome is saved"),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User may not publish content"),
+        (status = UNPROCESSABLE_ENTITY, description = "A field is malformed or unknown"),
+    ),
+)]
+pub(crate) async fn update_welcome(
+    State(pool): State<PgPool>,
+    State(clock): State<Clock>,
+    session: Session,
+    Json(body): Json<WelcomeFields>,
+) -> Result<StatusCode, ApiError> {
+    ensure_publisher(&session)?;
+    let new = WelcomeFields {
+        photo_alt: required(&body.photo_alt, 200)?,
+        message: required(&body.message, 2000)?,
+        ..body
+    };
+    let today = village::today(&pool, clock.now()).await?;
+    let mut tx = pool.begin().await?;
+    sqlx::query!("LOCK TABLE home_welcome IN EXCLUSIVE MODE")
+        .execute(&mut *tx)
+        .await?;
+    let old = welcome(&mut tx).await?;
+    // A signer kept from before may have stopped serving since; only a new one must serve.
+    let kept = old.as_ref().is_some_and(|old| old.signer == new.signer);
+    let serving = signer(&mut tx, new.signer, today)
+        .await?
+        .is_some_and(|signer| signer.serving);
+    if !kept && !serving {
+        return Err(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY));
+    }
+    saved(
+        sqlx::query!(
+            "INSERT INTO home_welcome (photo_file_id, photo_alt, message, signer_tenure_id)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (singleton) DO UPDATE SET photo_file_id = EXCLUDED.photo_file_id,
+             photo_alt = EXCLUDED.photo_alt, message = EXCLUDED.message,
+             signer_tenure_id = EXCLUDED.signer_tenure_id",
+            new.photo,
+            new.photo_alt,
+            new.message,
+            new.signer,
+        )
+        .execute(&mut *tx)
+        .await,
+    )?;
+    if let Some(photo) = old
+        .as_ref()
+        .map(|old| old.photo)
+        .filter(|&photo| photo != new.photo)
+    {
+        storage::release(&mut tx, photo).await?;
+    }
+    let changes = diff(&serde_json::to_value(&old)?, &serde_json::to_value(&new)?);
+    if !changes.is_empty() {
+        audit::record_change(
+            &mut tx,
+            Actor::User(session.user_id),
+            "home.update_welcome",
+            ("home_welcome", None),
+            changes.into(),
+        )
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Stores a welcome portrait, a JPEG, PNG or WebP of at most 10 MiB.
+///
+/// # Errors
+/// `401` without a live session, `403` without `content.publish`, `413` over 10 MiB, `415`
+/// for content that is not JPEG, PNG or WebP, `422` over 40 megapixels or undecodable.
+#[utoipa::path(
+    post,
+    path = "/home/welcome/photo",
+    operation_id = "uploadHomeWelcomePhoto",
+    tag = "content",
+    request_body(content = Vec<u8>, content_type = "application/octet-stream"),
+    responses(
+        (status = CREATED, description = "The stored photo", body = Upload),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User may not publish content"),
+        (status = PAYLOAD_TOO_LARGE, description = "The file is over 10 MiB"),
+        (status = UNSUPPORTED_MEDIA_TYPE, description = "The file is not JPEG, PNG or WebP"),
+        (status = UNPROCESSABLE_ENTITY, description = "The image is too large or broken"),
+    ),
+)]
+pub(crate) async fn upload_welcome_photo(
+    State(pool): State<PgPool>,
+    State(storage): State<Arc<Storage>>,
+    session: Session,
+    body: Body,
+) -> Result<(StatusCode, Json<Upload>), ApiError> {
+    upload(&pool, &storage, &session, body, Kind::Photo).await
 }

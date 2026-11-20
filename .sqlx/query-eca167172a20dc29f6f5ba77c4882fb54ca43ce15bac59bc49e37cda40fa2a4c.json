@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO home_welcome (photo_file_id, photo_alt, message, signer_tenure_id)\n             VALUES ($1, $2, $3, $4)\n             ON CONFLICT (singleton) DO UPDATE SET photo_file_id = EXCLUDED.photo_file_id,\n             photo_alt = EXCLUDED.photo_alt, message = EXCLUDED.message,\n             signer_tenure_id = EXCLUDED.signer_tenure_id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Uuid", "Text", "Text", "Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "eca167172a20dc29f6f5ba77c4882fb54ca43ce15bac59bc49e37cda40fa2a4c"
+}
