@@ -120,6 +120,82 @@ async fn the_dashboard_lists_every_draft_to_those_who_write_content(pool: PgPool
     assert_eq!(drafts.len(), 2);
     assert_eq!(drafts[0]["id"], ids[1]);
     assert_eq!(drafts[0]["title"], "Posyandu");
+    assert_eq!(drafts[0]["kind"], "newsPost");
     assert!(drafts[0]["updatedAt"].is_string());
     assert!(hidden.body["drafts"].is_null());
+
+    // An Announcement Draft waits too.
+    let announcement = app
+        .call(
+            "POST",
+            "/announcements",
+            Some(&json!({ "title": "Libur Kantor" })),
+            Some(&writer),
+        )
+        .await;
+    let reply = app.call("GET", "/dashboard", None, Some(&writer)).await;
+    assert_eq!(reply.body["drafts"][0]["id"], announcement.body["id"]);
+    assert_eq!(reply.body["drafts"][0]["kind"], "announcement");
+}
+
+#[sqlx::test]
+async fn the_dashboard_warns_of_announcements_ending_within_seven_days(pool: PgPool) {
+    pranata::village::set_code(&pool, "9103012004")
+        .await
+        .unwrap();
+    // 00:30 on 21 November in the Village's WIT, still the 20th in UTC.
+    let app = TestApp::at(pool.clone(), Some("2026-11-20T15:30:00Z".parse().unwrap()));
+    let writer = app.user_with(&pool, "penulis", &["content.write"]).await;
+    let publisher = app.user_with(&pool, "redaksi", &["content.publish"]).await;
+    let manager = app.user_with(&pool, "operator", &["village.manage"]).await;
+    for (title, start, end, publish) in [
+        ("Berakhir kemarin", "2026-11-01", "2026-11-20", true),
+        ("Berakhir hari ini", "2026-11-01", "2026-11-21", true),
+        ("Berakhir minggu depan", "2026-11-01", "2026-11-28", true),
+        (
+            "Berakhir delapan hari lagi",
+            "2026-11-01",
+            "2026-11-29",
+            true,
+        ),
+        ("Belum berlaku", "2026-11-25", "2026-11-26", true),
+        ("Draf", "2026-11-01", "2026-11-22", false),
+    ] {
+        let id = app
+            .call(
+                "POST",
+                "/announcements",
+                Some(&json!({
+                    "title": title, "summary": "x", "startDate": start, "endDate": end,
+                })),
+                Some(&writer),
+            )
+            .await
+            .body["id"]
+            .clone();
+        if publish {
+            let path = format!("/announcements/{}/publish", id.as_str().unwrap());
+            let reply = app.call("POST", &path, None, Some(&publisher)).await;
+            assert_eq!(reply.status, StatusCode::NO_CONTENT);
+        }
+    }
+
+    let reply = app.call("GET", "/dashboard", None, Some(&writer)).await;
+    let hidden = app.call("GET", "/dashboard", None, Some(&manager)).await;
+
+    let ending: Vec<_> = reply.body["endingAnnouncements"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|a| (a["title"].as_str().unwrap(), a["endDate"].as_str().unwrap()))
+        .collect();
+    assert_eq!(
+        ending,
+        [
+            ("Berakhir hari ini", "2026-11-21"),
+            ("Berakhir minggu depan", "2026-11-28"),
+        ]
+    );
+    assert!(reply.body["endingAnnouncements"][0]["id"].is_string());
+    assert!(hidden.body["endingAnnouncements"].is_null());
 }

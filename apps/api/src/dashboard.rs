@@ -1,11 +1,16 @@
 use axum::{Json, extract::State};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, TimeDelta, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::{ApiError, auth::Session, role::Permission, village::TimeZone};
+use crate::{
+    ApiError, Clock,
+    auth::Session,
+    role::Permission,
+    village::{self, TimeZone},
+};
 
 /// The figures behind the admin dashboard's cards.
 #[derive(Serialize, ToSchema)]
@@ -16,15 +21,38 @@ pub struct Dashboard {
     /// Konten menunggu terbit: every Draft, the latest changed first; null for a User who may
     /// neither write nor publish content.
     drafts: Option<Vec<DraftSummary>>,
+    /// Pengumuman segera berakhir: Published Announcements in effect today that end within 7
+    /// days, the soonest first; null for a User who may neither write nor publish content.
+    ending_announcements: Option<Vec<EndingAnnouncement>>,
 }
 
-/// A Draft waiting to be published; News Posts are the only kind so far.
+/// What kind of website item a Draft is.
+#[derive(Serialize, ToSchema, sqlx::Type)]
+#[serde(rename_all = "camelCase")]
+#[sqlx(type_name = "text", rename_all = "snake_case")]
+pub enum DraftKind {
+    NewsPost,
+    Announcement,
+}
+
+/// A Draft waiting to be published.
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DraftSummary {
     id: Uuid,
+    kind: DraftKind,
     title: String,
     updated_at: DateTime<Utc>,
+}
+
+/// A Published Announcement about to end.
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct EndingAnnouncement {
+    id: Uuid,
+    title: String,
+    /// The last day in effect.
+    end_date: NaiveDate,
 }
 
 /// What the Village has yet to fill in.
@@ -53,6 +81,7 @@ pub struct MissingVillageData {
 )]
 pub async fn get(
     State(pool): State<PgPool>,
+    State(clock): State<Clock>,
     session: Session,
 ) -> Result<Json<Dashboard>, ApiError> {
     let active_users =
@@ -83,23 +112,39 @@ pub async fn get(
             .await?
         }
     };
-    let drafts =
+    let (drafts, ending_announcements) =
         if session.holds(Permission::ContentWrite) || session.holds(Permission::ContentPublish) {
-            Some(
-                sqlx::query_as!(
-                    DraftSummary,
-                    "SELECT id, title, updated_at FROM news_posts WHERE NOT published
-                 ORDER BY updated_at DESC, id DESC"
-                )
-                .fetch_all(&pool)
-                .await?,
+            let today = village::today(&pool, clock.now()).await?;
+            let drafts = sqlx::query_as!(
+                DraftSummary,
+                r#"SELECT id AS "id!", kind AS "kind!: DraftKind", title AS "title!",
+                   updated_at AS "updated_at!"
+                   FROM (SELECT id, 'news_post' AS kind, title, updated_at FROM news_posts
+                         WHERE NOT published
+                         UNION ALL SELECT id, 'announcement', title, updated_at
+                         FROM announcements WHERE NOT published) drafts
+                   ORDER BY updated_at DESC, id DESC"#
             )
+            .fetch_all(&pool)
+            .await?;
+            let ending = sqlx::query_as!(
+                EndingAnnouncement,
+                r#"SELECT id, title, end_date AS "end_date!" FROM announcements
+                   WHERE published AND start_date <= $1 AND end_date BETWEEN $1 AND $2
+                   ORDER BY end_date, id"#,
+                today,
+                today + TimeDelta::days(7),
+            )
+            .fetch_all(&pool)
+            .await?;
+            (Some(drafts), Some(ending))
         } else {
-            None
+            (None, None)
         };
     Ok(Json(Dashboard {
         active_users,
         drafts,
+        ending_announcements,
         missing_village_data: MissingVillageData {
             logo: village.as_ref().is_none_or(|village| village.logo),
             vision_mission: village
