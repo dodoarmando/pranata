@@ -379,10 +379,10 @@ export interface EventPage {
 /**
  * Whether an Event is still to come (or under way) or over.
  */
-export type Timing = typeof Timing[keyof typeof Timing];
+export type EventTiming = typeof EventTiming[keyof typeof EventTiming];
 
 
-export const Timing = {
+export const EventTiming = {
   upcoming: 'upcoming',
   past: 'past',
 } as const;
@@ -405,7 +405,7 @@ export interface EventSummary {
   published: boolean;
   /** @nullable */
   startsAt?: string | null;
-  timing?: Timing | null;
+  timing?: EventTiming | null;
   title: string;
   updatedAt: string;
 }
