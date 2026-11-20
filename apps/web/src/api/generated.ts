@@ -222,6 +222,7 @@ export const DraftKind = {
   newsPost: 'newsPost',
   announcement: 'announcement',
   event: 'event',
+  page: 'page',
 } as const;
 
 /**

@@ -149,6 +149,19 @@ async fn the_dashboard_lists_every_draft_to_those_who_write_content(pool: PgPool
     let reply = app.call("GET", "/dashboard", None, Some(&writer)).await;
     assert_eq!(reply.body["drafts"][0]["id"], event.body["id"]);
     assert_eq!(reply.body["drafts"][0]["kind"], "event");
+
+    // And a Page Draft.
+    let page = app
+        .call(
+            "POST",
+            "/pages",
+            Some(&json!({ "title": "Sejarah Desa", "menu": "profile" })),
+            Some(&writer),
+        )
+        .await;
+    let reply = app.call("GET", "/dashboard", None, Some(&writer)).await;
+    assert_eq!(reply.body["drafts"][0]["id"], page.body["id"]);
+    assert_eq!(reply.body["drafts"][0]["kind"], "page");
 }
 
 #[sqlx::test]

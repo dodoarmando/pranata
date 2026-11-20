@@ -34,6 +34,7 @@ pub enum DraftKind {
     NewsPost,
     Announcement,
     Event,
+    Page,
 }
 
 /// A Draft waiting to be published.
@@ -125,7 +126,9 @@ pub async fn get(
                          UNION ALL SELECT id, 'announcement', title, updated_at
                          FROM announcements WHERE NOT published
                          UNION ALL SELECT id, 'event', title, updated_at
-                         FROM events WHERE NOT published) drafts
+                         FROM events WHERE NOT published
+                         UNION ALL SELECT id, 'page', title, updated_at
+                         FROM pages WHERE NOT published) drafts
                    ORDER BY updated_at DESC, id DESC"#
             )
             .fetch_all(&pool)
