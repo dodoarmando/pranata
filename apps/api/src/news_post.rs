@@ -137,7 +137,8 @@ pub(crate) fn ensure_writer(session: &Session) -> Result<(), ApiError> {
     }
 }
 
-/// An unknown Category or cover says the body is wrong; a slug taken meanwhile, a conflict.
+/// An unknown reference, such as a Category or cover, says the body is wrong; a slug taken
+/// meanwhile, a conflict.
 pub(crate) fn saved<T>(result: sqlx::Result<T>) -> Result<T, ApiError> {
     match result {
         Err(sqlx::Error::Database(error)) if error.is_foreign_key_violation() => {
