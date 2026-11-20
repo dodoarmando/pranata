@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"count!\" FROM search_items\n           WHERE search @@ search_query($1) AND ($2::search_kind IS NULL OR kind = $2)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        {
+          "Custom": {
+            "name": "search_kind",
+            "kind": {
+              "Enum": ["news_post", "announcement", "page", "transparency_document"]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": [null]
+  },
+  "hash": "43bd4433410dc876e179a5fdb345c840060d97a5c30e3d27b5acdfde7493d2fd"
+}

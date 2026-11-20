@@ -1,0 +1,153 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT kind AS \"kind!: SearchKind\", title AS \"title!\", summary, slug,\n           menu AS \"menu: PageMenu\", file_id AS file,\n           document_type AS \"document_type: TransparencyDocumentType\", fiscal_year,\n           dated_at AS \"dated_at!\"\n           FROM search_items\n           WHERE search @@ search_query($1) AND ($2::search_kind IS NULL OR kind = $2)\n           ORDER BY ts_rank_cd(search, search_query($1)) DESC, dated_at DESC, id DESC\n           LIMIT $3 OFFSET $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "kind!: SearchKind",
+        "type_info": {
+          "Custom": {
+            "name": "search_kind",
+            "kind": {
+              "Enum": ["news_post", "announcement", "page", "transparency_document"]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "search_items",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "search_items",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "summary",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "search_items",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "search_items",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "menu: PageMenu",
+        "type_info": {
+          "Custom": {
+            "name": "page_menu",
+            "kind": {
+              "Enum": ["profile", "government", "services"]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "search_items",
+            "name": "menu"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "file",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "search_items",
+            "name": "file_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "document_type: TransparencyDocumentType",
+        "type_info": {
+          "Custom": {
+            "name": "document_type",
+            "kind": {
+              "Enum": [
+                "apbdes",
+                "apbdes_amendment",
+                "realisation_report",
+                "rkpdes",
+                "rpjmdes",
+                "village_regulation",
+                "other"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "search_items",
+            "name": "document_type"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "fiscal_year",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "search_items",
+            "name": "fiscal_year"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "dated_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "search_items",
+            "name": "dated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        {
+          "Custom": {
+            "name": "search_kind",
+            "kind": {
+              "Enum": ["news_post", "announcement", "page", "transparency_document"]
+            }
+          }
+        },
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [true, true, true, true, true, true, true, true, true]
+  },
+  "hash": "405f108c4144a88abdda60d51e7e987291f706465ff2ec61bcf9a1a0963b80e1"
+}
