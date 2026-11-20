@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, title, updated_at FROM news_posts WHERE NOT published\n                 ORDER BY updated_at DESC, id DESC",
+  "query": "SELECT id, title, end_date AS \"end_date!\" FROM announcements\n                   WHERE published AND start_date <= $1 AND end_date BETWEEN $1 AND $2\n                   ORDER BY end_date, id",
   "describe": {
     "columns": [
       {
@@ -9,7 +9,7 @@
         "type_info": "Uuid",
         "origin": {
           "Table": {
-            "table": "news_posts",
+            "table": "announcements",
             "name": "id"
           }
         }
@@ -20,27 +20,27 @@
         "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "news_posts",
+            "table": "announcements",
             "name": "title"
           }
         }
       },
       {
         "ordinal": 2,
-        "name": "updated_at",
-        "type_info": "Timestamptz",
+        "name": "end_date!",
+        "type_info": "Date",
         "origin": {
           "Table": {
-            "table": "news_posts",
-            "name": "updated_at"
+            "table": "announcements",
+            "name": "end_date"
           }
         }
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": ["Date", "Date"]
     },
-    "nullable": [false, false, false]
+    "nullable": [false, false, true]
   },
-  "hash": "8c92166d17a6a2012fffe1db5dec348dc093ef3adfa580512a6063ef1fa068eb"
+  "hash": "ad436ff6ff15ea4b51069b1ce28d93b14a43a918edc3c77e7c12d6d11487e342"
 }

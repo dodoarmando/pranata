@@ -213,12 +213,34 @@ export interface Created {
 }
 
 /**
- * A Draft waiting to be published; News Posts are the only kind so far.
+ * What kind of website item a Draft is.
+ */
+export type DraftKind = typeof DraftKind[keyof typeof DraftKind];
+
+
+export const DraftKind = {
+  newsPost: 'newsPost',
+  announcement: 'announcement',
+} as const;
+
+/**
+ * A Draft waiting to be published.
  */
 export interface DraftSummary {
   id: string;
+  kind: DraftKind;
   title: string;
   updatedAt: string;
+}
+
+/**
+ * A Published Announcement about to end.
+ */
+export interface EndingAnnouncement {
+  /** The last day in effect. */
+  endDate: string;
+  id: string;
+  title: string;
 }
 
 /**
@@ -242,6 +264,12 @@ export interface Dashboard {
      * @nullable
      */
   drafts?: DraftSummary[] | null;
+  /**
+     * Pengumuman segera berakhir: Published Announcements in effect today that end within 7
+     * days, the soonest first; null for a User who may neither write nor publish content.
+     * @nullable
+     */
+  endingAnnouncements?: EndingAnnouncement[] | null;
   missingVillageData: MissingVillageData;
 }
 

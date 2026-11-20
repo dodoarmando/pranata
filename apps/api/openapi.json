@@ -3571,6 +3571,16 @@
             },
             "description": "Konten menunggu terbit: every Draft, the latest changed first; null for a User who may\nneither write nor publish content."
           },
+          "endingAnnouncements": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EndingAnnouncement"
+            },
+            "description": "Pengumuman segera berakhir: Published Announcements in effect today that end within 7\ndays, the soonest first; null for a User who may neither write nor publish content."
+          },
           "missingVillageData": {
             "$ref": "#/components/schemas/MissingVillageData"
           }
@@ -3587,11 +3597,20 @@
           "very_underdeveloped"
         ]
       },
+      "DraftKind": {
+        "type": "string",
+        "description": "What kind of website item a Draft is.",
+        "enum": [
+          "newsPost",
+          "announcement"
+        ]
+      },
       "DraftSummary": {
         "type": "object",
-        "description": "A Draft waiting to be published; News Posts are the only kind so far.",
+        "description": "A Draft waiting to be published.",
         "required": [
           "id",
+          "kind",
           "title",
           "updatedAt"
         ],
@@ -3599,6 +3618,9 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DraftKind"
           },
           "title": {
             "type": "string"
@@ -3629,6 +3651,29 @@
           "password": {
             "type": "string",
             "description": "The one-time password, to show once; Pranata keeps no copy."
+          }
+        }
+      },
+      "EndingAnnouncement": {
+        "type": "object",
+        "description": "A Published Announcement about to end.",
+        "required": [
+          "id",
+          "title",
+          "endDate"
+        ],
+        "properties": {
+          "endDate": {
+            "type": "string",
+            "format": "date",
+            "description": "The last day in effect."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
           }
         }
       },
