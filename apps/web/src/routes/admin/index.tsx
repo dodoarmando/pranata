@@ -22,6 +22,7 @@ const draftKinds = {
   album: { label: 'Galeri', to: '/admin/galeri/$id' },
   importantContact: { label: 'Kontak penting', to: '/admin/kontak-penting' },
   partner: { label: 'Mitra', to: '/admin/mitra' },
+  transparencyDocument: { label: 'Dokumen transparansi', to: '/admin/dokumen' },
 } as const satisfies Record<DraftKind, { label: string; to: string }>;
 
 export const Route = createFileRoute('/admin/')({
