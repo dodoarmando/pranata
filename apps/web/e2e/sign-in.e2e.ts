@@ -315,6 +315,44 @@ test('a village manager records an Institution with ordered members, listed publ
   await expect(item).toContainText('Fajar NugrahaKetuaSinta DewiSekretaris');
 });
 
+test('a village manager records an Indeks Desa Edition, shown publicly as the latest', async ({
+  page,
+}) => {
+  await page.goto('/masuk');
+  await page.getByLabel('Nama pengguna').fill(username);
+  await page.getByLabel('Kata sandi', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Beranda' })).toBeVisible();
+
+  // The last year allowed, so it is the latest. A year holds one Edition and the local
+  // database outlives runs, so one a failed run left behind goes first.
+  await page.getByRole('link', { name: 'Indeks Desa' }).click();
+  const row = page.getByRole('row').filter({ hasText: '2100' });
+  page.on('dialog', (dialog) => dialog.accept());
+  if (await row.count()) {
+    await row.getByRole('button', { name: 'Hapus' }).click();
+    await expect(row).toHaveCount(0);
+  }
+  await page.getByRole('button', { name: 'Tambah edisi' }).click();
+  await page.getByLabel('Tahun pengumpulan data').fill('2100');
+  await page.getByLabel('Skor', { exact: true }).fill('72.48');
+  await page.getByLabel('Status').selectOption({ label: 'Maju' });
+  await page.getByLabel('Ekonomi').fill('63');
+  await page.getByRole('button', { name: 'Simpan', exact: true }).click();
+  await expect(row).toContainText('72,48Maju');
+
+  await page.goto('/profil');
+  const section = page.getByRole('region', { name: 'Indeks Desa' });
+  await expect(section).toContainText('Desa Maju');
+  await expect(section).toContainText('72,48 dari 100');
+  await expect(section).toContainText('Ekonomi63,00');
+
+  await page.goto('/admin/indeks-desa');
+  await row.getByRole('button', { name: 'Hapus' }).click();
+  await expect(page.getByText('Edisi dihapus.')).toBeVisible();
+  await expect(row).toHaveCount(0);
+});
+
 test('every page has the stylesheet, and the public site stays light', async ({ page }) => {
   // Admin code is split into route chunks the public home page never fetches.
   const scripts: Promise<string>[] = [];
