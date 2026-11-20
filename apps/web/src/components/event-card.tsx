@@ -1,9 +1,9 @@
-import type { EventCard as Card, TimeZone, Timing } from '../api/generated';
+import type { EventCard as Card, EventTiming, TimeZone } from '../api/generated';
 import { schedule } from '../event';
 import { Badge } from './ui/badge';
 
 /** Akan datang or Selesai, and Dibatalkan for an Event called off. */
-export function TimingBadges({ timing, cancelled }: { timing: Timing; cancelled: boolean }) {
+export function TimingBadges({ timing, cancelled }: { timing: EventTiming; cancelled: boolean }) {
   return (
     <>
       <Badge variant={timing === 'upcoming' ? 'default' : 'outline'}>

@@ -4231,7 +4231,7 @@
           "timing": {
             "oneOf": [
               {
-                "$ref": "#/components/schemas/Timing",
+                "$ref": "#/components/schemas/EventTiming",
                 "description": "Now's, once the start is set."
               },
               {
@@ -4247,6 +4247,14 @@
             "format": "date-time"
           }
         }
+      },
+      "EventTiming": {
+        "type": "string",
+        "description": "Whether an Event is still to come (or under way) or over.",
+        "enum": [
+          "upcoming",
+          "past"
+        ]
       },
       "ExportReason": {
         "type": "object",
@@ -5545,14 +5553,6 @@
           "WIB",
           "WITA",
           "WIT"
-        ]
-      },
-      "Timing": {
-        "type": "string",
-        "description": "Whether an Event is still to come (or under way) or over.",
-        "enum": [
-          "upcoming",
-          "past"
         ]
       },
       "Upload": {

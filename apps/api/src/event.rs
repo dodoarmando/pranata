@@ -92,7 +92,7 @@ impl EventFields {
 /// Whether an Event is still to come (or under way) or over.
 #[derive(Serialize, ToSchema, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub enum Timing {
+pub enum EventTiming {
     Upcoming,
     Past,
 }
@@ -120,7 +120,7 @@ pub struct EventSummary {
     starts_at: Option<NaiveDateTime>,
     ends_at: Option<NaiveDateTime>,
     /// Now's, once the start is set.
-    timing: Option<Timing>,
+    timing: Option<EventTiming>,
     cancelled: bool,
     published: bool,
     updated_at: DateTime<Utc>,
@@ -182,9 +182,13 @@ pub(crate) async fn list(
                 category: row.category,
                 starts_at: row.starts_at,
                 ends_at: row.ends_at,
-                timing: row
-                    .past
-                    .map(|past| if past { Timing::Past } else { Timing::Upcoming }),
+                timing: row.past.map(|past| {
+                    if past {
+                        EventTiming::Past
+                    } else {
+                        EventTiming::Upcoming
+                    }
+                }),
                 cancelled: row.cancelled,
                 published: row.published,
                 updated_at: row.updated_at,
