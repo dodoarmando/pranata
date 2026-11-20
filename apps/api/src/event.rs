@@ -40,7 +40,7 @@ pub struct EventFields {
     #[serde(default)]
     starts_at: Option<NaiveDateTime>,
     /// Optional, not before the start, possibly days later. Without one, the Event is past
-    /// once the day it starts on is over.
+    /// once it has started.
     #[serde(default)]
     ends_at: Option<NaiveDateTime>,
     /// Plain text, at most 200 characters; required to publish.
