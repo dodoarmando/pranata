@@ -2,6 +2,7 @@ import { createFileRoute, Link, notFound } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { period } from '../../../announcement';
 import { getPublishedAlbum } from '../../../api/generated';
+import { NotFound } from '../../../components/not-found';
 import { pageHead, truncate } from '../../../seo';
 
 // Server-only. Null for a slug no Published Album has; any other failure throws, so it is an
@@ -79,21 +80,10 @@ function AlbumPage() {
 
 function AlbumNotFound() {
   return (
-    <main className="site-container grid gap-4 pt-10 pb-sec md:pt-16">
-      <h1 className="text-[2rem] leading-tight font-semibold tracking-tight">
-        Album tidak ditemukan
-      </h1>
-      <p className="text-muted-foreground">
-        Album ini mungkin sudah tidak diterbitkan atau alamatnya salah.
-      </p>
-      <p className="flex flex-wrap gap-4">
-        <Link to="/galeri" className="font-medium text-primary">
-          Lihat semua album
-        </Link>
-        <Link to="/" className="font-medium text-primary">
-          Kembali ke beranda
-        </Link>
-      </p>
-    </main>
+    <NotFound
+      title="Album tidak ditemukan"
+      text="Album ini mungkin sudah tidak diterbitkan atau alamatnya salah."
+      list={{ to: '/galeri', label: 'Lihat semua album' }}
+    />
   );
 }

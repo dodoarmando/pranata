@@ -1,6 +1,7 @@
 import { createFileRoute, getRouteApi, Link, notFound } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { getPublishedNewsPost } from '../../../api/generated';
+import { NotFound } from '../../../components/not-found';
 import { RichTextBody } from '../../../components/rich-text-body';
 import { newsDate } from '../../../news';
 import { governmentOrganization, pageHead, shareImage, siteOf } from '../../../seo';
@@ -95,21 +96,10 @@ function NewsPostPage() {
 
 function NewsPostNotFound() {
   return (
-    <main className="site-container grid gap-4 pt-10 pb-sec md:pt-16">
-      <h1 className="text-[2rem] leading-tight font-semibold tracking-tight">
-        Berita tidak ditemukan
-      </h1>
-      <p className="text-muted-foreground">
-        Berita ini mungkin sudah tidak diterbitkan atau alamatnya salah.
-      </p>
-      <p className="flex flex-wrap gap-4">
-        <Link to="/berita" className="font-medium text-primary">
-          Lihat semua berita
-        </Link>
-        <Link to="/" className="font-medium text-primary">
-          Kembali ke beranda
-        </Link>
-      </p>
-    </main>
+    <NotFound
+      title="Berita tidak ditemukan"
+      text="Berita ini mungkin sudah tidak diterbitkan atau alamatnya salah."
+      list={{ to: '/berita', label: 'Lihat semua berita' }}
+    />
   );
 }

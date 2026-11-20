@@ -3,6 +3,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { period } from '../../../announcement';
 import { getPublishedAnnouncement } from '../../../api/generated';
 import { ValidityBadge } from '../../../components/announcement-card';
+import { NotFound } from '../../../components/not-found';
 import { RichTextBody } from '../../../components/rich-text-body';
 import { pageHead } from '../../../seo';
 
@@ -58,22 +59,10 @@ function AnnouncementPage() {
 
 function AnnouncementNotFound() {
   return (
-    <main className="site-container grid gap-4 pt-10 pb-sec md:pt-16">
-      <h1 className="text-[2rem] leading-tight font-semibold tracking-tight">
-        Pengumuman tidak ditemukan
-      </h1>
-      <p className="text-muted-foreground">
-        Pengumuman ini mungkin sudah tidak diterbitkan, tidak punya halaman sendiri, atau alamatnya
-        salah.
-      </p>
-      <p className="flex flex-wrap gap-4">
-        <Link to="/pengumuman" className="font-medium text-primary">
-          Lihat semua pengumuman
-        </Link>
-        <Link to="/" className="font-medium text-primary">
-          Kembali ke beranda
-        </Link>
-      </p>
-    </main>
+    <NotFound
+      title="Pengumuman tidak ditemukan"
+      text="Pengumuman ini mungkin sudah tidak diterbitkan, tidak punya halaman sendiri, atau alamatnya salah."
+      list={{ to: '/pengumuman', label: 'Lihat semua pengumuman' }}
+    />
   );
 }
