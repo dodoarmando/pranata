@@ -1,9 +1,9 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import { period, validityLabels, validityVariants } from '../../../announcement';
+import { period } from '../../../announcement';
 import { getPublishedAnnouncement, type Village } from '../../../api/generated';
+import { ValidityBadge } from '../../../components/announcement-card';
 import { RichTextBody } from '../../../components/rich-text-body';
-import { Badge } from '../../../components/ui/badge';
 import { villageTitle } from '../../../village';
 
 // Server-only: the body becomes HTML here, so Tiptap never ships to the browser. Null for a
@@ -51,9 +51,7 @@ function AnnouncementPage() {
         {announcement.title}
       </h1>
       <p className="flex flex-wrap items-center gap-2 text-muted-foreground">
-        <Badge variant={validityVariants[announcement.validity]}>
-          {validityLabels[announcement.validity]}
-        </Badge>
+        <ValidityBadge validity={announcement.validity} />
         {period(announcement.startDate, announcement.endDate)}
       </p>
       <p className="text-lg font-medium">{announcement.summary}</p>

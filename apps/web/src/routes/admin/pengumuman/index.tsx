@@ -2,9 +2,10 @@ import { createFileRoute, getRouteApi, Link, useNavigate } from '@tanstack/react
 import { createServerFn, useServerFn } from '@tanstack/react-start';
 import { Plus } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
-import { period, validityLabels, validityVariants } from '../../../announcement';
+import { period } from '../../../announcement';
 import { createAnnouncement, listAnnouncements } from '../../../api/generated';
 import { DataTable, Notice, PageHead } from '../../../components/admin';
+import { ValidityBadge } from '../../../components/announcement-card';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import {
@@ -139,11 +140,7 @@ function Announcements() {
                   {announcement.startDate && announcement.endDate ? (
                     <span className="flex flex-wrap items-center gap-2">
                       {period(announcement.startDate, announcement.endDate)}
-                      {announcement.validity && (
-                        <Badge variant={validityVariants[announcement.validity]}>
-                          {validityLabels[announcement.validity]}
-                        </Badge>
-                      )}
+                      {announcement.validity && <ValidityBadge validity={announcement.validity} />}
                     </span>
                   ) : (
                     '—'
