@@ -53,6 +53,8 @@ export const Route = createFileRoute('/_public/apbdes')({
   head: (context) =>
     pageHead(context, {
       title: context.loaderData ? `APBDes ${context.loaderData.fiscalYear}` : 'APBDes',
+      // Each fiscal year is a page of its own, unlike the year filter on /dokumen.
+      canonicalSearch: ['tahun'],
     }),
   component: ApbdesPage,
 });

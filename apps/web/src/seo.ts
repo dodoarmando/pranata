@@ -19,6 +19,11 @@ type PageSeo = {
   image?: string | null | undefined;
   type?: 'website' | 'article';
   jsonLd?: object;
+  /**
+   * The search parameters that name a different page, kept in the canonical URL; every other
+   * one filters a page. The page number unless a route says otherwise.
+   */
+  canonicalSearch?: string[];
 };
 
 /** The sentence a page without a summary is described by, from what the Village Code names. */
@@ -35,9 +40,6 @@ export function truncate(text: string, max = 160) {
 
 /** JSON for a `<script>`, which `<` in the data cannot close. */
 export const jsonLd = (data: object) => JSON.stringify(data).replace(/</g, '\\u003c');
-
-// Only these name a different page; every other search parameter filters one.
-const canonicalParams = ['halaman', 'tahun'];
 
 /** The share variant of an image, absolute for link previews. */
 export const shareImage = (origin: string, file: string) => `${origin}/media/${file}/share`;
@@ -60,7 +62,7 @@ export function pageHead({ matches, match }: HeadContext, page: PageSeo) {
   const description = page.description ?? (village ? villageSentence(village) : undefined);
   const image = page.image ?? hero ?? village?.logo;
   const search = new URLSearchParams();
-  for (const key of canonicalParams) {
+  for (const key of page.canonicalSearch ?? ['halaman']) {
     const value = (match.search as Record<string, unknown>)[key];
     if (value !== undefined) search.set(key, String(value));
   }
