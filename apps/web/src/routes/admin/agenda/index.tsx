@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 import { createEvent, listEvents } from '../../../api/generated';
 import { DataTable, Notice, PageHead } from '../../../components/admin';
-import { TimingBadges } from '../../../components/event-card';
+import { CancelledBadge, TimingBadge } from '../../../components/event-card';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import {
@@ -142,9 +142,8 @@ function Events() {
                   {event.startsAt ? (
                     <span className="flex flex-wrap items-center gap-2">
                       {schedule(event.startsAt, event.endsAt, zone)}
-                      {event.timing && (
-                        <TimingBadges timing={event.timing} cancelled={event.cancelled} />
-                      )}
+                      {event.timing && <TimingBadge timing={event.timing} />}
+                      {event.cancelled && <CancelledBadge />}
                     </span>
                   ) : (
                     '—'
