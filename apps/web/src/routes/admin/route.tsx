@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-router';
 import { createServerFn, useServerFn } from '@tanstack/react-start';
 import {
+  Building2,
   ChevronRight,
   House,
   Landmark,
@@ -42,6 +43,7 @@ const pages = [
   { group: '', to: '/admin', label: 'Beranda', icon: House },
   { group: 'Desa', to: '/admin/profil-desa', label: 'Profil desa', icon: Landmark },
   { group: 'Desa', to: '/admin/wilayah', label: 'Wilayah', icon: MapPinned },
+  { group: 'Desa', to: '/admin/pemerintahan', label: 'Pemerintahan', icon: Building2 },
   { group: 'Sistem', to: '/admin/pengguna', label: 'Pengguna', icon: Users },
   { group: 'Sistem', to: '/admin/peran', label: 'Peran', icon: ShieldCheck },
   { group: 'Sistem', to: '/admin/log-audit', label: 'Log audit', icon: ScrollText },

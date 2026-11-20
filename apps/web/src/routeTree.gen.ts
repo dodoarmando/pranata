@@ -19,6 +19,7 @@ import { Route as PublicProfilRouteImport } from './routes/_public/profil'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAkunRouteImport } from './routes/admin/akun'
 import { Route as AdminLogAuditRouteImport } from './routes/admin/log-audit'
+import { Route as AdminPemerintahanRouteImport } from './routes/admin/pemerintahan'
 import { Route as AdminPenggunaRouteImport } from './routes/admin/pengguna'
 import { Route as AdminPeranRouteImport } from './routes/admin/peran'
 import { Route as AdminProfilDesaRouteImport } from './routes/admin/profil-desa'
@@ -74,6 +75,11 @@ const AdminLogAuditRoute = AdminLogAuditRouteImport.update({
   path: '/log-audit',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminPemerintahanRoute = AdminPemerintahanRouteImport.update({
+  id: '/pemerintahan',
+  path: '/pemerintahan',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminPenggunaRoute = AdminPenggunaRouteImport.update({
   id: '/pengguna',
   path: '/pengguna',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/profil': typeof PublicProfilRoute
   '/admin/akun': typeof AdminAkunRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
+  '/admin/pemerintahan': typeof AdminPemerintahanRoute
   '/admin/pengguna': typeof AdminPenggunaRoute
   '/admin/peran': typeof AdminPeranRoute
   '/admin/profil-desa': typeof AdminProfilDesaRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/profil': typeof PublicProfilRoute
   '/admin/akun': typeof AdminAkunRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
+  '/admin/pemerintahan': typeof AdminPemerintahanRoute
   '/admin/pengguna': typeof AdminPenggunaRoute
   '/admin/peran': typeof AdminPeranRoute
   '/admin/profil-desa': typeof AdminProfilDesaRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/_public/profil': typeof PublicProfilRoute
   '/admin/akun': typeof AdminAkunRoute
   '/admin/log-audit': typeof AdminLogAuditRoute
+  '/admin/pemerintahan': typeof AdminPemerintahanRoute
   '/admin/pengguna': typeof AdminPenggunaRoute
   '/admin/peran': typeof AdminPeranRoute
   '/admin/profil-desa': typeof AdminProfilDesaRoute
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/profil'
     | '/admin/akun'
     | '/admin/log-audit'
+    | '/admin/pemerintahan'
     | '/admin/pengguna'
     | '/admin/peran'
     | '/admin/profil-desa'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/profil'
     | '/admin/akun'
     | '/admin/log-audit'
+    | '/admin/pemerintahan'
     | '/admin/pengguna'
     | '/admin/peran'
     | '/admin/profil-desa'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/_public/profil'
     | '/admin/akun'
     | '/admin/log-audit'
+    | '/admin/pemerintahan'
     | '/admin/pengguna'
     | '/admin/peran'
     | '/admin/profil-desa'
@@ -280,6 +292,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLogAuditRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/pemerintahan': {
+      id: '/admin/pemerintahan'
+      path: '/pemerintahan'
+      fullPath: '/admin/pemerintahan'
+      preLoaderRoute: typeof AdminPemerintahanRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/pengguna': {
       id: '/admin/pengguna'
       path: '/pengguna'
@@ -321,6 +340,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteRouteChildren {
   AdminAkunRoute: typeof AdminAkunRoute
   AdminLogAuditRoute: typeof AdminLogAuditRoute
+  AdminPemerintahanRoute: typeof AdminPemerintahanRoute
   AdminPenggunaRoute: typeof AdminPenggunaRoute
   AdminPeranRoute: typeof AdminPeranRoute
   AdminProfilDesaRoute: typeof AdminProfilDesaRoute
@@ -331,6 +351,7 @@ interface AdminRouteRouteChildren {
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAkunRoute: AdminAkunRoute,
   AdminLogAuditRoute: AdminLogAuditRoute,
+  AdminPemerintahanRoute: AdminPemerintahanRoute,
   AdminPenggunaRoute: AdminPenggunaRoute,
   AdminPeranRoute: AdminPeranRoute,
   AdminProfilDesaRoute: AdminProfilDesaRoute,
