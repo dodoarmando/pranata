@@ -151,12 +151,16 @@ function ImportantContacts() {
     const form = new FormData(event.currentTarget);
     const text = (name: string) => String(form.get(name) ?? '').trim();
     const order = text('order');
+    const category = text('category');
+    // A contact moved to another category with its old place untouched goes last there.
+    const moved =
+      editing !== null && category !== editing.category && order === String(editing.order);
     const contact: ImportantContactFields = {
       name: text('name'),
-      category: text('category'),
+      category,
       phone: text('phone'),
       note: text('note') || null,
-      order: order ? Number(order) : null,
+      order: order && !moved ? Number(order) : null,
     };
     const status = await saveContact({ data: { id: editing?.id ?? null, contact } });
     if (status >= 300) {
