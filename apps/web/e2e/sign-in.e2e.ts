@@ -524,6 +524,43 @@ test('a publisher lists an Event on /agenda and calls it off, labelled Dibatalka
   await expect(page.getByText('Kategori dihapus.')).toBeVisible();
 });
 
+test('a publisher puts a Page under Profil and the public menu lists it', async ({ page }) => {
+  await page.goto('/masuk');
+  await page.getByLabel('Nama pengguna').fill(username);
+  await page.getByLabel('Kata sandi', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Beranda' })).toBeVisible();
+  page.on('dialog', (dialog) => dialog.accept());
+  // The local database outlives runs, so names are this run's own.
+  const title = `Sejarah desa ${Date.now()}`;
+
+  await page.getByRole('link', { name: 'Halaman', exact: true }).click();
+  await page.getByRole('button', { name: 'Tulis halaman' }).click();
+  await page.getByLabel('Judul').fill(title);
+  await page.getByLabel('Menu', { exact: true }).selectOption({ label: 'Profil' });
+  await page.getByRole('button', { name: 'Mulai menulis' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Tulis halaman' })).toBeVisible();
+  const editor = page.url();
+
+  await page.getByLabel('Ringkasan').fill('Asal-usul desa dari masa ke masa.');
+  await expect(page.getByRole('status')).toContainText('Tersimpan otomatis');
+  await page.getByRole('button', { name: 'Terbitkan' }).click();
+  await expect(page.getByText('Halaman terbit di situs.')).toBeVisible();
+
+  await page.goto('/');
+  const menu = page.getByRole('navigation', { name: 'Menu utama' });
+  await menu.getByText('Profil', { exact: true }).click();
+  await menu.getByRole('link', { name: title }).click();
+  await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+  await expect(page.getByText('Terakhir diperbarui')).toBeVisible();
+
+  await page.goto(editor);
+  await page.getByRole('button', { name: 'Batalkan terbit' }).click();
+  await expect(page.getByText('Halaman kembali menjadi draf.')).toBeVisible();
+  await page.getByRole('button', { name: 'Hapus draf' }).click();
+  await expect(page.getByRole('heading', { name: 'Halaman', exact: true })).toBeVisible();
+});
+
 test('every page has the stylesheet, and the public site stays light', async ({ page }) => {
   // Admin code is split into route chunks the public home page never fetches.
   const scripts: Promise<string>[] = [];
