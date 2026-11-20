@@ -20,5 +20,27 @@
       "suspicious": { "noExplicitAny": "error" }
     }
   },
+  "overrides": [
+    {
+      "includes": ["apps/web/src/routes/_public/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@tiptap/*", "**/rich-text", "**/components/rich-text-editor"],
+                    "message": "Public pages never ship Tiptap: render rich text in a server function with a dynamic import of rich-text-html."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "assist": { "actions": { "source": { "organizeImports": "on" } } }
 }
