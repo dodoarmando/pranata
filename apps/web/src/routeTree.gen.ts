@@ -27,6 +27,8 @@ import { Route as AdminPenggunaRouteImport } from './routes/admin/pengguna'
 import { Route as AdminPeranRouteImport } from './routes/admin/peran'
 import { Route as AdminProfilDesaRouteImport } from './routes/admin/profil-desa'
 import { Route as AdminWilayahRouteImport } from './routes/admin/wilayah'
+import { Route as PublicBeritaIndexRouteImport } from './routes/_public/berita/index'
+import { Route as PublicBeritaSlugRouteImport } from './routes/_public/berita/$slug'
 import { Route as AdminBeritaIndexRouteImport } from './routes/admin/berita/index'
 import { Route as AdminBeritaIdRouteImport } from './routes/admin/berita/$id'
 import { Route as MediaIdVariantRouteImport } from './routes/media.$id.$variant'
@@ -120,6 +122,16 @@ const AdminWilayahRoute = AdminWilayahRouteImport.update({
   path: '/wilayah',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const PublicBeritaIndexRoute = PublicBeritaIndexRouteImport.update({
+  id: '/berita/',
+  path: '/berita/',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicBeritaSlugRoute = PublicBeritaSlugRouteImport.update({
+  id: '/berita/$slug',
+  path: '/berita/$slug',
+  getParentRoute: () => PublicRoute,
+} as any)
 const AdminBeritaIndexRoute = AdminBeritaIndexRouteImport.update({
   id: '/berita/',
   path: '/berita/',
@@ -154,8 +166,10 @@ export interface FileRoutesByFullPath {
   '/admin/profil-desa': typeof AdminProfilDesaRoute
   '/admin/wilayah': typeof AdminWilayahRoute
   '/admin/': typeof AdminIndexRoute
+  '/berita/$slug': typeof PublicBeritaSlugRoute
   '/admin/berita/$id': typeof AdminBeritaIdRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
+  '/berita/': typeof PublicBeritaIndexRoute
   '/admin/berita/': typeof AdminBeritaIndexRoute
 }
 export interface FileRoutesByTo {
@@ -175,8 +189,10 @@ export interface FileRoutesByTo {
   '/admin/wilayah': typeof AdminWilayahRoute
   '/': typeof PublicIndexRoute
   '/admin': typeof AdminIndexRoute
+  '/berita/$slug': typeof PublicBeritaSlugRoute
   '/admin/berita/$id': typeof AdminBeritaIdRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
+  '/berita': typeof PublicBeritaIndexRoute
   '/admin/berita': typeof AdminBeritaIndexRoute
 }
 export interface FileRoutesById {
@@ -199,8 +215,10 @@ export interface FileRoutesById {
   '/admin/wilayah': typeof AdminWilayahRoute
   '/_public/': typeof PublicIndexRoute
   '/admin/': typeof AdminIndexRoute
+  '/_public/berita/$slug': typeof PublicBeritaSlugRoute
   '/admin/berita/$id': typeof AdminBeritaIdRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
+  '/_public/berita/': typeof PublicBeritaIndexRoute
   '/admin/berita/': typeof AdminBeritaIndexRoute
 }
 export interface FileRouteTypes {
@@ -223,8 +241,10 @@ export interface FileRouteTypes {
     | '/admin/profil-desa'
     | '/admin/wilayah'
     | '/admin/'
+    | '/berita/$slug'
     | '/admin/berita/$id'
     | '/media/$id/$variant'
+    | '/berita/'
     | '/admin/berita/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -244,8 +264,10 @@ export interface FileRouteTypes {
     | '/admin/wilayah'
     | '/'
     | '/admin'
+    | '/berita/$slug'
     | '/admin/berita/$id'
     | '/media/$id/$variant'
+    | '/berita'
     | '/admin/berita'
   id:
     | '__root__'
@@ -267,8 +289,10 @@ export interface FileRouteTypes {
     | '/admin/wilayah'
     | '/_public/'
     | '/admin/'
+    | '/_public/berita/$slug'
     | '/admin/berita/$id'
     | '/media/$id/$variant'
+    | '/_public/berita/'
     | '/admin/berita/'
   fileRoutesById: FileRoutesById
 }
@@ -408,6 +432,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWilayahRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/_public/berita/': {
+      id: '/_public/berita/'
+      path: '/berita'
+      fullPath: '/berita/'
+      preLoaderRoute: typeof PublicBeritaIndexRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/berita/$slug': {
+      id: '/_public/berita/$slug'
+      path: '/berita/$slug'
+      fullPath: '/berita/$slug'
+      preLoaderRoute: typeof PublicBeritaSlugRouteImport
+      parentRoute: typeof PublicRoute
+    }
     '/admin/berita/': {
       id: '/admin/berita/'
       path: '/berita'
@@ -471,6 +509,8 @@ interface PublicRouteChildren {
   PublicPemerintahanRoute: typeof PublicPemerintahanRoute
   PublicProfilRoute: typeof PublicProfilRoute
   PublicIndexRoute: typeof PublicIndexRoute
+  PublicBeritaSlugRoute: typeof PublicBeritaSlugRoute
+  PublicBeritaIndexRoute: typeof PublicBeritaIndexRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
@@ -478,6 +518,8 @@ const PublicRouteChildren: PublicRouteChildren = {
   PublicPemerintahanRoute: PublicPemerintahanRoute,
   PublicProfilRoute: PublicProfilRoute,
   PublicIndexRoute: PublicIndexRoute,
+  PublicBeritaSlugRoute: PublicBeritaSlugRoute,
+  PublicBeritaIndexRoute: PublicBeritaIndexRoute,
 }
 
 const PublicRouteWithChildren =

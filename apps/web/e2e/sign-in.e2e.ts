@@ -353,6 +353,71 @@ test('a village manager records an Indeks Desa Edition, shown publicly as the la
   await expect(row).toHaveCount(0);
 });
 
+test('a publisher writes and publishes a News Post, read on /berita until unpublished', async ({
+  page,
+}) => {
+  await page.goto('/masuk');
+  await page.getByLabel('Nama pengguna').fill(username);
+  await page.getByLabel('Kata sandi', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Beranda' })).toBeVisible();
+  page.on('dialog', (dialog) => dialog.accept());
+  // The local database outlives runs, so names are this run's own.
+  const run = Date.now();
+  const category = `Kegiatan ${run}`;
+  const title = `Kerja bakti ${run}`;
+  const cover = await page.screenshot({ clip: { x: 0, y: 0, width: 320, height: 180 } });
+
+  await page.getByRole('link', { name: 'Berita' }).click();
+  await page.getByLabel('Kategori baru').fill(category);
+  await page.getByRole('button', { name: 'Tambah kategori' }).click();
+  await expect(page.getByText('Kategori ditambahkan.')).toBeVisible();
+  await page.getByRole('button', { name: 'Tulis berita' }).click();
+  await page.getByLabel('Judul').fill(title);
+  await page.getByRole('button', { name: 'Mulai menulis' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Tulis berita' })).toBeVisible();
+  const editor = page.url();
+
+  await page.getByLabel('Kategori').selectOption({ label: category });
+  await page.getByLabel('Ringkasan').fill('Warga membersihkan saluran air bersama-sama.');
+  await page.getByLabel(/Unggah foto/).setInputFiles({
+    name: 'sampul.png',
+    mimeType: 'image/png',
+    buffer: cover,
+  });
+  await expect(page.getByText('Belum ada foto')).toHaveCount(0);
+  await page.getByLabel('Keterangan foto').fill('Warga membersihkan saluran');
+  await expect(page.getByLabel('Teks alternatif')).toHaveValue('Warga membersihkan saluran');
+  await page.getByRole('textbox', { name: 'Isi berita' }).click();
+  await page.keyboard.type('Kerja bakti dimulai pukul tujuh pagi.');
+  await expect(page.getByRole('status')).toContainText('Tersimpan otomatis');
+  await page.getByRole('button', { name: 'Terbitkan' }).click();
+  await expect(page.getByText('Berita terbit di situs.')).toBeVisible();
+
+  await page.goto('/berita');
+  await page.getByRole('link', { name: title }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(title);
+  await expect(page.getByText('Kerja bakti dimulai pukul tujuh pagi.')).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Warga membersihkan saluran' })).toBeVisible();
+  const post = page.url();
+
+  await page.goto(editor);
+  await page.getByRole('button', { name: 'Batalkan terbit' }).click();
+  await expect(page.getByText('Berita kembali menjadi draf.')).toBeVisible();
+  expect((await page.goto(post))?.status()).toBe(404);
+  await expect(page.getByRole('heading', { name: 'Berita tidak ditemukan' })).toBeVisible();
+
+  await page.goto(editor);
+  await page.getByRole('button', { name: 'Hapus draf' }).click();
+  await expect(page.getByRole('heading', { name: 'Berita', exact: true })).toBeVisible();
+  await page
+    .getByRole('listitem')
+    .filter({ hasText: category })
+    .getByRole('button', { name: 'Hapus' })
+    .click();
+  await expect(page.getByText('Kategori dihapus.')).toBeVisible();
+});
+
 test('every page has the stylesheet, and the public site stays light', async ({ page }) => {
   // Admin code is split into route chunks the public home page never fetches.
   const scripts: Promise<string>[] = [];
@@ -389,6 +454,7 @@ test('every page has the stylesheet, and the public site stays light', async ({ 
     '/admin/akun',
     '/admin/pemerintahan',
     '/admin/lembaga-desa',
+    '/admin/berita',
     '/admin/pengguna',
     '/admin/peran',
     '/admin/log-audit',
