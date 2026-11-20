@@ -400,6 +400,7 @@ export const DraftKind = {
   importantContact: 'importantContact',
   partner: 'partner',
   transparencyDocument: 'transparencyDocument',
+  apbdesSummary: 'apbdesSummary',
 } as const;
 
 /**
