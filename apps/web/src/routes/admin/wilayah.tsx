@@ -68,7 +68,7 @@ const settingsErrors: Record<number, string> = {
 
 const unitErrors: Record<number, string> = {
   403: forbidden,
-  409: 'Tidak dapat disimpan: nomor itu sudah dipakai, masih ada wilayah aktif di bawahnya, atau wilayah di atasnya nonaktif.',
+  409: 'Tidak dapat disimpan: nomor itu sudah dipakai, masih ada wilayah aktif di bawahnya, masa jabatan kepalanya belum diberi tanggal selesai, atau wilayah di atasnya nonaktif.',
   422: 'Periksa lagi isian: nama wajib diisi (paling banyak 100 karakter), nomor 1–999, dan telepon yang sah.',
 };
 
@@ -404,8 +404,10 @@ function Regions() {
                   <span>
                     Aktif
                     <span id="unit-active-hint" className="block text-muted-foreground">
-                      Hanya dapat dinonaktifkan bila semua wilayah di bawahnya sudah nonaktif.
-                      Wilayah nonaktif tidak dapat dipilih untuk data baru, dan tidak pernah
+                      Hanya dapat dinonaktifkan bila semua wilayah di bawahnya sudah nonaktif
+                      {editing.kind === 'hamlet' &&
+                        ' dan masa jabatan kepalanya sudah diberi tanggal selesai di Pemerintahan'}
+                      . Wilayah nonaktif tidak dapat dipilih untuk data baru, dan tidak pernah
                       dihapus.
                     </span>
                   </span>
