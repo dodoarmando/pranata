@@ -4,6 +4,7 @@ mod auth;
 mod category;
 mod dashboard;
 pub mod db;
+mod event;
 mod export;
 mod government;
 mod health;
@@ -148,6 +149,12 @@ fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(announcement::list_published))
         .routes(routes!(announcement::list_in_effect))
         .routes(routes!(announcement::get_published))
+        .routes(routes!(event::list, event::create))
+        .routes(routes!(event::get, event::update, event::delete))
+        .routes(routes!(event::publish))
+        .routes(routes!(event::unpublish))
+        .routes(routes!(event::list_upcoming))
+        .routes(routes!(event::list_past))
         .routes(routes!(storage::get_media))
         .routes(routes!(auth::use_access_link))
         .routes(routes!(auth::sign_in))

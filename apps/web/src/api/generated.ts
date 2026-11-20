@@ -300,6 +300,116 @@ export interface EncryptedFile {
 }
 
 /**
+ * What a User writes in an Event. A Draft may leave out what publishing requires.
+ */
+export interface EventFields {
+  /** Called off; it stays listed, labelled "Dibatalkan". */
+  cancelled?: boolean;
+  /**
+     * The Category it is filed under, from the list News Posts share; required to publish.
+     * @nullable
+     */
+  category?: string | null;
+  /**
+     * Optional plain text, at most 2000 characters.
+     * @nullable
+     */
+  description?: string | null;
+  /**
+     * Optional, not before the start, possibly days later. Without one, the Event is past
+     * once the day it starts on is over.
+     * @nullable
+     */
+  endsAt?: string | null;
+  /**
+     * Plain text, at most 200 characters; required to publish.
+     * @nullable
+     */
+  location?: string | null;
+  /**
+     * Wall-clock time in the Village's time zone; required to publish.
+     * @nullable
+     */
+  startsAt?: string | null;
+  /** 1–150 characters. */
+  title: string;
+}
+
+/**
+ * An Event as the admin area edits it.
+ */
+export type Event = EventFields & ({
+  /** @nullable */
+  firstPublishedAt?: string | null;
+  id: string;
+  published: boolean;
+  updatedAt: string;
+});
+
+/**
+ * A Published Event on the public Agenda; it has no detail page.
+ */
+export interface EventCard {
+  /** Shown as "Dibatalkan". */
+  cancelled: boolean;
+  /** The Category's name. */
+  category: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  endsAt?: string | null;
+  id: string;
+  location: string;
+  /** Wall-clock time in the Village's time zone. */
+  startsAt: string;
+  title: string;
+}
+
+/**
+ * One page of past Events.
+ */
+export interface EventPage {
+  events: EventCard[];
+  pageSize: number;
+  /** How many past Published Events there are, over every page. */
+  total: number;
+}
+
+/**
+ * Whether an Event is still to come (or under way) or over.
+ */
+export type Timing = typeof Timing[keyof typeof Timing];
+
+
+export const Timing = {
+  upcoming: 'upcoming',
+  past: 'past',
+} as const;
+
+/**
+ * A line of the admin area's Event list.
+ */
+export interface EventSummary {
+  /** The creating User's username. */
+  author: string;
+  cancelled: boolean;
+  /**
+     * The Category's name.
+     * @nullable
+     */
+  category?: string | null;
+  /** @nullable */
+  endsAt?: string | null;
+  id: string;
+  published: boolean;
+  /** @nullable */
+  startsAt?: string | null;
+  timing?: Timing | null;
+  title: string;
+  updatedAt: string;
+}
+
+/**
  * Why the User exports; required (Permenkomdigi 5/2025 Art. 93) and kept in the Audit Entry.
  */
 export interface ExportReason {
@@ -1043,6 +1153,14 @@ export type ExportAuditEntriesParams = {
   to?: string;
   /** Only entries older than this one, such as the `next` of the previous page. */
   before?: string;
+};
+
+export type ListPastEventsParams = {
+  /**
+   * From 1, the default.
+   * @minimum 0
+   */
+  page?: number;
 };
 
 export type ListPublishedNewsPostsParams = {
@@ -2723,6 +2841,500 @@ export const getDashboard = async ( options?: Parameters<typeof apiFetch>[1]): P
   {
     ...options,
     method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listEventsResponse200 = {
+  data: EventSummary[]
+  status: 200
+}
+
+export type listEventsResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listEventsResponse403 = {
+  data: void
+  status: 403
+}
+
+export type listEventsResponseSuccess = (listEventsResponse200) & {
+  headers: Headers;
+};
+export type listEventsResponseError = (listEventsResponse401 | listEventsResponse403) & {
+  headers: Headers;
+};
+
+export type listEventsResponse = (listEventsResponseSuccess | listEventsResponseError)
+
+export const getListEventsUrl = () => {
+
+
+
+
+  return `/events`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`.
+ * @summary Every Event, Drafts and Published, the latest changed first.
+ */
+export const listEvents = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listEventsResponse> => {
+
+  return apiFetch<listEventsResponse>(getListEventsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createEventResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createEventResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createEventResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createEventResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createEventResponseSuccess = (createEventResponse201) & {
+  headers: Headers;
+};
+export type createEventResponseError = (createEventResponse401 | createEventResponse403 | createEventResponse422) & {
+  headers: Headers;
+};
+
+export type createEventResponse = (createEventResponseSuccess | createEventResponseError)
+
+export const getCreateEventUrl = () => {
+
+
+
+
+  return `/events`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `422`
+ * for a blank title, a malformed field, an end before the start or an unknown Category.
+ * @summary Starts a Draft written by the signed-in User; only the title is required.
+ */
+export const createEvent = async (eventFields: EventFields, options?: Parameters<typeof apiFetch>[1]): Promise<createEventResponse> => {
+
+  return apiFetch<createEventResponse>(getCreateEventUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(eventFields)
+  }
+);}
+
+
+
+export type listPastEventsResponse200 = {
+  data: EventPage
+  status: 200
+}
+
+export type listPastEventsResponseSuccess = (listPastEventsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listPastEventsResponse = (listPastEventsResponseSuccess)
+
+export const getListPastEventsUrl = (params?: ListPastEventsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/events/past?${stringifiedParams}` : `/events/past`
+}
+
+/**
+ * @summary The Published Events that are over, the latest first, a page at a time.
+ */
+export const listPastEvents = async (params?: ListPastEventsParams, options?: Parameters<typeof apiFetch>[1]): Promise<listPastEventsResponse> => {
+
+  return apiFetch<listPastEventsResponse>(getListPastEventsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listUpcomingEventsResponse200 = {
+  data: EventCard[]
+  status: 200
+}
+
+export type listUpcomingEventsResponseSuccess = (listUpcomingEventsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listUpcomingEventsResponse = (listUpcomingEventsResponseSuccess)
+
+export const getListUpcomingEventsUrl = () => {
+
+
+
+
+  return `/events/upcoming`
+}
+
+/**
+ * @summary The Published Events still to come or under way, the soonest first, Cancelled ones
+included.
+ */
+export const listUpcomingEvents = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listUpcomingEventsResponse> => {
+
+  return apiFetch<listUpcomingEventsResponse>(getListUpcomingEventsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getEventResponse200 = {
+  data: Event
+  status: 200
+}
+
+export type getEventResponse401 = {
+  data: void
+  status: 401
+}
+
+export type getEventResponse403 = {
+  data: void
+  status: 403
+}
+
+export type getEventResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getEventResponseSuccess = (getEventResponse200) & {
+  headers: Headers;
+};
+export type getEventResponseError = (getEventResponse401 | getEventResponse403 | getEventResponse404) & {
+  headers: Headers;
+};
+
+export type getEventResponse = (getEventResponseSuccess | getEventResponseError)
+
+export const getGetEventUrl = (id: string,) => {
+
+
+
+
+  return `/events/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `404`
+ * for an unknown Event.
+ * @summary One Event, Draft or Published, for editing.
+ */
+export const getEvent = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<getEventResponse> => {
+
+  return apiFetch<getEventResponse>(getGetEventUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type updateEventResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateEventResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateEventResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateEventResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateEventResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateEventResponseSuccess = (updateEventResponse204) & {
+  headers: Headers;
+};
+export type updateEventResponseError = (updateEventResponse401 | updateEventResponse403 | updateEventResponse404 | updateEventResponse422) & {
+  headers: Headers;
+};
+
+export type updateEventResponse = (updateEventResponseSuccess | updateEventResponseError)
+
+export const getUpdateEventUrl = (id: string,) => {
+
+
+
+
+  return `/events/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` (or `content.publish`) for a
+ * Draft or without `content.publish` for a Published Event, `404` for an unknown Event, `422`
+ * for a blank title, a malformed field, an end before the start, an unknown Category, or a
+ * Published Event missing what publishing requires.
+ * @summary Saves an Event: a Draft as it autosaves, a Published one live.
+ */
+export const updateEvent = async (id: string,
+    eventFields: EventFields, options?: Parameters<typeof apiFetch>[1]): Promise<updateEventResponse> => {
+
+  return apiFetch<updateEventResponse>(getUpdateEventUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(eventFields)
+  }
+);}
+
+
+
+export type deleteEventResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteEventResponse401 = {
+  data: void
+  status: 401
+}
+
+export type deleteEventResponse403 = {
+  data: void
+  status: 403
+}
+
+export type deleteEventResponse404 = {
+  data: void
+  status: 404
+}
+
+export type deleteEventResponse409 = {
+  data: void
+  status: 409
+}
+
+export type deleteEventResponseSuccess = (deleteEventResponse204) & {
+  headers: Headers;
+};
+export type deleteEventResponseError = (deleteEventResponse401 | deleteEventResponse403 | deleteEventResponse404 | deleteEventResponse409) & {
+  headers: Headers;
+};
+
+export type deleteEventResponse = (deleteEventResponseSuccess | deleteEventResponseError)
+
+export const getDeleteEventUrl = (id: string,) => {
+
+
+
+
+  return `/events/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown Event,
+ * `409` when it is Published.
+ * @summary Deletes a Draft for good. A Published one is unpublished first.
+ */
+export const deleteEvent = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deleteEventResponse> => {
+
+  return apiFetch<deleteEventResponse>(getDeleteEventUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type publishEventResponse204 = {
+  data: void
+  status: 204
+}
+
+export type publishEventResponse401 = {
+  data: void
+  status: 401
+}
+
+export type publishEventResponse403 = {
+  data: void
+  status: 403
+}
+
+export type publishEventResponse404 = {
+  data: void
+  status: 404
+}
+
+export type publishEventResponse409 = {
+  data: void
+  status: 409
+}
+
+export type publishEventResponse422 = {
+  data: void
+  status: 422
+}
+
+export type publishEventResponseSuccess = (publishEventResponse204) & {
+  headers: Headers;
+};
+export type publishEventResponseError = (publishEventResponse401 | publishEventResponse403 | publishEventResponse404 | publishEventResponse409 | publishEventResponse422) & {
+  headers: Headers;
+};
+
+export type publishEventResponse = (publishEventResponseSuccess | publishEventResponseError)
+
+export const getPublishEventUrl = (id: string,) => {
+
+
+
+
+  return `/events/${id}/publish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown Event,
+ * `409` when it is already Published, `422` when it lacks a Category, start or location.
+ * @summary Puts a Draft on the public Agenda.
+ */
+export const publishEvent = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<publishEventResponse> => {
+
+  return apiFetch<publishEventResponse>(getPublishEventUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type unpublishEventResponse204 = {
+  data: void
+  status: 204
+}
+
+export type unpublishEventResponse401 = {
+  data: void
+  status: 401
+}
+
+export type unpublishEventResponse403 = {
+  data: void
+  status: 403
+}
+
+export type unpublishEventResponse404 = {
+  data: void
+  status: 404
+}
+
+export type unpublishEventResponse409 = {
+  data: void
+  status: 409
+}
+
+export type unpublishEventResponseSuccess = (unpublishEventResponse204) & {
+  headers: Headers;
+};
+export type unpublishEventResponseError = (unpublishEventResponse401 | unpublishEventResponse403 | unpublishEventResponse404 | unpublishEventResponse409) & {
+  headers: Headers;
+};
+
+export type unpublishEventResponse = (unpublishEventResponseSuccess | unpublishEventResponseError)
+
+export const getUnpublishEventUrl = (id: string,) => {
+
+
+
+
+  return `/events/${id}/unpublish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown Event,
+ * `409` when it is a Draft.
+ * @summary Takes a Published Event off the public Agenda, back to Draft.
+ */
+export const unpublishEvent = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<unpublishEventResponse> => {
+
+  return apiFetch<unpublishEventResponse>(getUnpublishEventUrl(id),
+  {
+    ...options,
+    method: 'POST'
 
 
   }
