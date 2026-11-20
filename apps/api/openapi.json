@@ -713,6 +713,158 @@
         }
       }
     },
+    "/index-editions": {
+      "get": {
+        "tags": [
+          "index-edition"
+        ],
+        "summary": "Every Edition, the newest year first, for the public site and the admin area.",
+        "operationId": "listIndexEditions",
+        "responses": {
+          "200": {
+            "description": "Every Edition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IndexEdition"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "index-edition"
+        ],
+        "summary": "Records an Edition.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `409` when the year has an\nEdition, `422` for a year, score or dimension outside its kind's scale, or dimensions on IDM.",
+        "operationId": "createIndexEdition",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndexEditionFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Edition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "409": {
+            "description": "The year has an Edition"
+          },
+          "422": {
+            "description": "A field is outside its scale"
+          }
+        }
+      }
+    },
+    "/index-editions/{id}": {
+      "put": {
+        "tags": [
+          "index-edition"
+        ],
+        "summary": "Changes an Edition.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `404` for an unknown Edition,\n`409` when the year has another Edition, `422` for a year, score or dimension outside its\nkind's scale, or dimensions on IDM.",
+        "operationId": "updateIndexEdition",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Edition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndexEditionFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Edition is changed"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "404": {
+            "description": "There is no such Edition"
+          },
+          "409": {
+            "description": "The year has another Edition"
+          },
+          "422": {
+            "description": "A field is outside its scale"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "index-edition"
+        ],
+        "summary": "Deletes an Edition.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `404` for an unknown Edition.",
+        "operationId": "deleteIndexEdition",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Edition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Edition is deleted"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "404": {
+            "description": "There is no such Edition"
+          }
+        }
+      }
+    },
     "/institutions": {
       "get": {
         "tags": [
@@ -2184,6 +2336,17 @@
           }
         }
       },
+      "DevelopmentStatus": {
+        "type": "string",
+        "description": "The status the ministry gave, as entered.",
+        "enum": [
+          "independent",
+          "advanced",
+          "developing",
+          "underdeveloped",
+          "very_underdeveloped"
+        ]
+      },
       "EncryptedFile": {
         "type": "object",
         "description": "An exported file, encrypted; only `password` opens it.",
@@ -2300,6 +2463,109 @@
         "enum": [
           "ok",
           "unavailable"
+        ]
+      },
+      "IndexEdition": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/IndexEditionFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ]
+      },
+      "IndexEditionFields": {
+        "type": "object",
+        "description": "What a User records about an Edition.",
+        "required": [
+          "year",
+          "kind",
+          "score",
+          "status"
+        ],
+        "properties": {
+          "accessibility": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Aksesibilitas."
+          },
+          "basicServices": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Layanan Dasar; this and the other dimensions are 0–100 with 2 decimals, Indeks Desa only."
+          },
+          "economic": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Ekonomi."
+          },
+          "environmental": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Lingkungan."
+          },
+          "governance": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Tata Kelola Pemerintahan."
+          },
+          "kind": {
+            "$ref": "#/components/schemas/IndexKind"
+          },
+          "score": {
+            "type": "number",
+            "format": "double",
+            "description": "0–100 with 2 decimals for Indeks Desa, 0–1 with 4 decimals for IDM."
+          },
+          "social": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Sosial."
+          },
+          "status": {
+            "$ref": "#/components/schemas/DevelopmentStatus"
+          },
+          "year": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The data-collection year, 2000–2100; one Edition per year."
+          }
+        }
+      },
+      "IndexKind": {
+        "type": "string",
+        "description": "Which index scored the Village.",
+        "enum": [
+          "indeks_desa",
+          "idm"
         ]
       },
       "Institution": {

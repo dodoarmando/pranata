@@ -1,0 +1,55 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO index_editions (year, kind, score, status, basic_services, social,\n             economic, environmental, accessibility, governance)\n             VALUES ($1, $2, $3::float8, $4, $5::float8, $6::float8, $7::float8, $8::float8,\n             $9::float8, $10::float8) RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "index_editions",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int2",
+        {
+          "Custom": {
+            "name": "index_kind",
+            "kind": {
+              "Enum": ["indeks_desa", "idm"]
+            }
+          }
+        },
+        "Float8",
+        {
+          "Custom": {
+            "name": "development_status",
+            "kind": {
+              "Enum": [
+                "independent",
+                "advanced",
+                "developing",
+                "underdeveloped",
+                "very_underdeveloped"
+              ]
+            }
+          }
+        },
+        "Float8",
+        "Float8",
+        "Float8",
+        "Float8",
+        "Float8",
+        "Float8"
+      ]
+    },
+    "nullable": [false]
+  },
+  "hash": "20156cdee79e2e8135fd5b160fc8c98e776e318a2b1d35e04c030a4ef7c77263"
+}
