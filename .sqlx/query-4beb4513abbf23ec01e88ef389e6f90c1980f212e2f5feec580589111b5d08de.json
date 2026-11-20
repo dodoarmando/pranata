@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT slug FROM pages WHERE (slug = $1 OR slug ~ ('^' || $1 || '-[0-9]+$'))\n         AND id IS DISTINCT FROM $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "pages",
+            "name": "slug"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Text", "Uuid"]
+    },
+    "nullable": [false]
+  },
+  "hash": "4beb4513abbf23ec01e88ef389e6f90c1980f212e2f5feec580589111b5d08de"
+}

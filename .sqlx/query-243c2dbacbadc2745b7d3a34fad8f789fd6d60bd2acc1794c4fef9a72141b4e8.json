@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE pages SET title = $1, slug = $2, menu = $3, sort_order = $4, summary = $5,\n         cover_file_id = $6, cover_caption = $7, cover_alt = $8, body = $9, updated_at = now()\n         WHERE id = $10",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        {
+          "Custom": {
+            "name": "page_menu",
+            "kind": {
+              "Enum": ["profile", "government", "services"]
+            }
+          }
+        },
+        "Int4",
+        "Text",
+        "Uuid",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "243c2dbacbadc2745b7d3a34fad8f789fd6d60bd2acc1794c4fef9a72141b4e8"
+}

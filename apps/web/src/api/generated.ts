@@ -806,6 +806,106 @@ export interface OfficialLink {
 }
 
 /**
+ * The fixed parent menu a Page sits under, which is also its URL's first part.
+ */
+export type PageMenu = typeof PageMenu[keyof typeof PageMenu];
+
+
+export const PageMenu = {
+  profile: 'profile',
+  government: 'government',
+  services: 'services',
+} as const;
+
+/**
+ * Tiptap JSON of the allowed nodes and marks only: paragraph, h2–h3, bold, italic, link
+ * (`http(s):`, `mailto:`, `tel:`), bullet and ordered list, blockquote, table and `YouTube`.
+ */
+export type PageFieldsBody = { [key: string]: unknown };
+
+/**
+ * What a User writes in a Page. A Draft may leave out what publishing requires.
+ */
+export interface PageFields {
+  /**
+     * Tiptap JSON of the allowed nodes and marks only: paragraph, h2–h3, bold, italic, link
+     * (`http(s):`, `mailto:`, `tel:`), bullet and ordered list, blockquote, table and `YouTube`.
+     */
+  body?: PageFieldsBody;
+  /**
+     * The optional cover photo, uploaded at `/pages/cover`.
+     * @nullable
+     */
+  cover?: string | null;
+  /**
+     * The cover's alt text, up to 300 characters; required to publish with a cover.
+     * @nullable
+     */
+  coverAlt?: string | null;
+  /**
+     * Up to 300 characters.
+     * @nullable
+     */
+  coverCaption?: string | null;
+  /** Locked once first published, like the slug. */
+  menu: PageMenu;
+  /**
+     * The place within the menu, smallest first; a new Page goes last when left out, and an
+     * edit keeps the place.
+     * @nullable
+     */
+  order?: number | null;
+  /**
+     * Made from the title when blank; transliterated, and locked once first published.
+     * @nullable
+     */
+  slug?: string | null;
+  /**
+     * The meta description, at most 250 characters; required to publish.
+     * @nullable
+     */
+  summary?: string | null;
+  /** 1–150 characters. */
+  title: string;
+}
+
+/**
+ * A Page as the admin area edits it.
+ */
+export type Page = PageFields & ({
+  /**
+     * Null until first published; the slug and menu are locked once set.
+     * @nullable
+     */
+  firstPublishedAt?: string | null;
+  id: string;
+  published: boolean;
+  updatedAt: string;
+});
+
+/**
+ * A Published Page in the public navigation.
+ */
+export interface PageLink {
+  menu: PageMenu;
+  slug: string;
+  title: string;
+}
+
+/**
+ * A line of the admin area's Page list.
+ */
+export interface PageSummary {
+  id: string;
+  menu: PageMenu;
+  order: number;
+  published: boolean;
+  slug: string;
+  title: string;
+  updatedAt: string;
+}
+
+/**
  * A WebAuthn ceremony's options for the browser, and its id to finish it with.
  */
 export interface PasskeyChallenge {
@@ -947,6 +1047,31 @@ export interface PublishedNewsPost {
   slug: string;
   summary: string;
   title: string;
+}
+
+/**
+ * Tiptap JSON of the allowed nodes and marks only.
+ */
+export type PublishedPageBody = { [key: string]: unknown };
+
+/**
+ * A Published Page as the public reads it.
+ */
+export interface PublishedPage {
+  /** Tiptap JSON of the allowed nodes and marks only. */
+  body: PublishedPageBody;
+  /** @nullable */
+  cover?: string | null;
+  /** @nullable */
+  coverAlt?: string | null;
+  /** @nullable */
+  coverCaption?: string | null;
+  menu: PageMenu;
+  slug: string;
+  summary: string;
+  title: string;
+  /** The last save, shown as "last updated". */
+  updatedAt: string;
 }
 
 export interface Reauthenticate {
@@ -4487,6 +4612,582 @@ export const getUnpublishNewsPostUrl = (id: string,) => {
 export const unpublishNewsPost = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<unpublishNewsPostResponse> => {
 
   return apiFetch<unpublishNewsPostResponse>(getUnpublishNewsPostUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type listPagesResponse200 = {
+  data: PageSummary[]
+  status: 200
+}
+
+export type listPagesResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listPagesResponse403 = {
+  data: void
+  status: 403
+}
+
+export type listPagesResponseSuccess = (listPagesResponse200) & {
+  headers: Headers;
+};
+export type listPagesResponseError = (listPagesResponse401 | listPagesResponse403) & {
+  headers: Headers;
+};
+
+export type listPagesResponse = (listPagesResponseSuccess | listPagesResponseError)
+
+export const getListPagesUrl = () => {
+
+
+
+
+  return `/pages`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`.
+ * @summary Every Page, Drafts and Published, menu by menu in order.
+ */
+export const listPages = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listPagesResponse> => {
+
+  return apiFetch<listPagesResponse>(getListPagesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createPageResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createPageResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createPageResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createPageResponse409 = {
+  data: void
+  status: 409
+}
+
+export type createPageResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createPageResponseSuccess = (createPageResponse201) & {
+  headers: Headers;
+};
+export type createPageResponseError = (createPageResponse401 | createPageResponse403 | createPageResponse409 | createPageResponse422) & {
+  headers: Headers;
+};
+
+export type createPageResponse = (createPageResponseSuccess | createPageResponseError)
+
+export const getCreatePageUrl = () => {
+
+
+
+
+  return `/pages`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `409`
+ * when another Page takes the slug meanwhile, `422` for a blank title, a missing or unknown
+ * menu, a malformed field, a body outside the allowlist, or an unknown cover.
+ * @summary Starts a Draft written by the signed-in User; only the title and menu are required.
+ */
+export const createPage = async (pageFields: PageFields, options?: Parameters<typeof apiFetch>[1]): Promise<createPageResponse> => {
+
+  return apiFetch<createPageResponse>(getCreatePageUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(pageFields)
+  }
+);}
+
+
+
+export type uploadPageCoverResponse201 = {
+  data: Upload
+  status: 201
+}
+
+export type uploadPageCoverResponse401 = {
+  data: void
+  status: 401
+}
+
+export type uploadPageCoverResponse403 = {
+  data: void
+  status: 403
+}
+
+export type uploadPageCoverResponse413 = {
+  data: void
+  status: 413
+}
+
+export type uploadPageCoverResponse415 = {
+  data: void
+  status: 415
+}
+
+export type uploadPageCoverResponse422 = {
+  data: void
+  status: 422
+}
+
+export type uploadPageCoverResponseSuccess = (uploadPageCoverResponse201) & {
+  headers: Headers;
+};
+export type uploadPageCoverResponseError = (uploadPageCoverResponse401 | uploadPageCoverResponse403 | uploadPageCoverResponse413 | uploadPageCoverResponse415 | uploadPageCoverResponse422) & {
+  headers: Headers;
+};
+
+export type uploadPageCoverResponse = (uploadPageCoverResponseSuccess | uploadPageCoverResponseError)
+
+export const getUploadPageCoverUrl = () => {
+
+
+
+
+  return `/pages/cover`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `413`
+ * over 10 MiB, `415` for content that is not JPEG, PNG or WebP, `422` over 40 megapixels or
+ * undecodable.
+ * @summary Stores a cover photo, a JPEG, PNG or WebP of at most 10 MiB, for saving into a Page.
+ */
+export const uploadPageCover = async (uploadPageCoverBody: Blob, options?: Parameters<typeof apiFetch>[1]): Promise<uploadPageCoverResponse> => {
+
+  return apiFetch<uploadPageCoverResponse>(getUploadPageCoverUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/octet-stream' }, options?.headers),
+    body: uploadPageCoverBody
+  }
+);}
+
+
+
+export type listPublishedPagesResponse200 = {
+  data: PageLink[]
+  status: 200
+}
+
+export type listPublishedPagesResponseSuccess = (listPublishedPagesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listPublishedPagesResponse = (listPublishedPagesResponseSuccess)
+
+export const getListPublishedPagesUrl = () => {
+
+
+
+
+  return `/pages/published`
+}
+
+/**
+ * @summary Published Pages for the public navigation: Profil, then Pemerintahan, then Layanan, each in
+order.
+ */
+export const listPublishedPages = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listPublishedPagesResponse> => {
+
+  return apiFetch<listPublishedPagesResponse>(getListPublishedPagesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getPublishedPageResponse200 = {
+  data: PublishedPage
+  status: 200
+}
+
+export type getPublishedPageResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getPublishedPageResponseSuccess = (getPublishedPageResponse200) & {
+  headers: Headers;
+};
+export type getPublishedPageResponseError = (getPublishedPageResponse404) & {
+  headers: Headers;
+};
+
+export type getPublishedPageResponse = (getPublishedPageResponseSuccess | getPublishedPageResponseError)
+
+export const getGetPublishedPageUrl = (slug: string,) => {
+
+
+
+
+  return `/pages/published/${slug}`
+}
+
+/**
+ * # Errors
+ * `404` for a slug no Published Page has, such as a Draft's or a deleted one's.
+ * @summary One Published Page by its slug.
+ */
+export const getPublishedPage = async (slug: string, options?: Parameters<typeof apiFetch>[1]): Promise<getPublishedPageResponse> => {
+
+  return apiFetch<getPublishedPageResponse>(getGetPublishedPageUrl(slug),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getPageResponse200 = {
+  data: Page
+  status: 200
+}
+
+export type getPageResponse401 = {
+  data: void
+  status: 401
+}
+
+export type getPageResponse403 = {
+  data: void
+  status: 403
+}
+
+export type getPageResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getPageResponseSuccess = (getPageResponse200) & {
+  headers: Headers;
+};
+export type getPageResponseError = (getPageResponse401 | getPageResponse403 | getPageResponse404) & {
+  headers: Headers;
+};
+
+export type getPageResponse = (getPageResponseSuccess | getPageResponseError)
+
+export const getGetPageUrl = (id: string,) => {
+
+
+
+
+  return `/pages/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `404`
+ * for an unknown Page.
+ * @summary One Page, Draft or Published, for editing.
+ */
+export const getPage = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<getPageResponse> => {
+
+  return apiFetch<getPageResponse>(getGetPageUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type updatePageResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updatePageResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updatePageResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updatePageResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updatePageResponse409 = {
+  data: void
+  status: 409
+}
+
+export type updatePageResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updatePageResponseSuccess = (updatePageResponse204) & {
+  headers: Headers;
+};
+export type updatePageResponseError = (updatePageResponse401 | updatePageResponse403 | updatePageResponse404 | updatePageResponse409 | updatePageResponse422) & {
+  headers: Headers;
+};
+
+export type updatePageResponse = (updatePageResponseSuccess | updatePageResponseError)
+
+export const getUpdatePageUrl = (id: string,) => {
+
+
+
+
+  return `/pages/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` (or `content.publish`) for a
+ * Draft or without `content.publish` for a Published Page, `404` for an unknown Page, `409`
+ * for a new slug or menu once first published or a slug another Page takes meanwhile, `422`
+ * for a blank title, a malformed field, a body outside the allowlist, an unknown cover, or a
+ * Published Page missing what publishing requires.
+ * @summary Saves a Page: a Draft as it autosaves, a Published one live.
+ */
+export const updatePage = async (id: string,
+    pageFields: PageFields, options?: Parameters<typeof apiFetch>[1]): Promise<updatePageResponse> => {
+
+  return apiFetch<updatePageResponse>(getUpdatePageUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(pageFields)
+  }
+);}
+
+
+
+export type deletePageResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deletePageResponse401 = {
+  data: void
+  status: 401
+}
+
+export type deletePageResponse403 = {
+  data: void
+  status: 403
+}
+
+export type deletePageResponse404 = {
+  data: void
+  status: 404
+}
+
+export type deletePageResponse409 = {
+  data: void
+  status: 409
+}
+
+export type deletePageResponseSuccess = (deletePageResponse204) & {
+  headers: Headers;
+};
+export type deletePageResponseError = (deletePageResponse401 | deletePageResponse403 | deletePageResponse404 | deletePageResponse409) & {
+  headers: Headers;
+};
+
+export type deletePageResponse = (deletePageResponseSuccess | deletePageResponseError)
+
+export const getDeletePageUrl = (id: string,) => {
+
+
+
+
+  return `/pages/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown Page,
+ * `409` when it is Published.
+ * @summary Deletes a Draft for good; its slug is free again. A Published Page is unpublished first.
+ */
+export const deletePage = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deletePageResponse> => {
+
+  return apiFetch<deletePageResponse>(getDeletePageUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type publishPageResponse204 = {
+  data: void
+  status: 204
+}
+
+export type publishPageResponse401 = {
+  data: void
+  status: 401
+}
+
+export type publishPageResponse403 = {
+  data: void
+  status: 403
+}
+
+export type publishPageResponse404 = {
+  data: void
+  status: 404
+}
+
+export type publishPageResponse409 = {
+  data: void
+  status: 409
+}
+
+export type publishPageResponse422 = {
+  data: void
+  status: 422
+}
+
+export type publishPageResponseSuccess = (publishPageResponse204) & {
+  headers: Headers;
+};
+export type publishPageResponseError = (publishPageResponse401 | publishPageResponse403 | publishPageResponse404 | publishPageResponse409 | publishPageResponse422) & {
+  headers: Headers;
+};
+
+export type publishPageResponse = (publishPageResponseSuccess | publishPageResponseError)
+
+export const getPublishPageUrl = (id: string,) => {
+
+
+
+
+  return `/pages/${id}/publish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown Page,
+ * `409` when it is already Published, `422` when it lacks a summary, or has a cover without
+ * alt text.
+ * @summary Puts a Draft on the public site; the first publication locks its slug and menu.
+ */
+export const publishPage = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<publishPageResponse> => {
+
+  return apiFetch<publishPageResponse>(getPublishPageUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type unpublishPageResponse204 = {
+  data: void
+  status: 204
+}
+
+export type unpublishPageResponse401 = {
+  data: void
+  status: 401
+}
+
+export type unpublishPageResponse403 = {
+  data: void
+  status: 403
+}
+
+export type unpublishPageResponse404 = {
+  data: void
+  status: 404
+}
+
+export type unpublishPageResponse409 = {
+  data: void
+  status: 409
+}
+
+export type unpublishPageResponseSuccess = (unpublishPageResponse204) & {
+  headers: Headers;
+};
+export type unpublishPageResponseError = (unpublishPageResponse401 | unpublishPageResponse403 | unpublishPageResponse404 | unpublishPageResponse409) & {
+  headers: Headers;
+};
+
+export type unpublishPageResponse = (unpublishPageResponseSuccess | unpublishPageResponseError)
+
+export const getUnpublishPageUrl = (id: string,) => {
+
+
+
+
+  return `/pages/${id}/unpublish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown Page,
+ * `409` when it is a Draft.
+ * @summary Takes a Published Page off the public site, back to Draft; it keeps its slug and menu.
+ */
+export const unpublishPage = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<unpublishPageResponse> => {
+
+  return apiFetch<unpublishPageResponse>(getUnpublishPageUrl(id),
   {
     ...options,
     method: 'POST'

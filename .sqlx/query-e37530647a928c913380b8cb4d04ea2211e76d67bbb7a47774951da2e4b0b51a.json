@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT menu AS \"menu: PageMenu\", slug, title FROM pages WHERE published\n           ORDER BY menu, sort_order, title, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "menu: PageMenu",
+        "type_info": {
+          "Custom": {
+            "name": "page_menu",
+            "kind": {
+              "Enum": ["profile", "government", "services"]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "pages",
+            "name": "menu"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "pages",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "pages",
+            "name": "title"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, false, false]
+  },
+  "hash": "e37530647a928c913380b8cb4d04ea2211e76d67bbb7a47774951da2e4b0b51a"
+}

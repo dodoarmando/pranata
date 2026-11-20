@@ -138,7 +138,7 @@ pub(crate) fn ensure_writer(session: &Session) -> Result<(), ApiError> {
 }
 
 /// An unknown Category or cover says the body is wrong; a slug taken meanwhile, a conflict.
-fn saved<T>(result: sqlx::Result<T>) -> Result<T, ApiError> {
+pub(crate) fn saved<T>(result: sqlx::Result<T>) -> Result<T, ApiError> {
     match result {
         Err(sqlx::Error::Database(error)) if error.is_foreign_key_violation() => {
             Err(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY))

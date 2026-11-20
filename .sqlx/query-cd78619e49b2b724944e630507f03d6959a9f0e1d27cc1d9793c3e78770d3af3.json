@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE pages SET published = $1,\n         first_published_at = coalesce(first_published_at, now()) WHERE id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Bool", "Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "cd78619e49b2b724944e630507f03d6959a9f0e1d27cc1d9793c3e78770d3af3"
+}
