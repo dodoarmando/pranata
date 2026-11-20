@@ -1,9 +1,11 @@
 use axum::{Json, extract::State};
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
 use utoipa::ToSchema;
+use uuid::Uuid;
 
-use crate::{ApiError, auth::Session, village::TimeZone};
+use crate::{ApiError, auth::Session, role::Permission, village::TimeZone};
 
 /// The figures behind the admin dashboard's cards.
 #[derive(Serialize, ToSchema)]
@@ -11,6 +13,18 @@ use crate::{ApiError, auth::Session, village::TimeZone};
 pub struct Dashboard {
     active_users: i64,
     missing_village_data: MissingVillageData,
+    /// Konten menunggu terbit: every Draft, the latest changed first; null for a User who may
+    /// neither write nor publish content.
+    drafts: Option<Vec<DraftSummary>>,
+}
+
+/// A Draft waiting to be published; News Posts are the only kind so far.
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DraftSummary {
+    id: Uuid,
+    title: String,
+    updated_at: DateTime<Utc>,
 }
 
 /// What the Village has yet to fill in.
@@ -39,7 +53,7 @@ pub struct MissingVillageData {
 )]
 pub async fn get(
     State(pool): State<PgPool>,
-    _session: Session,
+    session: Session,
 ) -> Result<Json<Dashboard>, ApiError> {
     let active_users =
         sqlx::query_scalar!(r#"SELECT count(*) AS "count!" FROM users WHERE active"#)
@@ -69,8 +83,23 @@ pub async fn get(
             .await?
         }
     };
+    let drafts =
+        if session.holds(Permission::ContentWrite) || session.holds(Permission::ContentPublish) {
+            Some(
+                sqlx::query_as!(
+                    DraftSummary,
+                    "SELECT id, title, updated_at FROM news_posts WHERE NOT published
+                 ORDER BY updated_at DESC, id DESC"
+                )
+                .fetch_all(&pool)
+                .await?,
+            )
+        } else {
+            None
+        };
     Ok(Json(Dashboard {
         active_users,
+        drafts,
         missing_village_data: MissingVillageData {
             logo: village.as_ref().is_none_or(|village| village.logo),
             vision_mission: village

@@ -2966,6 +2966,16 @@
             "type": "integer",
             "format": "int64"
           },
+          "drafts": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/DraftSummary"
+            },
+            "description": "Konten menunggu terbit: every Draft, the latest changed first; null for a User who may\nneither write nor publish content."
+          },
           "missingVillageData": {
             "$ref": "#/components/schemas/MissingVillageData"
           }
@@ -2981,6 +2991,28 @@
           "underdeveloped",
           "very_underdeveloped"
         ]
+      },
+      "DraftSummary": {
+        "type": "object",
+        "description": "A Draft waiting to be published; News Posts are the only kind so far.",
+        "required": [
+          "id",
+          "title",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       },
       "EncryptedFile": {
         "type": "object",

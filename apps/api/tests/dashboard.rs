@@ -83,3 +83,43 @@ async fn the_dashboard_lists_missing_village_data(pool: PgPool) {
     assert_eq!(reply.status, StatusCode::NO_CONTENT);
     assert_eq!(missing(&app, &cookie).await["visionMission"], false);
 }
+
+#[sqlx::test]
+async fn the_dashboard_lists_every_draft_to_those_who_write_content(pool: PgPool) {
+    let app = TestApp::new(pool.clone());
+    let writer = app.user_with(&pool, "penulis", &["content.write"]).await;
+    let manager = app.user_with(&pool, "operator", &["village.manage"]).await;
+    let mut ids = Vec::new();
+    for title in ["Kerja Bakti", "Posyandu", "Sudah Terbit"] {
+        let reply = app
+            .call(
+                "POST",
+                "/news-posts",
+                Some(&json!({ "title": title })),
+                Some(&writer),
+            )
+            .await;
+        ids.push(reply.body["id"].clone());
+    }
+    // Published without the API, which needs a cover upload and a publisher.
+    sqlx::query(
+        "WITH category AS (INSERT INTO categories (name) VALUES ('Umum') RETURNING id),
+         cover AS (INSERT INTO files DEFAULT VALUES RETURNING id)
+         UPDATE news_posts SET published = true, first_published_at = now(), summary = 'x',
+         cover_alt = 'x', category_id = category.id, cover_file_id = cover.id
+         FROM category, cover WHERE title = 'Sudah Terbit'",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let reply = app.call("GET", "/dashboard", None, Some(&writer)).await;
+    let hidden = app.call("GET", "/dashboard", None, Some(&manager)).await;
+
+    let drafts = reply.body["drafts"].as_array().unwrap();
+    assert_eq!(drafts.len(), 2);
+    assert_eq!(drafts[0]["id"], ids[1]);
+    assert_eq!(drafts[0]["title"], "Posyandu");
+    assert!(drafts[0]["updatedAt"].is_string());
+    assert!(hidden.body["drafts"].is_null());
+}
