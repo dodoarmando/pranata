@@ -1,5 +1,5 @@
 import { expect, test } from '@rstest/core';
-import { fileSize } from './document';
+import { fileSize } from './transparency-document';
 
 test.each([
   [200, '1 KB'],

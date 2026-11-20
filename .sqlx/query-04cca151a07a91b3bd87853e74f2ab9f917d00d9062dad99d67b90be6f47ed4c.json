@@ -1,10 +1,21 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT title, document_type AS \"document_type: DocumentType\", fiscal_year,\n           file_id AS file, byte_size AS \"byte_size!\"\n           FROM transparency_documents documents JOIN files ON files.id = file_id\n           WHERE published AND ($1::document_type[] IS NULL OR document_type = ANY($1))\n           AND ($2::integer IS NULL OR fiscal_year = $2)\n           ORDER BY fiscal_year DESC, documents.id DESC LIMIT $3 OFFSET $4",
+  "query": "SELECT documents.id, title, document_type AS \"document_type: TransparencyDocumentType\",\n           fiscal_year, file_id, byte_size AS \"byte_size!\", published\n           FROM transparency_documents documents JOIN files ON files.id = file_id\n           ORDER BY fiscal_year DESC, documents.id DESC",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "transparency_documents",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
         "name": "title",
         "type_info": "Text",
         "origin": {
@@ -15,8 +26,8 @@
         }
       },
       {
-        "ordinal": 1,
-        "name": "document_type: DocumentType",
+        "ordinal": 2,
+        "name": "document_type: TransparencyDocumentType",
         "type_info": {
           "Custom": {
             "name": "document_type",
@@ -41,7 +52,7 @@
         }
       },
       {
-        "ordinal": 2,
+        "ordinal": 3,
         "name": "fiscal_year",
         "type_info": "Int4",
         "origin": {
@@ -52,8 +63,8 @@
         }
       },
       {
-        "ordinal": 3,
-        "name": "file",
+        "ordinal": 4,
+        "name": "file_id",
         "type_info": "Uuid",
         "origin": {
           "Table": {
@@ -63,7 +74,7 @@
         }
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "byte_size!",
         "type_info": "Int8",
         "origin": {
@@ -72,39 +83,23 @@
             "name": "byte_size"
           }
         }
+      },
+      {
+        "ordinal": 6,
+        "name": "published",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "transparency_documents",
+            "name": "published"
+          }
+        }
       }
     ],
     "parameters": {
-      "Left": [
-        {
-          "Custom": {
-            "name": "document_type[]",
-            "kind": {
-              "Array": {
-                "Custom": {
-                  "name": "document_type",
-                  "kind": {
-                    "Enum": [
-                      "apbdes",
-                      "apbdes_amendment",
-                      "realisation_report",
-                      "rkpdes",
-                      "rpjmdes",
-                      "village_regulation",
-                      "other"
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "Int4",
-        "Int8",
-        "Int8"
-      ]
+      "Left": []
     },
-    "nullable": [false, false, false, false, true]
+    "nullable": [false, false, false, false, false, true, false]
   },
-  "hash": "13ae99d69fc8c1de9892743b87c7e3b211b39ff8e1b0f42447eb68c5888a3ebd"
+  "hash": "04cca151a07a91b3bd87853e74f2ab9f917d00d9062dad99d67b90be6f47ed4c"
 }

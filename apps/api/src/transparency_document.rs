@@ -44,7 +44,7 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
 #[derive(Serialize, Deserialize, ToSchema, sqlx::Type, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[sqlx(type_name = "document_type", rename_all = "snake_case")]
-pub enum DocumentType {
+pub enum TransparencyDocumentType {
     /// The village budget, `APBDes`.
     Apbdes,
     /// Its amendment, `APBDes Perubahan`.
@@ -64,7 +64,7 @@ pub enum DocumentType {
 /// A public filter over document types.
 #[derive(Deserialize, ToSchema, Clone, Copy)]
 #[serde(rename_all = "camelCase")]
-pub enum DocumentGroup {
+pub enum TransparencyDocumentGroup {
     /// `APBDes` and its amendment.
     Budget,
     /// Realisation reports.
@@ -75,13 +75,19 @@ pub enum DocumentGroup {
     Regulation,
 }
 
-impl DocumentGroup {
-    fn types(self) -> &'static [DocumentType] {
+impl TransparencyDocumentGroup {
+    fn types(self) -> &'static [TransparencyDocumentType] {
         match self {
-            Self::Budget => &[DocumentType::Apbdes, DocumentType::ApbdesAmendment],
-            Self::Realisation => &[DocumentType::RealisationReport],
-            Self::Planning => &[DocumentType::Rkpdes, DocumentType::Rpjmdes],
-            Self::Regulation => &[DocumentType::VillageRegulation],
+            Self::Budget => &[
+                TransparencyDocumentType::Apbdes,
+                TransparencyDocumentType::ApbdesAmendment,
+            ],
+            Self::Realisation => &[TransparencyDocumentType::RealisationReport],
+            Self::Planning => &[
+                TransparencyDocumentType::Rkpdes,
+                TransparencyDocumentType::Rpjmdes,
+            ],
+            Self::Regulation => &[TransparencyDocumentType::VillageRegulation],
         }
     }
 }
@@ -92,7 +98,7 @@ impl DocumentGroup {
 pub struct TransparencyDocumentFields {
     /// 1–200 characters.
     title: String,
-    document_type: DocumentType,
+    document_type: TransparencyDocumentType,
     /// 2000–2100.
     fiscal_year: i32,
     /// The PDF, uploaded at `/transparency-documents/file`.
@@ -168,7 +174,7 @@ pub(crate) async fn list(
 ) -> Result<Json<Vec<TransparencyDocument>>, ApiError> {
     ensure_writer(&session)?;
     let rows = sqlx::query!(
-        r#"SELECT documents.id, title, document_type AS "document_type: DocumentType",
+        r#"SELECT documents.id, title, document_type AS "document_type: TransparencyDocumentType",
            fiscal_year, file_id, byte_size AS "byte_size!", published
            FROM transparency_documents documents JOIN files ON files.id = file_id
            ORDER BY fiscal_year DESC, documents.id DESC"#
@@ -225,7 +231,7 @@ pub(crate) async fn create(
             "INSERT INTO transparency_documents (title, document_type, fiscal_year, file_id)
              VALUES ($1, $2, $3, $4) RETURNING id",
             new.title,
-            new.document_type as DocumentType,
+            new.document_type as TransparencyDocumentType,
             new.fiscal_year,
             new.file,
         )
@@ -276,7 +282,7 @@ pub(crate) async fn update(
     let new = body.normalized()?;
     let mut tx = pool.begin().await?;
     let old = sqlx::query!(
-        r#"SELECT title, document_type AS "document_type: DocumentType", fiscal_year, file_id,
+        r#"SELECT title, document_type AS "document_type: TransparencyDocumentType", fiscal_year, file_id,
            published FROM transparency_documents WHERE id = $1 FOR UPDATE"#,
         id
     )
@@ -292,7 +298,7 @@ pub(crate) async fn update(
             "UPDATE transparency_documents SET title = $1, document_type = $2, fiscal_year = $3,
              file_id = $4, updated_at = now() WHERE id = $5",
             new.title,
-            new.document_type as DocumentType,
+            new.document_type as TransparencyDocumentType,
             new.fiscal_year,
             new.file,
             id,
@@ -514,10 +520,10 @@ const PAGE_SIZE: i64 = 10;
 #[derive(Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 #[serde(rename_all = "camelCase")]
-pub struct DocumentFilter {
+pub struct TransparencyDocumentFilter {
     /// Only documents of this group's types.
     #[param(inline)]
-    group: Option<DocumentGroup>,
+    group: Option<TransparencyDocumentGroup>,
     /// Only documents of this fiscal year.
     fiscal_year: Option<i32>,
     /// From 1, the default.
@@ -527,9 +533,9 @@ pub struct DocumentFilter {
 /// A Published Transparency Document on `/dokumen`.
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct DocumentCard {
+pub struct PublishedTransparencyDocument {
     title: String,
-    document_type: DocumentType,
+    document_type: TransparencyDocumentType,
     fiscal_year: i32,
     /// Served at `/media/{file}/pdf`.
     file: Uuid,
@@ -539,8 +545,8 @@ pub struct DocumentCard {
 /// One page of `/dokumen`.
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct DocumentPage {
-    documents: Vec<DocumentCard>,
+pub struct TransparencyDocumentPage {
+    documents: Vec<PublishedTransparencyDocument>,
     /// How many Published documents match, over every page.
     total: i64,
     page_size: i64,
@@ -554,36 +560,36 @@ pub struct DocumentPage {
     path = "/transparency-documents/published",
     operation_id = "listPublishedTransparencyDocuments",
     tag = "content",
-    params(DocumentFilter),
+    params(TransparencyDocumentFilter),
     responses(
-        (status = OK, description = "A page of Published Transparency Documents", body = DocumentPage),
+        (status = OK, description = "A page of Published Transparency Documents", body = TransparencyDocumentPage),
         (status = BAD_REQUEST, description = "The filter is malformed"),
     ),
 )]
 pub(crate) async fn list_published(
     State(pool): State<PgPool>,
-    Query(filter): Query<DocumentFilter>,
-) -> Result<Json<DocumentPage>, ApiError> {
+    Query(filter): Query<TransparencyDocumentFilter>,
+) -> Result<Json<TransparencyDocumentPage>, ApiError> {
     let offset = (i64::from(filter.page.unwrap_or(1).max(1)) - 1) * PAGE_SIZE;
-    let types = filter.group.map(DocumentGroup::types);
+    let types = filter.group.map(TransparencyDocumentGroup::types);
     let total = sqlx::query_scalar!(
         r#"SELECT count(*) AS "count!" FROM transparency_documents
            WHERE published AND ($1::document_type[] IS NULL OR document_type = ANY($1))
            AND ($2::integer IS NULL OR fiscal_year = $2)"#,
-        types as Option<&[DocumentType]>,
+        types as Option<&[TransparencyDocumentType]>,
         filter.fiscal_year,
     )
     .fetch_one(&pool)
     .await?;
     let documents = sqlx::query_as!(
-        DocumentCard,
-        r#"SELECT title, document_type AS "document_type: DocumentType", fiscal_year,
+        PublishedTransparencyDocument,
+        r#"SELECT title, document_type AS "document_type: TransparencyDocumentType", fiscal_year,
            file_id AS file, byte_size AS "byte_size!"
            FROM transparency_documents documents JOIN files ON files.id = file_id
            WHERE published AND ($1::document_type[] IS NULL OR document_type = ANY($1))
            AND ($2::integer IS NULL OR fiscal_year = $2)
            ORDER BY fiscal_year DESC, documents.id DESC LIMIT $3 OFFSET $4"#,
-        types as Option<&[DocumentType]>,
+        types as Option<&[TransparencyDocumentType]>,
         filter.fiscal_year,
         PAGE_SIZE,
         offset,
@@ -596,7 +602,7 @@ pub(crate) async fn list_published(
     )
     .fetch_all(&pool)
     .await?;
-    Ok(Json(DocumentPage {
+    Ok(Json(TransparencyDocumentPage {
         documents,
         total,
         page_size: PAGE_SIZE,

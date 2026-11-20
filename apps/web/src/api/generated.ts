@@ -405,46 +405,6 @@ export const DevelopmentStatus = {
 } as const;
 
 /**
- * A Transparency Document's type, from a fixed catalog.
- */
-export type DocumentType = typeof DocumentType[keyof typeof DocumentType];
-
-
-export const DocumentType = {
-  apbdes: 'apbdes',
-  apbdesAmendment: 'apbdesAmendment',
-  realisationReport: 'realisationReport',
-  rkpdes: 'rkpdes',
-  rpjmdes: 'rpjmdes',
-  villageRegulation: 'villageRegulation',
-  other: 'other',
-} as const;
-
-/**
- * A Published Transparency Document on `/dokumen`.
- */
-export interface DocumentCard {
-  byteSize: number;
-  documentType: DocumentType;
-  /** Served at `/media/{file}/pdf`. */
-  file: string;
-  fiscalYear: number;
-  title: string;
-}
-
-/**
- * One page of `/dokumen`.
- */
-export interface DocumentPage {
-  documents: DocumentCard[];
-  /** Every fiscal year with a Published document, the latest first, for the year filter. */
-  fiscalYears: number[];
-  pageSize: number;
-  /** How many Published documents match, over every page. */
-  total: number;
-}
-
-/**
  * An exported file, encrypted; only `password` opens it.
  */
 export interface EncryptedFile {
@@ -1354,6 +1314,34 @@ export interface PublishedPartner {
   url?: string | null;
 }
 
+/**
+ * A Transparency Document's type, from a fixed catalog.
+ */
+export type TransparencyDocumentType = typeof TransparencyDocumentType[keyof typeof TransparencyDocumentType];
+
+
+export const TransparencyDocumentType = {
+  apbdes: 'apbdes',
+  apbdesAmendment: 'apbdesAmendment',
+  realisationReport: 'realisationReport',
+  rkpdes: 'rkpdes',
+  rpjmdes: 'rpjmdes',
+  villageRegulation: 'villageRegulation',
+  other: 'other',
+} as const;
+
+/**
+ * A Published Transparency Document on `/dokumen`.
+ */
+export interface PublishedTransparencyDocument {
+  byteSize: number;
+  documentType: TransparencyDocumentType;
+  /** Served at `/media/{file}/pdf`. */
+  file: string;
+  fiscalYear: number;
+  title: string;
+}
+
 export interface Reauthenticate {
   password: string;
 }
@@ -1430,7 +1418,7 @@ export const TimeZone = {
  * What a User writes in a Transparency Document.
  */
 export interface TransparencyDocumentFields {
-  documentType: DocumentType;
+  documentType: TransparencyDocumentType;
   /** The PDF, uploaded at `/transparency-documents/file`. */
   file: string;
   /** 2000–2100. */
@@ -1448,6 +1436,18 @@ export type TransparencyDocument = TransparencyDocumentFields & {
   id: string;
   published: boolean;
 };
+
+/**
+ * One page of `/dokumen`.
+ */
+export interface TransparencyDocumentPage {
+  documents: PublishedTransparencyDocument[];
+  /** Every fiscal year with a Published document, the latest first, for the year filter. */
+  fiscalYears: number[];
+  pageSize: number;
+  /** How many Published documents match, over every page. */
+  total: number;
+}
 
 export interface Upload {
   /** The stored file, unreferenced until saved into its owner and swept after 24 h if not. */
@@ -8464,7 +8464,7 @@ export const uploadTransparencyDocumentFile = async (uploadTransparencyDocumentF
 
 
 export type listPublishedTransparencyDocumentsResponse200 = {
-  data: DocumentPage
+  data: TransparencyDocumentPage
   status: 200
 }
 
