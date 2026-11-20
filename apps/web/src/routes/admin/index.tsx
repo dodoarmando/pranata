@@ -1,14 +1,17 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, getRouteApi, Link } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { getDashboard } from '../../api/generated';
 import { PageHead } from '../../components/admin';
 import { Card } from '../../components/ui/card';
+import { ianaZones } from '../../village';
 
 // Server-only; null when the session ended since the shell checked it.
 const fetchDashboard = createServerFn({ method: 'GET' }).handler(async () => {
   const response = await getDashboard();
   return response.status === 200 ? response.data : null;
 });
+
+const root = getRouteApi('__root__');
 
 export const Route = createFileRoute('/admin/')({
   loader: () => fetchDashboard(),
@@ -17,6 +20,11 @@ export const Route = createFileRoute('/admin/')({
 
 function Dashboard() {
   const dashboard = Route.useLoaderData();
+  const village = root.useLoaderData();
+  const date = new Intl.DateTimeFormat('id-ID', {
+    dateStyle: 'medium',
+    timeZone: ianaZones[village?.timeZone ?? 'WIB'],
+  });
   const missing = dashboard?.missingVillageData;
   const toFill = missing
     ? [
@@ -65,6 +73,33 @@ function Dashboard() {
               <p className="font-medium">Semua sudah lengkap.</p>
             )}
           </Card>
+          {dashboard.drafts && (
+            <Card role="region" aria-labelledby="drafts" className="col-span-2 gap-2 px-5 py-5">
+              <h2 id="drafts" className="text-muted-foreground">
+                Konten menunggu terbit
+              </h2>
+              {dashboard.drafts.length ? (
+                <ul className="grid gap-1">
+                  {dashboard.drafts.map((draft) => (
+                    <li key={draft.id} className="flex flex-wrap justify-between gap-x-3">
+                      <Link
+                        to="/admin/berita/$id"
+                        params={{ id: draft.id }}
+                        className="min-w-0 truncate font-medium underline-offset-4 hover:underline"
+                      >
+                        {draft.title}
+                      </Link>
+                      <span className="text-sm text-muted-foreground">
+                        Berita · {date.format(new Date(draft.updatedAt))}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="font-medium">Tidak ada draf.</p>
+              )}
+            </Card>
+          )}
         </div>
       )}
     </>
