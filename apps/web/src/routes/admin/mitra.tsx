@@ -27,6 +27,7 @@ import {
 } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { moved } from '../../order';
 
 // Server-only; null without a content Permission.
 const fetchPartners = createServerFn({ method: 'GET' }).handler(async () => {
@@ -139,9 +140,11 @@ function Partners() {
 
   async function move(from: number, to: number) {
     if (!partners || from === to) return;
-    const ids = partners.map((partner) => partner.id);
-    const [id] = ids.splice(from, 1);
-    if (id) ids.splice(to, 0, id);
+    const ids = moved(
+      partners.map((partner) => partner.id),
+      from,
+      to,
+    );
     await result(await order({ data: ids }), 'Urutan mitra diubah.');
   }
 
