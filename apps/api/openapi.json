@@ -1760,6 +1760,55 @@
         }
       }
     },
+    "/contact-categories/{id}/contact-order": {
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Puts every Important Contact of one Contact Category, Draft or Published, in a new order.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown\nContact Category, `422` unless the list holds every contact of it exactly once.",
+        "operationId": "orderImportantContacts",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Contact Category",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Order"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Important Contacts are reordered"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Contact Category"
+          },
+          "422": {
+            "description": "The list is not every contact of the Contact Category exactly once"
+          }
+        }
+      }
+    },
     "/dashboard": {
       "get": {
         "tags": [
