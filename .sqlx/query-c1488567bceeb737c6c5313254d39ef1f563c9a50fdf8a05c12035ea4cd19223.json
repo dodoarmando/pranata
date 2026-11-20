@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT published FROM albums WHERE id = $1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "published",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "published"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": [false]
+  },
+  "hash": "c1488567bceeb737c6c5313254d39ef1f563c9a50fdf8a05c12035ea4cd19223"
+}

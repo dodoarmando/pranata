@@ -1,3 +1,4 @@
+mod album;
 mod announcement;
 mod audit;
 mod auth;
@@ -163,6 +164,13 @@ fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(page::upload_cover))
         .routes(routes!(page::list_published))
         .routes(routes!(page::get_published))
+        .routes(routes!(album::list, album::create))
+        .routes(routes!(album::get, album::update, album::delete))
+        .routes(routes!(album::publish))
+        .routes(routes!(album::unpublish))
+        .routes(routes!(album::upload_photo))
+        .routes(routes!(album::list_published))
+        .routes(routes!(album::get_published))
         .routes(routes!(storage::get_media))
         .routes(routes!(auth::use_access_link))
         .routes(routes!(auth::sign_in))

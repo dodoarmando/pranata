@@ -30,6 +30,101 @@ export interface ActiveSession {
 }
 
 /**
+ * One photo of an Album.
+ */
+export interface AlbumPhoto {
+  /**
+     * Up to 300 characters; required to publish.
+     * @nullable
+     */
+  alt?: string | null;
+  /**
+     * Up to 300 characters.
+     * @nullable
+     */
+  caption?: string | null;
+  /** Uploaded at `/albums/photo`. */
+  file: string;
+}
+
+/**
+ * What a User writes in an Album. A Draft may leave out what publishing requires.
+ */
+export interface AlbumFields {
+  /**
+     * One of the photos' files; null makes the first photo the cover.
+     * @nullable
+     */
+  cover?: string | null;
+  /**
+     * Up to 500 characters.
+     * @nullable
+     */
+  description?: string | null;
+  /**
+     * The occasion's last day, when it spans several; not before the start.
+     * @nullable
+     */
+  occasionEnd?: string | null;
+  /**
+     * The occasion's first day; required to publish.
+     * @nullable
+     */
+  occasionStart?: string | null;
+  /** In the order the public sees, each file once; publishing needs at least one. */
+  photos?: AlbumPhoto[];
+  /**
+     * Made from the title when blank; transliterated, and locked once first published.
+     * @nullable
+     */
+  slug?: string | null;
+  /** 1–150 characters. */
+  title: string;
+}
+
+/**
+ * An Album as the admin area edits it.
+ */
+export type Album = AlbumFields & ({
+  /**
+     * Null until first published; the slug is locked once set.
+     * @nullable
+     */
+  firstPublishedAt?: string | null;
+  id: string;
+  published: boolean;
+  updatedAt: string;
+});
+
+/**
+ * A Published Album in the gallery.
+ */
+export interface AlbumCard {
+  cover: string;
+  coverAlt: string;
+  /** @nullable */
+  occasionEnd?: string | null;
+  occasionStart: string;
+  photoCount: number;
+  slug: string;
+  title: string;
+}
+
+/**
+ * A line of the admin area's Album list.
+ */
+export interface AlbumSummary {
+  id: string;
+  /** @nullable */
+  occasionStart?: string | null;
+  photoCount: number;
+  published: boolean;
+  slug: string;
+  title: string;
+  updatedAt: string;
+}
+
+/**
  * Optional; only an Announcement with a body has a detail page. Tiptap JSON of the same
  * allowlist as a News Post's body.
  */
@@ -416,6 +511,16 @@ export interface EventSummary {
  */
 export interface ExportReason {
   reason: string;
+}
+
+/**
+ * One page of the gallery.
+ */
+export interface GalleryPage {
+  albums: AlbumCard[];
+  pageSize: number;
+  /** How many Albums are Published, over every page. */
+  total: number;
 }
 
 export interface PublicHamlet {
@@ -1005,6 +1110,32 @@ export interface PositionName {
 }
 
 /**
+ * A photo of a Published Album.
+ */
+export interface PublishedPhoto {
+  alt: string;
+  /** @nullable */
+  caption?: string | null;
+  file: string;
+}
+
+/**
+ * A Published Album as the public sees it.
+ */
+export interface PublishedAlbum {
+  /** The chosen photo, or else the first. */
+  cover: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  occasionEnd?: string | null;
+  occasionStart: string;
+  photos: PublishedPhoto[];
+  slug: string;
+  title: string;
+}
+
+/**
  * Tiptap JSON of the allowed nodes and marks only.
  */
 export type PublishedAnnouncementBody = { [key: string]: unknown };
@@ -1248,6 +1379,14 @@ export interface VisionMission {
   vision: string;
 }
 
+export type ListPublishedAlbumsParams = {
+  /**
+   * From 1, the default.
+   * @minimum 0
+   */
+  page?: number;
+};
+
 export type ListPublishedAnnouncementsParams = {
   /**
    * From 1, the default.
@@ -1319,6 +1458,588 @@ const getHeaders = (...sources: (RequestInit['headers'] | Record<string, string 
   }
   return Object.fromEntries(layers.reverse().flat()) as Extract<RequestInit['headers'], Record<string, unknown>>;
 };
+
+export type listAlbumsResponse200 = {
+  data: AlbumSummary[]
+  status: 200
+}
+
+export type listAlbumsResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listAlbumsResponse403 = {
+  data: void
+  status: 403
+}
+
+export type listAlbumsResponseSuccess = (listAlbumsResponse200) & {
+  headers: Headers;
+};
+export type listAlbumsResponseError = (listAlbumsResponse401 | listAlbumsResponse403) & {
+  headers: Headers;
+};
+
+export type listAlbumsResponse = (listAlbumsResponseSuccess | listAlbumsResponseError)
+
+export const getListAlbumsUrl = () => {
+
+
+
+
+  return `/albums`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`.
+ * @summary Every Album, Drafts and Published, the latest occasion first and undated Drafts on top.
+ */
+export const listAlbums = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listAlbumsResponse> => {
+
+  return apiFetch<listAlbumsResponse>(getListAlbumsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createAlbumResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createAlbumResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createAlbumResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createAlbumResponse409 = {
+  data: void
+  status: 409
+}
+
+export type createAlbumResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createAlbumResponseSuccess = (createAlbumResponse201) & {
+  headers: Headers;
+};
+export type createAlbumResponseError = (createAlbumResponse401 | createAlbumResponse403 | createAlbumResponse409 | createAlbumResponse422) & {
+  headers: Headers;
+};
+
+export type createAlbumResponse = (createAlbumResponseSuccess | createAlbumResponseError)
+
+export const getCreateAlbumUrl = () => {
+
+
+
+
+  return `/albums`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `409`
+ * when another Album takes the slug meanwhile, `422` for a blank title, a malformed field, an
+ * end before the start, a photo listed twice or unknown, or a cover that is not a photo.
+ * @summary Starts a Draft written by the signed-in User; only the title is required.
+ */
+export const createAlbum = async (albumFields: AlbumFields, options?: Parameters<typeof apiFetch>[1]): Promise<createAlbumResponse> => {
+
+  return apiFetch<createAlbumResponse>(getCreateAlbumUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(albumFields)
+  }
+);}
+
+
+
+export type uploadAlbumPhotoResponse201 = {
+  data: Upload
+  status: 201
+}
+
+export type uploadAlbumPhotoResponse401 = {
+  data: void
+  status: 401
+}
+
+export type uploadAlbumPhotoResponse403 = {
+  data: void
+  status: 403
+}
+
+export type uploadAlbumPhotoResponse413 = {
+  data: void
+  status: 413
+}
+
+export type uploadAlbumPhotoResponse415 = {
+  data: void
+  status: 415
+}
+
+export type uploadAlbumPhotoResponse422 = {
+  data: void
+  status: 422
+}
+
+export type uploadAlbumPhotoResponseSuccess = (uploadAlbumPhotoResponse201) & {
+  headers: Headers;
+};
+export type uploadAlbumPhotoResponseError = (uploadAlbumPhotoResponse401 | uploadAlbumPhotoResponse403 | uploadAlbumPhotoResponse413 | uploadAlbumPhotoResponse415 | uploadAlbumPhotoResponse422) & {
+  headers: Headers;
+};
+
+export type uploadAlbumPhotoResponse = (uploadAlbumPhotoResponseSuccess | uploadAlbumPhotoResponseError)
+
+export const getUploadAlbumPhotoUrl = () => {
+
+
+
+
+  return `/albums/photo`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `413`
+ * over 10 MiB, `415` for content that is not JPEG, PNG or WebP, `422` over 40 megapixels or
+ * undecodable.
+ * @summary Stores a photo, a JPEG, PNG or WebP of at most 10 MiB, for saving into an Album.
+ */
+export const uploadAlbumPhoto = async (uploadAlbumPhotoBody: Blob, options?: Parameters<typeof apiFetch>[1]): Promise<uploadAlbumPhotoResponse> => {
+
+  return apiFetch<uploadAlbumPhotoResponse>(getUploadAlbumPhotoUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/octet-stream' }, options?.headers),
+    body: uploadAlbumPhotoBody
+  }
+);}
+
+
+
+export type listPublishedAlbumsResponse200 = {
+  data: GalleryPage
+  status: 200
+}
+
+export type listPublishedAlbumsResponseSuccess = (listPublishedAlbumsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listPublishedAlbumsResponse = (listPublishedAlbumsResponseSuccess)
+
+export const getListPublishedAlbumsUrl = (params?: ListPublishedAlbumsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/albums/published?${stringifiedParams}` : `/albums/published`
+}
+
+/**
+ * @summary Published Albums, the latest occasion first, a page at a time.
+ */
+export const listPublishedAlbums = async (params?: ListPublishedAlbumsParams, options?: Parameters<typeof apiFetch>[1]): Promise<listPublishedAlbumsResponse> => {
+
+  return apiFetch<listPublishedAlbumsResponse>(getListPublishedAlbumsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getPublishedAlbumResponse200 = {
+  data: PublishedAlbum
+  status: 200
+}
+
+export type getPublishedAlbumResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getPublishedAlbumResponseSuccess = (getPublishedAlbumResponse200) & {
+  headers: Headers;
+};
+export type getPublishedAlbumResponseError = (getPublishedAlbumResponse404) & {
+  headers: Headers;
+};
+
+export type getPublishedAlbumResponse = (getPublishedAlbumResponseSuccess | getPublishedAlbumResponseError)
+
+export const getGetPublishedAlbumUrl = (slug: string,) => {
+
+
+
+
+  return `/albums/published/${slug}`
+}
+
+/**
+ * # Errors
+ * `404` for a slug no Published Album has, such as a Draft's or a deleted one's.
+ * @summary One Published Album by its slug.
+ */
+export const getPublishedAlbum = async (slug: string, options?: Parameters<typeof apiFetch>[1]): Promise<getPublishedAlbumResponse> => {
+
+  return apiFetch<getPublishedAlbumResponse>(getGetPublishedAlbumUrl(slug),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getAlbumResponse200 = {
+  data: Album
+  status: 200
+}
+
+export type getAlbumResponse401 = {
+  data: void
+  status: 401
+}
+
+export type getAlbumResponse403 = {
+  data: void
+  status: 403
+}
+
+export type getAlbumResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getAlbumResponseSuccess = (getAlbumResponse200) & {
+  headers: Headers;
+};
+export type getAlbumResponseError = (getAlbumResponse401 | getAlbumResponse403 | getAlbumResponse404) & {
+  headers: Headers;
+};
+
+export type getAlbumResponse = (getAlbumResponseSuccess | getAlbumResponseError)
+
+export const getGetAlbumUrl = (id: string,) => {
+
+
+
+
+  return `/albums/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `404`
+ * for an unknown Album.
+ * @summary One Album, Draft or Published, for editing.
+ */
+export const getAlbum = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<getAlbumResponse> => {
+
+  return apiFetch<getAlbumResponse>(getGetAlbumUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type updateAlbumResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateAlbumResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateAlbumResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateAlbumResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateAlbumResponse409 = {
+  data: void
+  status: 409
+}
+
+export type updateAlbumResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateAlbumResponseSuccess = (updateAlbumResponse204) & {
+  headers: Headers;
+};
+export type updateAlbumResponseError = (updateAlbumResponse401 | updateAlbumResponse403 | updateAlbumResponse404 | updateAlbumResponse409 | updateAlbumResponse422) & {
+  headers: Headers;
+};
+
+export type updateAlbumResponse = (updateAlbumResponseSuccess | updateAlbumResponseError)
+
+export const getUpdateAlbumUrl = (id: string,) => {
+
+
+
+
+  return `/albums/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` (or `content.publish`) for a
+ * Draft or without `content.publish` for a Published Album, `404` for an unknown Album, `409`
+ * for a new slug once first published or a slug another Album takes meanwhile, `422` for a
+ * blank title, a malformed field, an end before the start, a photo listed twice or unknown, a
+ * cover that is not a photo, or a Published Album missing what publishing requires.
+ * @summary Saves an Album: a Draft as it autosaves, a Published one live.
+ */
+export const updateAlbum = async (id: string,
+    albumFields: AlbumFields, options?: Parameters<typeof apiFetch>[1]): Promise<updateAlbumResponse> => {
+
+  return apiFetch<updateAlbumResponse>(getUpdateAlbumUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(albumFields)
+  }
+);}
+
+
+
+export type deleteAlbumResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteAlbumResponse401 = {
+  data: void
+  status: 401
+}
+
+export type deleteAlbumResponse403 = {
+  data: void
+  status: 403
+}
+
+export type deleteAlbumResponse404 = {
+  data: void
+  status: 404
+}
+
+export type deleteAlbumResponse409 = {
+  data: void
+  status: 409
+}
+
+export type deleteAlbumResponseSuccess = (deleteAlbumResponse204) & {
+  headers: Headers;
+};
+export type deleteAlbumResponseError = (deleteAlbumResponse401 | deleteAlbumResponse403 | deleteAlbumResponse404 | deleteAlbumResponse409) & {
+  headers: Headers;
+};
+
+export type deleteAlbumResponse = (deleteAlbumResponseSuccess | deleteAlbumResponseError)
+
+export const getDeleteAlbumUrl = (id: string,) => {
+
+
+
+
+  return `/albums/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown Album,
+ * `409` when it is Published.
+ * @summary Deletes a Draft for good; its slug is free again. A Published Album is unpublished first.
+ */
+export const deleteAlbum = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deleteAlbumResponse> => {
+
+  return apiFetch<deleteAlbumResponse>(getDeleteAlbumUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type publishAlbumResponse204 = {
+  data: void
+  status: 204
+}
+
+export type publishAlbumResponse401 = {
+  data: void
+  status: 401
+}
+
+export type publishAlbumResponse403 = {
+  data: void
+  status: 403
+}
+
+export type publishAlbumResponse404 = {
+  data: void
+  status: 404
+}
+
+export type publishAlbumResponse409 = {
+  data: void
+  status: 409
+}
+
+export type publishAlbumResponse422 = {
+  data: void
+  status: 422
+}
+
+export type publishAlbumResponseSuccess = (publishAlbumResponse204) & {
+  headers: Headers;
+};
+export type publishAlbumResponseError = (publishAlbumResponse401 | publishAlbumResponse403 | publishAlbumResponse404 | publishAlbumResponse409 | publishAlbumResponse422) & {
+  headers: Headers;
+};
+
+export type publishAlbumResponse = (publishAlbumResponseSuccess | publishAlbumResponseError)
+
+export const getPublishAlbumUrl = (id: string,) => {
+
+
+
+
+  return `/albums/${id}/publish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown Album,
+ * `409` when it is already Published, `422` when it has no photos, a photo without alt text,
+ * or no occasion start.
+ * @summary Puts a Draft on the public site; the first publication locks its slug.
+ */
+export const publishAlbum = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<publishAlbumResponse> => {
+
+  return apiFetch<publishAlbumResponse>(getPublishAlbumUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type unpublishAlbumResponse204 = {
+  data: void
+  status: 204
+}
+
+export type unpublishAlbumResponse401 = {
+  data: void
+  status: 401
+}
+
+export type unpublishAlbumResponse403 = {
+  data: void
+  status: 403
+}
+
+export type unpublishAlbumResponse404 = {
+  data: void
+  status: 404
+}
+
+export type unpublishAlbumResponse409 = {
+  data: void
+  status: 409
+}
+
+export type unpublishAlbumResponseSuccess = (unpublishAlbumResponse204) & {
+  headers: Headers;
+};
+export type unpublishAlbumResponseError = (unpublishAlbumResponse401 | unpublishAlbumResponse403 | unpublishAlbumResponse404 | unpublishAlbumResponse409) & {
+  headers: Headers;
+};
+
+export type unpublishAlbumResponse = (unpublishAlbumResponseSuccess | unpublishAlbumResponseError)
+
+export const getUnpublishAlbumUrl = (id: string,) => {
+
+
+
+
+  return `/albums/${id}/unpublish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown Album,
+ * `409` when it is a Draft.
+ * @summary Takes a Published Album off the public site, back to Draft; it keeps its slug.
+ */
+export const unpublishAlbum = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<unpublishAlbumResponse> => {
+
+  return apiFetch<unpublishAlbumResponse>(getUnpublishAlbumUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
 
 export type listAnnouncementsResponse200 = {
   data: AnnouncementSummary[]

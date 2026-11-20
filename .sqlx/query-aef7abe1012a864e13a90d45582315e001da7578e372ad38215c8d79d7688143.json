@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE albums SET published = $1,\n         first_published_at = coalesce(first_published_at, now()) WHERE id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Bool", "Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "aef7abe1012a864e13a90d45582315e001da7578e372ad38215c8d79d7688143"
+}

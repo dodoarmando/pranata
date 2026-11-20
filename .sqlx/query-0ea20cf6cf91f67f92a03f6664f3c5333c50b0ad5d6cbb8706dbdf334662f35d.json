@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO albums (title, slug, description, occasion_start, occasion_end,\n             cover_file_id, author_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Text", "Text", "Text", "Date", "Date", "Uuid", "Uuid"]
+    },
+    "nullable": [false]
+  },
+  "hash": "0ea20cf6cf91f67f92a03f6664f3c5333c50b0ad5d6cbb8706dbdf334662f35d"
+}

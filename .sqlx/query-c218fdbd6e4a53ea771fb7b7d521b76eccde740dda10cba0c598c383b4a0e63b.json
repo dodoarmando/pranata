@@ -1,0 +1,85 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, title, slug, occasion_start, published, updated_at,\n           (SELECT count(*) FROM album_photos WHERE album_id = albums.id) AS \"photo_count!\"\n           FROM albums ORDER BY occasion_start DESC NULLS FIRST, updated_at DESC, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "occasion_start",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "occasion_start"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "published",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "published"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "updated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "photo_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, false, false, true, false, false, null]
+  },
+  "hash": "c218fdbd6e4a53ea771fb7b7d521b76eccde740dda10cba0c598c383b4a0e63b"
+}

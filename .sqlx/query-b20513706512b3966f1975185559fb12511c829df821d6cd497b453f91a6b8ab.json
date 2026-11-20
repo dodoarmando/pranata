@@ -1,0 +1,85 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT slug, title, occasion_start AS \"occasion_start!\", occasion_end,\n           cover.file_id AS \"cover!\", cover.alt AS \"cover_alt!\",\n           (SELECT count(*) FROM album_photos WHERE album_id = albums.id) AS \"photo_count!\"\n           FROM albums CROSS JOIN LATERAL (\n               SELECT file_id, alt FROM album_photos WHERE album_id = albums.id\n               ORDER BY file_id IS NOT DISTINCT FROM albums.cover_file_id DESC, position\n               LIMIT 1\n           ) cover\n           WHERE published ORDER BY occasion_start DESC, albums.id DESC LIMIT $1 OFFSET $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "occasion_start!",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "occasion_start"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "occasion_end",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "albums",
+            "name": "occasion_end"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "cover!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "album_photos",
+            "name": "file_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "cover_alt!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "album_photos",
+            "name": "alt"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "photo_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": ["Int8", "Int8"]
+    },
+    "nullable": [false, false, true, true, false, true, null]
+  },
+  "hash": "b20513706512b3966f1975185559fb12511c829df821d6cd497b453f91a6b8ab"
+}

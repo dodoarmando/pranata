@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO album_photos (album_id, position, file_id, caption, alt)\n                 SELECT $1, (ord - 1)::integer, file, caption, alt\n                 FROM unnest($2::uuid[], $3::text[], $4::text[])\n                     WITH ORDINALITY AS photo (file, caption, alt, ord)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Uuid", "UuidArray", "TextArray", "TextArray"]
+    },
+    "nullable": []
+  },
+  "hash": "520cd789608cf2440641661167f8f4363922b535ae847a739a36e2ab82cfb31b"
+}
