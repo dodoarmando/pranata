@@ -242,7 +242,12 @@ async fn a_publisher_saves_the_welcome_live_signed_by_a_serving_official(pool: P
         )
         .await;
 
+    let upload_by_writer = office
+        .app
+        .upload("/home/welcome/photo", common::png(8, 8), &office.writer)
+        .await;
     assert_eq!(by_writer.status, StatusCode::FORBIDDEN);
+    assert_eq!(upload_by_writer.status, StatusCode::FORBIDDEN);
     assert_eq!(ended.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert_eq!(saved.status, StatusCode::NO_CONTENT);
     assert_eq!(
