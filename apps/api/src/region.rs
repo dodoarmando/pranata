@@ -15,6 +15,7 @@ use crate::{
     ApiError,
     audit::{self, Actor},
     auth::Session,
+    order::Order,
     role::Permission,
     village::{diff, phone_ok},
 };
@@ -149,12 +150,6 @@ pub struct RegionUnitUpdate {
 #[derive(Serialize, ToSchema)]
 pub struct Created {
     id: Uuid,
-}
-
-#[derive(Deserialize, ToSchema)]
-pub struct HamletOrder {
-    /// Every Hamlet, active or not, in its new order.
-    ids: Vec<Uuid>,
 }
 
 fn ensure_manager(session: &Session) -> Result<(), ApiError> {
@@ -518,7 +513,7 @@ pub(crate) async fn update_unit(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Puts every Hamlet in a new manual order.
+/// Puts every Hamlet, active or not, in a new manual order.
 ///
 /// # Errors
 /// `401` without a live session, `403` without `village.manage`, `422` unless the list holds
@@ -528,7 +523,7 @@ pub(crate) async fn update_unit(
     path = "/regions/hamlet-order",
     operation_id = "orderHamlets",
     tag = "regions",
-    request_body = HamletOrder,
+    request_body = Order,
     responses(
         (status = NO_CONTENT, description = "The Hamlets are reordered"),
         (status = UNAUTHORIZED, description = "There is no live session"),
@@ -539,7 +534,7 @@ pub(crate) async fn update_unit(
 pub(crate) async fn order_hamlets(
     State(pool): State<PgPool>,
     session: Session,
-    Json(body): Json<HamletOrder>,
+    Json(body): Json<Order>,
 ) -> Result<StatusCode, ApiError> {
     ensure_manager(&session)?;
     let mut tx = pool.begin().await?;
@@ -548,10 +543,7 @@ pub(crate) async fn order_hamlets(
     )
     .fetch_all(&mut *tx)
     .await?;
-    let (mut sorted_old, mut sorted_new) = (old.clone(), body.ids.clone());
-    sorted_old.sort_unstable();
-    sorted_new.sort_unstable();
-    if sorted_old != sorted_new {
+    if !body.matches(&old) {
         return Err(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY));
     }
     sqlx::query!(
