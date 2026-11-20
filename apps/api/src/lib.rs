@@ -15,6 +15,7 @@ mod index_edition;
 mod institution;
 mod news_post;
 mod page;
+mod partner;
 mod passkey;
 mod password;
 mod region;
@@ -172,7 +173,8 @@ fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(album::upload_photo))
         .routes(routes!(album::list_published))
         .routes(routes!(album::get_published))
-        .merge(important_contact::routes())
+        // Newer modules own their routes.
+        .merge(important_contact::routes().merge(partner::routes()))
         .routes(routes!(storage::get_media))
         .routes(routes!(auth::use_access_link))
         .routes(routes!(auth::sign_in))

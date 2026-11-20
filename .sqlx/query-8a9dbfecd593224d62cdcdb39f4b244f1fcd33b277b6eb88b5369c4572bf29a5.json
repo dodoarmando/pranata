@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT name, logo_file_id AS logo, url FROM partners WHERE published\n         ORDER BY sort_order, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "partners",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "logo",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "partners",
+            "name": "logo_file_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "url",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "partners",
+            "name": "url"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, false, true]
+  },
+  "hash": "8a9dbfecd593224d62cdcdb39f4b244f1fcd33b277b6eb88b5369c4572bf29a5"
+}
