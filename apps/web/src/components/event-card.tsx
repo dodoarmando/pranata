@@ -2,16 +2,18 @@ import type { EventCard as Card, EventTiming, TimeZone } from '../api/generated'
 import { schedule } from '../event';
 import { Badge } from './ui/badge';
 
-/** Akan datang or Selesai, and Dibatalkan for an Event called off. */
-export function TimingBadges({ timing, cancelled }: { timing: EventTiming; cancelled: boolean }) {
+const timingLabels: Record<EventTiming, string> = { upcoming: 'Akan datang', past: 'Selesai' };
+
+/** Akan datang or Selesai. */
+export function TimingBadge({ timing }: { timing: EventTiming }) {
   return (
-    <>
-      <Badge variant={timing === 'upcoming' ? 'default' : 'outline'}>
-        {timing === 'upcoming' ? 'Akan datang' : 'Selesai'}
-      </Badge>
-      {cancelled && <Badge variant="destructive">Dibatalkan</Badge>}
-    </>
+    <Badge variant={timing === 'upcoming' ? 'default' : 'outline'}>{timingLabels[timing]}</Badge>
   );
+}
+
+/** Dibatalkan, for an Event called off. */
+export function CancelledBadge() {
+  return <Badge variant="destructive">Dibatalkan</Badge>;
 }
 
 /** A Published Event on the public Agenda; it has no detail page. */
@@ -19,7 +21,7 @@ export function EventCard({ event, zone }: { event: Card; zone: TimeZone }) {
   return (
     <article className="grid gap-2 rounded-md border bg-card p-5">
       <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        {event.cancelled && <Badge variant="destructive">Dibatalkan</Badge>}
+        {event.cancelled && <CancelledBadge />}
         <Badge variant="secondary">{event.category}</Badge>
       </p>
       <h3 className="text-lg leading-snug font-semibold">{event.title}</h3>
