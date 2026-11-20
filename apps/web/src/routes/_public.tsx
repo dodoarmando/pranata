@@ -66,6 +66,9 @@ function PublicLayout() {
             <Link to="/pengumuman" className={navItem}>
               Pengumuman
             </Link>
+            <Link to="/agenda" className={navItem}>
+              Agenda
+            </Link>
             <Link to="/kontak" className={navItem}>
               Kontak
             </Link>

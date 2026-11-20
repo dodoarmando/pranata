@@ -465,6 +465,65 @@ test('a publisher publishes an Announcement, shown on the home page and on /peng
   await expect(page.getByRole('heading', { name: 'Pengumuman', exact: true })).toBeVisible();
 });
 
+test('a publisher lists an Event on /agenda and calls it off, labelled Dibatalkan', async ({
+  page,
+}) => {
+  await page.goto('/masuk');
+  await page.getByLabel('Nama pengguna').fill(username);
+  await page.getByLabel('Kata sandi', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Beranda' })).toBeVisible();
+  page.on('dialog', (dialog) => dialog.accept());
+  // The local database outlives runs, so names are this run's own.
+  const run = Date.now();
+  const category = `Gotong royong ${run}`;
+  const title = `Kerja bakti ${run}`;
+
+  await page.getByRole('link', { name: 'Berita' }).click();
+  await page.getByLabel('Kategori baru').fill(category);
+  await page.getByRole('button', { name: 'Tambah kategori' }).click();
+  await expect(page.getByText('Kategori ditambahkan.')).toBeVisible();
+  await page.getByRole('link', { name: 'Agenda' }).click();
+  await page.getByRole('button', { name: 'Tulis kegiatan' }).click();
+  await page.getByLabel('Judul').fill(title);
+  await page.getByRole('button', { name: 'Mulai menulis' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Tulis kegiatan' })).toBeVisible();
+  const editor = page.url();
+
+  await page.getByLabel('Kategori').selectOption({ label: category });
+  await page.getByLabel('Mulai').fill('2099-01-02T07:00');
+  await page.getByLabel('Tempat').fill('Balai desa');
+  await expect(page.getByRole('status')).toContainText('Tersimpan otomatis');
+  await page.getByRole('button', { name: 'Terbitkan' }).click();
+  await expect(page.getByText('Kegiatan terbit di Agenda.')).toBeVisible();
+
+  await page.goto('/agenda');
+  const upcoming = page.getByRole('region', { name: 'Akan datang' });
+  const card = upcoming.getByRole('article').filter({ hasText: title });
+  await expect(card.getByText('Jumat, 2 Januari 2099, 07.00', { exact: false })).toBeVisible();
+  await expect(card.getByText('Dibatalkan')).toHaveCount(0);
+
+  await page.goto(editor);
+  await page.getByLabel('Dibatalkan').check();
+  await page.getByRole('button', { name: 'Simpan' }).click();
+  await expect(page.getByRole('status')).toHaveText('Terbit di Agenda.');
+  await page.goto('/agenda');
+  await expect(card.getByText('Dibatalkan')).toBeVisible();
+
+  await page.goto(editor);
+  await page.getByRole('button', { name: 'Batalkan terbit' }).click();
+  await expect(page.getByText('Kegiatan kembali menjadi draf.')).toBeVisible();
+  await page.getByRole('button', { name: 'Hapus draf' }).click();
+  await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Berita' }).click();
+  await page
+    .getByRole('listitem')
+    .filter({ hasText: category })
+    .getByRole('button', { name: 'Hapus' })
+    .click();
+  await expect(page.getByText('Kategori dihapus.')).toBeVisible();
+});
+
 test('every page has the stylesheet, and the public site stays light', async ({ page }) => {
   // Admin code is split into route chunks the public home page never fetches.
   const scripts: Promise<string>[] = [];
