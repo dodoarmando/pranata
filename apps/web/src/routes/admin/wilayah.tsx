@@ -30,6 +30,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { moved } from '../../order';
+import { capitalized } from '../../village';
 
 // Server-only; the tree, or the status that refused it.
 const fetchTree = createServerFn({ method: 'GET' }).handler(async () => {
@@ -74,8 +75,6 @@ const unitErrors: Record<number, string> = {
 };
 
 const hamletLabels = ['dusun', 'banjar', 'jorong', 'lingkungan'];
-
-const capitalized = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** What the dialog adds or edits: a new unit under its parent, or an existing one. */
 type Editing = { kind: RegionKind; parentId?: string; unit?: RegionUnit };
