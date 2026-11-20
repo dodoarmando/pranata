@@ -28,6 +28,7 @@ import { Route as AdminPenggunaRouteImport } from './routes/admin/pengguna'
 import { Route as AdminPeranRouteImport } from './routes/admin/peran'
 import { Route as AdminProfilDesaRouteImport } from './routes/admin/profil-desa'
 import { Route as AdminWilayahRouteImport } from './routes/admin/wilayah'
+import { Route as PublicMenuSlugRouteImport } from './routes/_public/$menu.$slug'
 import { Route as PublicBeritaIndexRouteImport } from './routes/_public/berita/index'
 import { Route as PublicBeritaSlugRouteImport } from './routes/_public/berita/$slug'
 import { Route as PublicPengumumanIndexRouteImport } from './routes/_public/pengumuman/index'
@@ -136,6 +137,11 @@ const AdminWilayahRoute = AdminWilayahRouteImport.update({
   path: '/wilayah',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const PublicMenuSlugRoute = PublicMenuSlugRouteImport.update({
+  id: '/$menu/$slug',
+  path: '/$menu/$slug',
+  getParentRoute: () => PublicRoute,
+} as any)
 const PublicBeritaIndexRoute = PublicBeritaIndexRouteImport.update({
   id: '/berita/',
   path: '/berita/',
@@ -221,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/admin/profil-desa': typeof AdminProfilDesaRoute
   '/admin/wilayah': typeof AdminWilayahRoute
   '/admin/': typeof AdminIndexRoute
+  '/$menu/$slug': typeof PublicMenuSlugRoute
   '/berita/$slug': typeof PublicBeritaSlugRoute
   '/pengumuman/$slug': typeof PublicPengumumanSlugRoute
   '/admin/agenda/$id': typeof AdminAgendaIdRoute
@@ -253,6 +260,7 @@ export interface FileRoutesByTo {
   '/admin/wilayah': typeof AdminWilayahRoute
   '/': typeof PublicIndexRoute
   '/admin': typeof AdminIndexRoute
+  '/$menu/$slug': typeof PublicMenuSlugRoute
   '/berita/$slug': typeof PublicBeritaSlugRoute
   '/pengumuman/$slug': typeof PublicPengumumanSlugRoute
   '/admin/agenda/$id': typeof AdminAgendaIdRoute
@@ -288,6 +296,7 @@ export interface FileRoutesById {
   '/admin/wilayah': typeof AdminWilayahRoute
   '/_public/': typeof PublicIndexRoute
   '/admin/': typeof AdminIndexRoute
+  '/_public/$menu/$slug': typeof PublicMenuSlugRoute
   '/_public/berita/$slug': typeof PublicBeritaSlugRoute
   '/_public/pengumuman/$slug': typeof PublicPengumumanSlugRoute
   '/admin/agenda/$id': typeof AdminAgendaIdRoute
@@ -323,6 +332,7 @@ export interface FileRouteTypes {
     | '/admin/profil-desa'
     | '/admin/wilayah'
     | '/admin/'
+    | '/$menu/$slug'
     | '/berita/$slug'
     | '/pengumuman/$slug'
     | '/admin/agenda/$id'
@@ -355,6 +365,7 @@ export interface FileRouteTypes {
     | '/admin/wilayah'
     | '/'
     | '/admin'
+    | '/$menu/$slug'
     | '/berita/$slug'
     | '/pengumuman/$slug'
     | '/admin/agenda/$id'
@@ -389,6 +400,7 @@ export interface FileRouteTypes {
     | '/admin/wilayah'
     | '/_public/'
     | '/admin/'
+    | '/_public/$menu/$slug'
     | '/_public/berita/$slug'
     | '/_public/pengumuman/$slug'
     | '/admin/agenda/$id'
@@ -547,6 +559,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWilayahRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/_public/$menu/$slug': {
+      id: '/_public/$menu/$slug'
+      path: '/$menu/$slug'
+      fullPath: '/$menu/$slug'
+      preLoaderRoute: typeof PublicMenuSlugRouteImport
+      parentRoute: typeof PublicRoute
+    }
     '/_public/berita/': {
       id: '/_public/berita/'
       path: '/berita'
@@ -693,6 +712,7 @@ interface PublicRouteChildren {
   PublicPemerintahanRoute: typeof PublicPemerintahanRoute
   PublicProfilRoute: typeof PublicProfilRoute
   PublicIndexRoute: typeof PublicIndexRoute
+  PublicMenuSlugRoute: typeof PublicMenuSlugRoute
   PublicBeritaSlugRoute: typeof PublicBeritaSlugRoute
   PublicPengumumanSlugRoute: typeof PublicPengumumanSlugRoute
   PublicBeritaIndexRoute: typeof PublicBeritaIndexRoute
@@ -705,6 +725,7 @@ const PublicRouteChildren: PublicRouteChildren = {
   PublicPemerintahanRoute: PublicPemerintahanRoute,
   PublicProfilRoute: PublicProfilRoute,
   PublicIndexRoute: PublicIndexRoute,
+  PublicMenuSlugRoute: PublicMenuSlugRoute,
   PublicBeritaSlugRoute: PublicBeritaSlugRoute,
   PublicPengumumanSlugRoute: PublicPengumumanSlugRoute,
   PublicBeritaIndexRoute: PublicBeritaIndexRoute,
