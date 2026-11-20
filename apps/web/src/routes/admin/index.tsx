@@ -18,6 +18,7 @@ const draftKinds = {
   newsPost: { label: 'Berita', to: '/admin/berita/$id' },
   announcement: { label: 'Pengumuman', to: '/admin/pengumuman/$id' },
   event: { label: 'Agenda', to: '/admin/agenda/$id' },
+  page: { label: 'Halaman', to: '/admin/halaman/$id' },
 } as const satisfies Record<DraftKind, { label: string; to: string }>;
 
 export const Route = createFileRoute('/admin/')({
