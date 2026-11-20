@@ -303,6 +303,24 @@ export interface CategoryRef {
   name: string;
 }
 
+/**
+ * A Published Important Contact as the public reads it.
+ */
+export interface PublishedContact {
+  name: string;
+  /** @nullable */
+  note?: string | null;
+  phone: string;
+}
+
+/**
+ * One contact category's Published contacts, in order.
+ */
+export interface ContactGroup {
+  category: string;
+  contacts: PublishedContact[];
+}
+
 export interface Created {
   id: string;
 }
@@ -584,6 +602,40 @@ export const HealthStatus = {
 export interface Health {
   status: HealthStatus;
 }
+
+/**
+ * What a User writes in an Important Contact.
+ */
+export interface ImportantContactFields {
+  /** The contact category it is listed under. */
+  category: string;
+  /** 1–100 characters. */
+  name: string;
+  /**
+     * Up to 150 characters, such as opening hours.
+     * @nullable
+     */
+  note?: string | null;
+  /**
+     * The place within the category, smallest first; left out, a new contact or one moved to
+     * another category goes last there, and any other edit keeps the place.
+     * @nullable
+     */
+  order?: number | null;
+  /**
+     * Up to 30 characters with at least three digits, such as 112, and only digits, spaces
+     * and `+-()`.
+     */
+  phone: string;
+}
+
+/**
+ * An Important Contact as the admin area lists and edits it.
+ */
+export type ImportantContact = ImportantContactFields & {
+  id: string;
+  published: boolean;
+};
 
 /**
  * Which index scored the Village.
@@ -910,6 +962,13 @@ export interface OfficialLink {
      * @nullable
      */
   officialId?: string | null;
+}
+
+/**
+ * A new manual order: every item of the list exactly once, first to last.
+ */
+export interface Order {
+  ids: string[];
 }
 
 /**
@@ -3652,6 +3711,288 @@ export const deleteCategory = async (id: string, options?: Parameters<typeof api
 
 
 
+export type listContactCategoriesResponse200 = {
+  data: Category[]
+  status: 200
+}
+
+export type listContactCategoriesResponseSuccess = (listContactCategoriesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listContactCategoriesResponse = (listContactCategoriesResponseSuccess)
+
+export const getListContactCategoriesUrl = () => {
+
+
+
+
+  return `/contact-categories`
+}
+
+/**
+ * @summary Every contact category in order, for the public site and the admin area.
+ */
+export const listContactCategories = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listContactCategoriesResponse> => {
+
+  return apiFetch<listContactCategoriesResponse>(getListContactCategoriesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createContactCategoryResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createContactCategoryResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createContactCategoryResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createContactCategoryResponse409 = {
+  data: void
+  status: 409
+}
+
+export type createContactCategoryResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createContactCategoryResponseSuccess = (createContactCategoryResponse201) & {
+  headers: Headers;
+};
+export type createContactCategoryResponseError = (createContactCategoryResponse401 | createContactCategoryResponse403 | createContactCategoryResponse409 | createContactCategoryResponse422) & {
+  headers: Headers;
+};
+
+export type createContactCategoryResponse = (createContactCategoryResponseSuccess | createContactCategoryResponseError)
+
+export const getCreateContactCategoryUrl = () => {
+
+
+
+
+  return `/contact-categories`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `409` for a name in use,
+ * `422` for a blank name or one over 50 characters.
+ * @summary Adds a contact category, last.
+ */
+export const createContactCategory = async (categoryFields: CategoryFields, options?: Parameters<typeof apiFetch>[1]): Promise<createContactCategoryResponse> => {
+
+  return apiFetch<createContactCategoryResponse>(getCreateContactCategoryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(categoryFields)
+  }
+);}
+
+
+
+export type orderContactCategoriesResponse204 = {
+  data: void
+  status: 204
+}
+
+export type orderContactCategoriesResponse401 = {
+  data: void
+  status: 401
+}
+
+export type orderContactCategoriesResponse403 = {
+  data: void
+  status: 403
+}
+
+export type orderContactCategoriesResponse422 = {
+  data: void
+  status: 422
+}
+
+export type orderContactCategoriesResponseSuccess = (orderContactCategoriesResponse204) & {
+  headers: Headers;
+};
+export type orderContactCategoriesResponseError = (orderContactCategoriesResponse401 | orderContactCategoriesResponse403 | orderContactCategoriesResponse422) & {
+  headers: Headers;
+};
+
+export type orderContactCategoriesResponse = (orderContactCategoriesResponseSuccess | orderContactCategoriesResponseError)
+
+export const getOrderContactCategoriesUrl = () => {
+
+
+
+
+  return `/contact-categories/order`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `422` unless the list holds
+ * every contact category exactly once.
+ * @summary Puts every contact category in a new order.
+ */
+export const orderContactCategories = async (order: Order, options?: Parameters<typeof apiFetch>[1]): Promise<orderContactCategoriesResponse> => {
+
+  return apiFetch<orderContactCategoriesResponse>(getOrderContactCategoriesUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(order)
+  }
+);}
+
+
+
+export type updateContactCategoryResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateContactCategoryResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateContactCategoryResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateContactCategoryResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateContactCategoryResponse409 = {
+  data: void
+  status: 409
+}
+
+export type updateContactCategoryResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateContactCategoryResponseSuccess = (updateContactCategoryResponse204) & {
+  headers: Headers;
+};
+export type updateContactCategoryResponseError = (updateContactCategoryResponse401 | updateContactCategoryResponse403 | updateContactCategoryResponse404 | updateContactCategoryResponse409 | updateContactCategoryResponse422) & {
+  headers: Headers;
+};
+
+export type updateContactCategoryResponse = (updateContactCategoryResponseSuccess | updateContactCategoryResponseError)
+
+export const getUpdateContactCategoryUrl = (id: string,) => {
+
+
+
+
+  return `/contact-categories/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * contact category, `409` for a name in use, `422` for a blank name or one over 50
+ * characters.
+ * @summary Renames a contact category.
+ */
+export const updateContactCategory = async (id: string,
+    categoryFields: CategoryFields, options?: Parameters<typeof apiFetch>[1]): Promise<updateContactCategoryResponse> => {
+
+  return apiFetch<updateContactCategoryResponse>(getUpdateContactCategoryUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(categoryFields)
+  }
+);}
+
+
+
+export type deleteContactCategoryResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteContactCategoryResponse401 = {
+  data: void
+  status: 401
+}
+
+export type deleteContactCategoryResponse403 = {
+  data: void
+  status: 403
+}
+
+export type deleteContactCategoryResponse404 = {
+  data: void
+  status: 404
+}
+
+export type deleteContactCategoryResponse409 = {
+  data: void
+  status: 409
+}
+
+export type deleteContactCategoryResponseSuccess = (deleteContactCategoryResponse204) & {
+  headers: Headers;
+};
+export type deleteContactCategoryResponseError = (deleteContactCategoryResponse401 | deleteContactCategoryResponse403 | deleteContactCategoryResponse404 | deleteContactCategoryResponse409) & {
+  headers: Headers;
+};
+
+export type deleteContactCategoryResponse = (deleteContactCategoryResponseSuccess | deleteContactCategoryResponseError)
+
+export const getDeleteContactCategoryUrl = (id: string,) => {
+
+
+
+
+  return `/contact-categories/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * contact category, `409` while a contact is filed under it.
+ * @summary Deletes a contact category no contact, Draft or Published, is filed under.
+ */
+export const deleteContactCategory = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deleteContactCategoryResponse> => {
+
+  return apiFetch<deleteContactCategoryResponse>(getDeleteContactCategoryUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
 export type getDashboardResponse200 = {
   data: Dashboard
   status: 200
@@ -4272,6 +4613,395 @@ export const getHealth = async ( options?: Parameters<typeof apiFetch>[1]): Prom
   {
     ...options,
     method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listImportantContactsResponse200 = {
+  data: ImportantContact[]
+  status: 200
+}
+
+export type listImportantContactsResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listImportantContactsResponse403 = {
+  data: void
+  status: 403
+}
+
+export type listImportantContactsResponseSuccess = (listImportantContactsResponse200) & {
+  headers: Headers;
+};
+export type listImportantContactsResponseError = (listImportantContactsResponse401 | listImportantContactsResponse403) & {
+  headers: Headers;
+};
+
+export type listImportantContactsResponse = (listImportantContactsResponseSuccess | listImportantContactsResponseError)
+
+export const getListImportantContactsUrl = () => {
+
+
+
+
+  return `/important-contacts`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`.
+ * @summary Every Important Contact, Drafts and Published, category by category in order.
+ */
+export const listImportantContacts = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listImportantContactsResponse> => {
+
+  return apiFetch<listImportantContactsResponse>(getListImportantContactsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createImportantContactResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createImportantContactResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createImportantContactResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createImportantContactResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createImportantContactResponseSuccess = (createImportantContactResponse201) & {
+  headers: Headers;
+};
+export type createImportantContactResponseError = (createImportantContactResponse401 | createImportantContactResponse403 | createImportantContactResponse422) & {
+  headers: Headers;
+};
+
+export type createImportantContactResponse = (createImportantContactResponseSuccess | createImportantContactResponseError)
+
+export const getCreateImportantContactUrl = () => {
+
+
+
+
+  return `/important-contacts`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `422`
+ * for a blank name, a malformed phone or note, or an unknown category.
+ * @summary Saves a new Important Contact as a Draft.
+ */
+export const createImportantContact = async (importantContactFields: ImportantContactFields, options?: Parameters<typeof apiFetch>[1]): Promise<createImportantContactResponse> => {
+
+  return apiFetch<createImportantContactResponse>(getCreateImportantContactUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(importantContactFields)
+  }
+);}
+
+
+
+export type listPublishedImportantContactsResponse200 = {
+  data: ContactGroup[]
+  status: 200
+}
+
+export type listPublishedImportantContactsResponseSuccess = (listPublishedImportantContactsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listPublishedImportantContactsResponse = (listPublishedImportantContactsResponseSuccess)
+
+export const getListPublishedImportantContactsUrl = () => {
+
+
+
+
+  return `/important-contacts/published`
+}
+
+/**
+ * @summary Published Important Contacts grouped by category, each in order; a category without a
+Published contact is left out.
+ */
+export const listPublishedImportantContacts = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listPublishedImportantContactsResponse> => {
+
+  return apiFetch<listPublishedImportantContactsResponse>(getListPublishedImportantContactsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type updateImportantContactResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateImportantContactResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateImportantContactResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateImportantContactResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateImportantContactResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateImportantContactResponseSuccess = (updateImportantContactResponse204) & {
+  headers: Headers;
+};
+export type updateImportantContactResponseError = (updateImportantContactResponse401 | updateImportantContactResponse403 | updateImportantContactResponse404 | updateImportantContactResponse422) & {
+  headers: Headers;
+};
+
+export type updateImportantContactResponse = (updateImportantContactResponseSuccess | updateImportantContactResponseError)
+
+export const getUpdateImportantContactUrl = (id: string,) => {
+
+
+
+
+  return `/important-contacts/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` (or `content.publish`) for a
+ * Draft or without `content.publish` for a Published contact, `404` for an unknown contact,
+ * `422` for a blank name, a malformed phone or note, or an unknown category.
+ * @summary Saves an Important Contact, a Draft or a Published one live.
+ */
+export const updateImportantContact = async (id: string,
+    importantContactFields: ImportantContactFields, options?: Parameters<typeof apiFetch>[1]): Promise<updateImportantContactResponse> => {
+
+  return apiFetch<updateImportantContactResponse>(getUpdateImportantContactUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(importantContactFields)
+  }
+);}
+
+
+
+export type deleteImportantContactResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteImportantContactResponse401 = {
+  data: void
+  status: 401
+}
+
+export type deleteImportantContactResponse403 = {
+  data: void
+  status: 403
+}
+
+export type deleteImportantContactResponse404 = {
+  data: void
+  status: 404
+}
+
+export type deleteImportantContactResponse409 = {
+  data: void
+  status: 409
+}
+
+export type deleteImportantContactResponseSuccess = (deleteImportantContactResponse204) & {
+  headers: Headers;
+};
+export type deleteImportantContactResponseError = (deleteImportantContactResponse401 | deleteImportantContactResponse403 | deleteImportantContactResponse404 | deleteImportantContactResponse409) & {
+  headers: Headers;
+};
+
+export type deleteImportantContactResponse = (deleteImportantContactResponseSuccess | deleteImportantContactResponseError)
+
+export const getDeleteImportantContactUrl = (id: string,) => {
+
+
+
+
+  return `/important-contacts/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * contact, `409` when it is Published.
+ * @summary Deletes a Draft for good. A Published contact is unpublished first.
+ */
+export const deleteImportantContact = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deleteImportantContactResponse> => {
+
+  return apiFetch<deleteImportantContactResponse>(getDeleteImportantContactUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type publishImportantContactResponse204 = {
+  data: void
+  status: 204
+}
+
+export type publishImportantContactResponse401 = {
+  data: void
+  status: 401
+}
+
+export type publishImportantContactResponse403 = {
+  data: void
+  status: 403
+}
+
+export type publishImportantContactResponse404 = {
+  data: void
+  status: 404
+}
+
+export type publishImportantContactResponse409 = {
+  data: void
+  status: 409
+}
+
+export type publishImportantContactResponseSuccess = (publishImportantContactResponse204) & {
+  headers: Headers;
+};
+export type publishImportantContactResponseError = (publishImportantContactResponse401 | publishImportantContactResponse403 | publishImportantContactResponse404 | publishImportantContactResponse409) & {
+  headers: Headers;
+};
+
+export type publishImportantContactResponse = (publishImportantContactResponseSuccess | publishImportantContactResponseError)
+
+export const getPublishImportantContactUrl = (id: string,) => {
+
+
+
+
+  return `/important-contacts/${id}/publish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * contact, `409` when it is already Published.
+ * @summary Puts a Draft on the public site.
+ */
+export const publishImportantContact = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<publishImportantContactResponse> => {
+
+  return apiFetch<publishImportantContactResponse>(getPublishImportantContactUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type unpublishImportantContactResponse204 = {
+  data: void
+  status: 204
+}
+
+export type unpublishImportantContactResponse401 = {
+  data: void
+  status: 401
+}
+
+export type unpublishImportantContactResponse403 = {
+  data: void
+  status: 403
+}
+
+export type unpublishImportantContactResponse404 = {
+  data: void
+  status: 404
+}
+
+export type unpublishImportantContactResponse409 = {
+  data: void
+  status: 409
+}
+
+export type unpublishImportantContactResponseSuccess = (unpublishImportantContactResponse204) & {
+  headers: Headers;
+};
+export type unpublishImportantContactResponseError = (unpublishImportantContactResponse401 | unpublishImportantContactResponse403 | unpublishImportantContactResponse404 | unpublishImportantContactResponse409) & {
+  headers: Headers;
+};
+
+export type unpublishImportantContactResponse = (unpublishImportantContactResponseSuccess | unpublishImportantContactResponseError)
+
+export const getUnpublishImportantContactUrl = (id: string,) => {
+
+
+
+
+  return `/important-contacts/${id}/unpublish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * contact, `409` when it is a Draft.
+ * @summary Takes a Published contact off the public site, back to Draft.
+ */
+export const unpublishImportantContact = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<unpublishImportantContactResponse> => {
+
+  return apiFetch<unpublishImportantContactResponse>(getUnpublishImportantContactUrl(id),
+  {
+    ...options,
+    method: 'POST'
 
 
   }
