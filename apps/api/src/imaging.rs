@@ -31,7 +31,7 @@ impl Kind {
     /// The variants stored for an upload of this kind.
     pub(crate) fn variants(self) -> &'static [Variant] {
         match self {
-            Self::Hero => &Variant::HERO,
+            Self::Hero => &Variant::EVERY,
             Self::Photo | Self::Logo => &Variant::ALL,
         }
     }
@@ -68,8 +68,8 @@ pub(crate) enum Variant {
 impl Variant {
     /// Every Variant made for every image.
     pub(crate) const ALL: [Self; 4] = [Self::W480, Self::W960, Self::W1600, Self::Share];
-    /// Every Variant made for a [`Kind::Hero`], and so every Variant there is.
-    pub(crate) const HERO: [Self; 5] = [
+    /// Every Variant there is, all of which a [`Kind::Hero`] gets.
+    pub(crate) const EVERY: [Self; 5] = [
         Self::W480,
         Self::W960,
         Self::W1600,
