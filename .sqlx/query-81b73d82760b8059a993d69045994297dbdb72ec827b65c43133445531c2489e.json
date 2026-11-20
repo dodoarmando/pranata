@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE important_contacts SET sort_order = ordered.sort_order\n         FROM unnest($1::uuid[]) WITH ORDINALITY AS ordered (id, sort_order)\n         WHERE important_contacts.id = ordered.id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["UuidArray"]
+    },
+    "nullable": []
+  },
+  "hash": "81b73d82760b8059a993d69045994297dbdb72ec827b65c43133445531c2489e"
+}

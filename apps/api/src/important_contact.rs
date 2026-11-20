@@ -32,6 +32,7 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
         .routes(routes!(list_categories, create_category))
         .routes(routes!(update_category, delete_category))
         .routes(routes!(order_categories))
+        .routes(routes!(order_contacts))
         .routes(routes!(list, create))
         .routes(routes!(update, delete))
         .routes(routes!(publish))
@@ -279,6 +280,74 @@ pub(crate) async fn order_categories(
             Actor::User(session.user_id),
             "contact_category.order",
             ("contact_category", None),
+            json!([{ "field": "order", "from": old, "to": body.ids }]),
+        )
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Puts every Important Contact of one Contact Category, Draft or Published, in a new order.
+///
+/// # Errors
+/// `401` without a live session, `403` without `content.publish`, `404` for an unknown
+/// Contact Category, `422` unless the list holds every contact of it exactly once.
+#[utoipa::path(
+    put,
+    path = "/contact-categories/{id}/contact-order",
+    operation_id = "orderImportantContacts",
+    tag = "content",
+    params(("id" = Uuid, Path, description = "The Contact Category")),
+    request_body = Order,
+    responses(
+        (status = NO_CONTENT, description = "The Important Contacts are reordered"),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User may not publish content"),
+        (status = NOT_FOUND, description = "There is no such Contact Category"),
+        (status = UNPROCESSABLE_ENTITY, description = "The list is not every contact of the Contact Category exactly once"),
+    ),
+)]
+pub(crate) async fn order_contacts(
+    State(pool): State<PgPool>,
+    session: Session,
+    Path(id): Path<Uuid>,
+    Json(body): Json<Order>,
+) -> Result<StatusCode, ApiError> {
+    ensure_publisher(&session)?;
+    let mut tx = pool.begin().await?;
+    // Locking the category keeps contacts from moving in or out meanwhile.
+    sqlx::query_scalar!(
+        "SELECT id FROM contact_categories WHERE id = $1 FOR UPDATE",
+        id
+    )
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or(ApiError::Status(StatusCode::NOT_FOUND))?;
+    let old = sqlx::query_scalar!(
+        "SELECT id FROM important_contacts WHERE category_id = $1
+         ORDER BY sort_order, name, id FOR UPDATE",
+        id
+    )
+    .fetch_all(&mut *tx)
+    .await?;
+    if !body.matches(&old) {
+        return Err(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY));
+    }
+    sqlx::query!(
+        "UPDATE important_contacts SET sort_order = ordered.sort_order
+         FROM unnest($1::uuid[]) WITH ORDINALITY AS ordered (id, sort_order)
+         WHERE important_contacts.id = ordered.id",
+        &body.ids,
+    )
+    .execute(&mut *tx)
+    .await?;
+    if old != body.ids {
+        audit::record_change(
+            &mut tx,
+            Actor::User(session.user_id),
+            "important_contact.order",
+            ("contact_category", Some(&id.to_string())),
             json!([{ "field": "order", "from": old, "to": body.ids }]),
         )
         .await?;

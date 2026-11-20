@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id FROM important_contacts WHERE category_id = $1\n         ORDER BY sort_order, name, id FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "important_contacts",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": [false]
+  },
+  "hash": "d0e84134a62f6b813848ca828568d0785cb09d38ebd331faeac5a5fec66a4e98"
+}

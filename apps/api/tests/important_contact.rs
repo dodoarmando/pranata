@@ -226,9 +226,9 @@ async fn categories_and_contacts_keep_the_order_staff_give(pool: PgPool) {
     let office = office(&pool).await;
     let health = office.category("Kesehatan").await;
     let safety = office.category("Keamanan").await;
-    office.published("Puskesmas", &health).await;
+    let clinic = office.published("Puskesmas", &health).await;
     let ambulance = office.published("Ambulans Desa", &health).await;
-    office.published("Polsek", &safety).await;
+    let police = office.published("Polsek", &safety).await;
     assert_eq!(
         office.public_names().await,
         [
@@ -259,6 +259,40 @@ async fn categories_and_contacts_keep_the_order_staff_give(pool: PgPool) {
     assert_eq!(
         office.public_names().await[1].1,
         ["Polsek", "Ambulans Desa"]
+    );
+
+    // A category's contacts are reordered together, each exactly once, by a publisher.
+    let path = format!("/contact-categories/{safety}/contact-order");
+    let contacts = json!({ "ids": [ambulance, police] });
+    let by_writer = office
+        .call("PUT", &path, Some(&contacts), &office.writer)
+        .await;
+    assert_eq!(by_writer.status, StatusCode::FORBIDDEN);
+    for wrong in [
+        json!({ "ids": [ambulance] }),
+        json!({ "ids": [ambulance, police, clinic] }),
+    ] {
+        let refused = office
+            .call("PUT", &path, Some(&wrong), &office.publisher)
+            .await;
+        assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY, "{wrong}");
+    }
+    let unknown = office
+        .call(
+            "PUT",
+            "/contact-categories/0190c0de-0000-7000-8000-000000000000/contact-order",
+            Some(&json!({ "ids": [] })),
+            &office.publisher,
+        )
+        .await;
+    assert_eq!(unknown.status, StatusCode::NOT_FOUND);
+    let reordered = office
+        .call("PUT", &path, Some(&contacts), &office.publisher)
+        .await;
+    assert_eq!(reordered.status, StatusCode::NO_CONTENT);
+    assert_eq!(
+        office.public_names().await[1].1,
+        ["Ambulans Desa", "Polsek"]
     );
 
     // Reordering the categories needs every one exactly once, and a publisher.

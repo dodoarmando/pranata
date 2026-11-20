@@ -4040,6 +4040,68 @@ export const deleteContactCategory = async (id: string, options?: Parameters<typ
 
 
 
+export type orderImportantContactsResponse204 = {
+  data: void
+  status: 204
+}
+
+export type orderImportantContactsResponse401 = {
+  data: void
+  status: 401
+}
+
+export type orderImportantContactsResponse403 = {
+  data: void
+  status: 403
+}
+
+export type orderImportantContactsResponse404 = {
+  data: void
+  status: 404
+}
+
+export type orderImportantContactsResponse422 = {
+  data: void
+  status: 422
+}
+
+export type orderImportantContactsResponseSuccess = (orderImportantContactsResponse204) & {
+  headers: Headers;
+};
+export type orderImportantContactsResponseError = (orderImportantContactsResponse401 | orderImportantContactsResponse403 | orderImportantContactsResponse404 | orderImportantContactsResponse422) & {
+  headers: Headers;
+};
+
+export type orderImportantContactsResponse = (orderImportantContactsResponseSuccess | orderImportantContactsResponseError)
+
+export const getOrderImportantContactsUrl = (id: string,) => {
+
+
+
+
+  return `/contact-categories/${id}/contact-order`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown
+ * Contact Category, `422` unless the list holds every contact of it exactly once.
+ * @summary Puts every Important Contact of one Contact Category, Draft or Published, in a new order.
+ */
+export const orderImportantContacts = async (id: string,
+    order: Order, options?: Parameters<typeof apiFetch>[1]): Promise<orderImportantContactsResponse> => {
+
+  return apiFetch<orderImportantContactsResponse>(getOrderImportantContactsUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(order)
+  }
+);}
+
+
+
 export type getDashboardResponse200 = {
   data: Dashboard
   status: 200
