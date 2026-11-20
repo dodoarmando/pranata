@@ -243,6 +243,9 @@ test('a village manager records a Hamlet head on Pemerintahan, and the public si
   await page.getByLabel('Nama dusun').fill(hamlet);
   await page.getByRole('button', { name: 'Simpan', exact: true }).click();
   await expect(page.getByRole('region', { name: `Dusun ${hamlet}` })).toBeVisible();
+  await page.getByRole('link', { name: 'Beranda' }).click();
+  const missing = page.getByRole('region', { name: 'Data desa perlu dilengkapi' });
+  await expect(missing).toContainText(`Kepala Dusun ${hamlet}`);
 
   await page.getByRole('link', { name: 'Pemerintahan' }).click();
   await expect(page.getByRole('heading', { name: 'Pemerintahan', exact: true })).toBeVisible();
@@ -256,6 +259,8 @@ test('a village manager records a Hamlet head on Pemerintahan, and the public si
   await page.getByRole('button', { name: 'Simpan', exact: true }).click();
   await expect(card.getByRole('table')).toContainText('Bu Ratna');
   await expect(card.getByRole('table')).toContainText('1 Januari 2024 – sekarang');
+  await page.getByRole('link', { name: 'Beranda' }).click();
+  await expect(missing).not.toContainText(`Kepala Dusun ${hamlet}`);
 
   await page.goto('/pemerintahan');
   await expect(page.getByRole('region', { name: 'Perangkat desa' })).toContainText(
