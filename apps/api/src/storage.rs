@@ -54,7 +54,8 @@ impl Storage {
             .fetch_one(&mut *tx)
             .await?;
         let dir = self.dir.clone();
-        tokio::task::spawn_blocking(move || write_image(&dir, id, &image)).await??;
+        tokio::task::spawn_blocking(move || write_image(&dir, id, &image, kind.variants()))
+            .await??;
         tx.commit().await?;
         Ok(id)
     }
@@ -107,6 +108,7 @@ pub async fn sweep(pool: &PgPool, dir: &Path) -> anyhow::Result<usize> {
          AND id NOT IN (SELECT file_id FROM album_photos)
          AND id NOT IN (SELECT logo_file_id FROM partners)
          AND id NOT IN (SELECT file_id FROM transparency_documents)
+         AND id NOT IN (SELECT photo_file_id FROM home_hero)
          RETURNING id"
     )
     .fetch_all(pool)
@@ -160,7 +162,11 @@ pub fn regenerate(dir: &Path) -> anyhow::Result<usize> {
         };
         let image =
             image::open(&master).with_context(|| format!("cannot decode {}", master.display()))?;
-        for variant in Variant::ALL {
+        // A hero keeps its 2400 px variant; no other image gains one.
+        for variant in Variant::HERO {
+            if variant == Variant::W2400 && !file.join(variant.file_name()).exists() {
+                continue;
+            }
             let staged = file.join(format!(".{}", variant.file_name()));
             std::fs::write(&staged, imaging::render(&image, variant)?)?;
             std::fs::rename(&staged, file.join(variant.file_name()))?;
@@ -171,11 +177,16 @@ pub fn regenerate(dir: &Path) -> anyhow::Result<usize> {
 }
 
 /// Writes the master and variants beside each other, then moves them into place at once.
-fn write_image(dir: &Path, id: Uuid, image: &DynamicImage) -> anyhow::Result<()> {
+fn write_image(
+    dir: &Path,
+    id: Uuid,
+    image: &DynamicImage,
+    variants: &[Variant],
+) -> anyhow::Result<()> {
     place(dir, id, |staging| {
         let (master, extension) = imaging::encode_master(image)?;
         std::fs::write(staging.join(format!("master.{extension}")), master)?;
-        for variant in Variant::ALL {
+        for &variant in variants {
             std::fs::write(
                 staging.join(variant.file_name()),
                 imaging::render(image, variant)?,
@@ -200,9 +211,9 @@ fn place(
         .with_context(|| format!("cannot move file {id} into place"))
 }
 
-/// An image's public rendition, `480`, `960` or `1600` (WebP) or `share` (JPEG), or a stored
-/// PDF as `pdf`. Cached forever, since a file never changes; only files that hold no personal
-/// data come here. Nothing served may be sniffed or run as a page.
+/// An image's public rendition, `480`, `960`, `1600` or, for a hero, `2400` (WebP) or `share`
+/// (JPEG), or a stored PDF as `pdf`. Cached forever, since a file never changes; only files
+/// that hold no personal data come here. Nothing served may be sniffed or run as a page.
 ///
 /// # Errors
 /// `404` for an unknown file or variant.
@@ -213,7 +224,7 @@ fn place(
     tag = "media",
     params(
         ("id" = Uuid, Path, description = "The file"),
-        ("variant" = String, Path, description = "`480`, `960`, `1600`, `share` or `pdf`"),
+        ("variant" = String, Path, description = "`480`, `960`, `1600`, `2400`, `share` or `pdf`"),
     ),
     responses(
         (status = OK, description = "The file", content(("image/webp"), ("image/jpeg"), ("application/pdf"))),
@@ -227,7 +238,7 @@ pub(crate) async fn get_media(
     let (file_name, content_type) = if name == "pdf" {
         (PDF_FILE, "application/pdf")
     } else {
-        let variant = Variant::ALL
+        let variant = Variant::HERO
             .into_iter()
             .find(|variant| variant.name() == name)
             .ok_or(ApiError::Status(StatusCode::NOT_FOUND))?;

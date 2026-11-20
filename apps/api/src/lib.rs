@@ -10,6 +10,7 @@ mod event;
 mod export;
 mod government;
 mod health;
+mod home;
 mod imaging;
 mod important_contact;
 mod index_edition;
@@ -107,6 +108,7 @@ fn modules() -> OpenApiRouter<AppState> {
         .merge(partner::routes())
         .merge(apbdes_summary::routes())
         .merge(transparency_document::routes())
+        .merge(home::routes())
 }
 
 fn api() -> OpenApiRouter<AppState> {

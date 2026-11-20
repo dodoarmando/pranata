@@ -2506,6 +2506,115 @@
         }
       }
     },
+    "/home/hero": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "The home page hero, for the public site and the admin area alike.",
+        "description": "# Errors\n`404` before it is first saved.",
+        "operationId": "getHomeHero",
+        "responses": {
+          "200": {
+            "description": "The hero",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeHero"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No hero is saved yet"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Saves the home page hero live.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `422` for a blank or\noverlong text, an unknown photo, a button with a label or a path alone, a path off the\npublic site, or over four Quick Links.",
+        "operationId": "updateHomeHero",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeHero"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The hero is saved"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "422": {
+            "description": "A field is malformed or unknown"
+          }
+        }
+      }
+    },
+    "/home/hero/photo": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Stores a hero photo, a JPEG, PNG or WebP of at most 10 MiB, with its 2400 px variant.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `413` over 10 MiB, `415`\nfor content that is not JPEG, PNG or WebP, `422` over 40 megapixels or undecodable.",
+        "operationId": "uploadHomeHeroPhoto",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The stored photo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upload"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "413": {
+            "description": "The file is over 10 MiB"
+          },
+          "415": {
+            "description": "The file is not JPEG, PNG or WebP"
+          },
+          "422": {
+            "description": "The image is too large or broken"
+          }
+        }
+      }
+    },
     "/important-contacts": {
       "get": {
         "tags": [
@@ -3067,7 +3176,7 @@
         "tags": [
           "media"
         ],
-        "summary": "An image's public rendition, `480`, `960` or `1600` (WebP) or `share` (JPEG), or a stored\nPDF as `pdf`. Cached forever, since a file never changes; only files that hold no personal\ndata come here. Nothing served may be sniffed or run as a page.",
+        "summary": "An image's public rendition, `480`, `960`, `1600` or, for a hero, `2400` (WebP) or `share`\n(JPEG), or a stored PDF as `pdf`. Cached forever, since a file never changes; only files\nthat hold no personal data come here. Nothing served may be sniffed or run as a page.",
         "description": "# Errors\n`404` for an unknown file or variant.",
         "operationId": "getMedia",
         "parameters": [
@@ -3084,7 +3193,7 @@
           {
             "name": "variant",
             "in": "path",
-            "description": "`480`, `960`, `1600`, `share` or `pdf`",
+            "description": "`480`, `960`, `1600`, `2400`, `share` or `pdf`",
             "required": true,
             "schema": {
               "type": "string"
@@ -7000,6 +7109,58 @@
           "unavailable"
         ]
       },
+      "HomeHero": {
+        "type": "object",
+        "description": "The home page hero.",
+        "required": [
+          "photo",
+          "photoAlt",
+          "title"
+        ],
+        "properties": {
+          "buttonLabel": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Up to 40 characters; the button shows only with a label and a path."
+          },
+          "buttonPath": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A path on the public site, such as `/profil`."
+          },
+          "photo": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Uploaded at `/home/hero/photo`; served up to `/media/{photo}/2400`."
+          },
+          "photoAlt": {
+            "type": "string",
+            "description": "1–200 characters."
+          },
+          "quickLinks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuickLink"
+            },
+            "description": "At most four, in order."
+          },
+          "subtitle": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Up to 200 characters."
+          },
+          "title": {
+            "type": "string",
+            "description": "1–100 characters."
+          }
+        }
+      },
       "ImportantContact": {
         "allOf": [
           {
@@ -8401,6 +8562,24 @@
           },
           "title": {
             "type": "string"
+          }
+        }
+      },
+      "QuickLink": {
+        "type": "object",
+        "description": "A shortcut under the home page search box.",
+        "required": [
+          "label",
+          "path"
+        ],
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "1–40 characters."
+          },
+          "path": {
+            "type": "string",
+            "description": "A path on the public site, such as `/berita`."
           }
         }
       },

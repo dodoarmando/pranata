@@ -14,6 +14,8 @@ use resvg::{tiny_skia, usvg};
 pub(crate) enum Kind {
     /// JPEG, PNG or WebP, up to 10 MiB.
     Photo,
+    /// A [`Kind::Photo`] that also gets the 2400 px variant, for the home page.
+    Hero,
     /// PNG or SVG, up to 2 MiB; an SVG is rasterised and never kept.
     Logo,
 }
@@ -21,8 +23,16 @@ pub(crate) enum Kind {
 impl Kind {
     pub(crate) fn max_bytes(self) -> usize {
         match self {
-            Self::Photo => 10 << 20,
+            Self::Photo | Self::Hero => 10 << 20,
             Self::Logo => 2 << 20,
+        }
+    }
+
+    /// The variants stored for an upload of this kind.
+    pub(crate) fn variants(self) -> &'static [Variant] {
+        match self {
+            Self::Hero => &Variant::HERO,
+            Self::Photo | Self::Logo => &Variant::ALL,
         }
     }
 }
@@ -49,13 +59,23 @@ pub(crate) enum Variant {
     W480,
     W960,
     W1600,
+    /// Only for [`Kind::Hero`].
+    W2400,
     /// The 1200 px JPEG for `og:image`, opaque on white.
     Share,
 }
 
 impl Variant {
-    /// Every Variant made for every image; a 2400 px WebP is reserved for the hero.
+    /// Every Variant made for every image.
     pub(crate) const ALL: [Self; 4] = [Self::W480, Self::W960, Self::W1600, Self::Share];
+    /// Every Variant made for a [`Kind::Hero`], and so every Variant there is.
+    pub(crate) const HERO: [Self; 5] = [
+        Self::W480,
+        Self::W960,
+        Self::W1600,
+        Self::W2400,
+        Self::Share,
+    ];
 
     /// The name in the URL.
     pub(crate) fn name(self) -> &'static str {
@@ -63,6 +83,7 @@ impl Variant {
             Self::W480 => "480",
             Self::W960 => "960",
             Self::W1600 => "1600",
+            Self::W2400 => "2400",
             Self::Share => "share",
         }
     }
@@ -72,6 +93,7 @@ impl Variant {
             Self::W480 => "480.webp",
             Self::W960 => "960.webp",
             Self::W1600 => "1600.webp",
+            Self::W2400 => "2400.webp",
             Self::Share => "share.jpg",
         }
     }
@@ -88,6 +110,7 @@ impl Variant {
             Self::W480 => 480,
             Self::W960 => 960,
             Self::W1600 => 1600,
+            Self::W2400 => 2400,
             Self::Share => 1200,
         }
     }
@@ -97,7 +120,10 @@ impl Variant {
 pub(crate) fn decode(kind: Kind, bytes: &[u8]) -> Result<DynamicImage, Rejected> {
     let format = image::guess_format(bytes).ok();
     let image = match (kind, format) {
-        (Kind::Photo, Some(ImageFormat::Jpeg | ImageFormat::Png | ImageFormat::WebP))
+        (
+            Kind::Photo | Kind::Hero,
+            Some(ImageFormat::Jpeg | ImageFormat::Png | ImageFormat::WebP),
+        )
         | (Kind::Logo, Some(ImageFormat::Png)) => decode_raster(bytes)?,
         (Kind::Logo, None) => rasterise_svg(bytes)?,
         _ => return Err(Rejected::UnsupportedType),
@@ -291,6 +317,7 @@ mod tests {
             (Variant::W480, 480, ImageFormat::WebP),
             (Variant::W960, 960, ImageFormat::WebP),
             (Variant::W1600, 1600, ImageFormat::WebP),
+            (Variant::W2400, 2400, ImageFormat::WebP),
             (Variant::Share, 1200, ImageFormat::Jpeg),
         ] {
             let bytes = render(&image, variant).unwrap();
