@@ -5,6 +5,8 @@ import { type FormEvent, useState } from 'react';
 import {
   createAccessLink,
   createUser,
+  linkUserOfficial,
+  listPositions,
   listRoles,
   listUsers,
   type NewUser,
@@ -23,12 +25,24 @@ import { NativeSelect, NativeSelectOption } from '../../components/ui/native-sel
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { useSudo } from '../../sudo';
 
-// Server-only; the Users and Roles, or the status that refused them.
+// Server-only; the Users, Roles and Officials, or the status that refused them.
 const fetchUsers = createServerFn({ method: 'GET' }).handler(async () => {
-  const [users, roles] = await Promise.all([listUsers(), listRoles()]);
+  const [users, roles, positions] = await Promise.all([listUsers(), listRoles(), listPositions()]);
   if (users.status !== 200) return users.status;
   if (roles.status !== 200) return roles.status;
-  return { users: users.data, roles: roles.data };
+  // Each Official once, named as on any of their Tenures.
+  const officials = new Map(
+    (positions.status === 200 ? positions.data : [])
+      .flatMap((position) => position.tenures)
+      .map((tenure) => [tenure.officialId, tenure.name]),
+  );
+  return {
+    users: users.data,
+    roles: roles.data,
+    officials: [...officials]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'id')),
+  };
 });
 
 const createUserFn = createServerFn({ method: 'POST' })
@@ -53,6 +67,12 @@ const updateUserFn = createServerFn({ method: 'POST' })
   .validator((data: { id: string; change: UserChange }) => data)
   .handler(async ({ data }) => (await updateUser(data.id, data.change)).status);
 
+const linkOfficialFn = createServerFn({ method: 'POST' })
+  .validator((data: { id: string; officialId: string | null }) => data)
+  .handler(
+    async ({ data }) => (await linkUserOfficial(data.id, { officialId: data.officialId })).status,
+  );
+
 const revokeSessionsFn = createServerFn({ method: 'POST' })
   .validator((id: string) => id)
   .handler(async ({ data }) => (await revokeSessions(data)).status);
@@ -76,6 +96,10 @@ const updateErrors: Record<number, string> = {
   409: 'Harus tetap ada setidaknya satu Administrator aktif.',
 };
 
+const linkErrors: Record<number, string> = {
+  409: 'Pejabat itu sudah ditautkan ke pengguna lain.',
+};
+
 function Users() {
   const page = Route.useLoaderData();
   const router = useRouter();
@@ -83,6 +107,7 @@ function Users() {
   const submitCreate = useServerFn(createUserFn);
   const submitReset = useServerFn(resetFn);
   const submitUpdate = useServerFn(updateUserFn);
+  const submitLink = useServerFn(linkOfficialFn);
   const submitRevoke = useServerFn(revokeSessionsFn);
   const submitRemovePasskeys = useServerFn(removePasskeysFn);
   const [link, setLink] = useState<{ username: string; url: string } | null>(null);
@@ -182,6 +207,7 @@ function Users() {
           <TableRow>
             <TableHead>Nama pengguna</TableHead>
             <TableHead>Peran</TableHead>
+            <TableHead>Pejabat</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Tindakan</TableHead>
           </TableRow>
@@ -202,6 +228,23 @@ function Users() {
                   {page.roles.map((role) => (
                     <NativeSelectOption key={role.id} value={role.id}>
                       {role.name}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </TableCell>
+              <TableCell>
+                <NativeSelect
+                  aria-label={`Pejabat ${user.username}`}
+                  value={user.officialId ?? ''}
+                  onChange={(event) => {
+                    const officialId = event.target.value || null;
+                    act(linkErrors, () => submitLink({ data: { id: user.id, officialId } }))();
+                  }}
+                >
+                  <NativeSelectOption value="">Bukan pejabat</NativeSelectOption>
+                  {page.officials.map((official) => (
+                    <NativeSelectOption key={official.id} value={official.id}>
+                      {official.name}
                     </NativeSelectOption>
                   ))}
                 </NativeSelect>
