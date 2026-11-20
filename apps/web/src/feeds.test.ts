@@ -1,6 +1,6 @@
 import { expect, test } from '@rstest/core';
-import type { Sitemap } from './api/generated';
-import { robotsTxt, sitemapXml } from './feeds';
+import type { NewsCard, Sitemap } from './api/generated';
+import { robotsTxt, rssXml, sitemapXml } from './feeds';
 
 const origin = 'https://desa.example';
 
@@ -32,4 +32,28 @@ test('robots.txt keeps crawlers out of the admin area and sign-in and points to 
   expect(robots).toContain('Allow: /');
   for (const path of ['/admin', '/masuk', '/akses']) expect(robots).toContain(`Disallow: ${path}`);
   expect(robots).toContain('Sitemap: https://desa.example/sitemap.xml');
+});
+
+test('the feed holds the News Posts, escaped, newest first as given', () => {
+  const post = (slug: string, title: string): NewsCard => ({
+    slug,
+    title,
+    summary: 'Ringkasan <b>tebal</b> & lain',
+    category: 'Kegiatan',
+    cover: 'cover-id',
+    coverAlt: 'Foto',
+    publishedAt: '2026-11-21T03:00:00Z',
+    readingMinutes: 2,
+  });
+  const xml = rssXml(origin, 'Desa Sukamaju', 'Situs resmi.', [
+    post('baru', 'Jalan & jembatan'),
+    post('lama', 'Lama'),
+  ]);
+  expect(xml).toContain('<rss version="2.0"');
+  expect(xml).toContain('<title>Berita — Desa Sukamaju</title>');
+  expect(xml).toContain('<title>Jalan &amp; jembatan</title>');
+  expect(xml).toContain('<description>Ringkasan &lt;b&gt;tebal&lt;/b&gt; &amp; lain</description>');
+  expect(xml).toContain('<link>https://desa.example/berita/baru</link>');
+  expect(xml).toContain('<pubDate>Sat, 21 Nov 2026 03:00:00 GMT</pubDate>');
+  expect(xml.indexOf('/berita/baru')).toBeLessThan(xml.indexOf('/berita/lama'));
 });
