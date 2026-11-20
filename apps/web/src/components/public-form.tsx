@@ -1,3 +1,4 @@
+import { useRouter } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import type { Challenge, Proof } from '../api/generated';
 
@@ -7,16 +8,25 @@ export const privatePage = {
   headers: { 'cache-control': 'no-store' },
 };
 
-/** The proof of work for `challenge`, solved in a Web Worker from when the form opens. */
+/**
+ * The proof of work for `challenge`, solved in a Web Worker from when the form opens. The page
+ * reloads its data before the API's 2-hour lifetime ends, so a form left open never sends an
+ * expired proof, which the API would answer as if received and store nowhere.
+ */
 export function useProof(challenge: Challenge) {
+  const router = useRouter();
   const [proof, setProof] = useState<Proof | null>(null);
   useEffect(() => {
     setProof(null);
     const worker = new Worker(new URL('../proof-of-work.worker.ts', import.meta.url));
     worker.addEventListener('message', (event: MessageEvent<Proof | null>) => setProof(event.data));
     worker.postMessage(challenge);
-    return () => worker.terminate();
-  }, [challenge]);
+    const timer = setTimeout(() => void router.invalidate(), 90 * 60_000);
+    return () => {
+      worker.terminate();
+      clearTimeout(timer);
+    };
+  }, [challenge, router]);
   return proof;
 }
 
