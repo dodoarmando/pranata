@@ -58,7 +58,37 @@ impl Storage {
         tx.commit().await?;
         Ok(id)
     }
+
+    /// Stores an upload as a PDF, kept byte for byte and served at `/media/{id}/pdf`.
+    ///
+    /// The file is unreferenced until an owner points to it, and swept if none does in 24 h.
+    /// `415` unless the content starts as a PDF does, whatever its name.
+    pub(crate) async fn save_pdf(&self, pool: &PgPool, upload: Vec<u8>) -> Result<Uuid, ApiError> {
+        if !upload.starts_with(b"%PDF-") {
+            return Err(ApiError::Status(StatusCode::UNSUPPORTED_MEDIA_TYPE));
+        }
+        let byte_size = i64::try_from(upload.len())?;
+        let mut tx = pool.begin().await?;
+        let id = sqlx::query_scalar!(
+            "INSERT INTO files (byte_size) VALUES ($1) RETURNING id",
+            byte_size
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+        let dir = self.dir.clone();
+        tokio::task::spawn_blocking(move || {
+            place(&dir, id, |staging| {
+                Ok(std::fs::write(staging.join(PDF_FILE), upload)?)
+            })
+        })
+        .await??;
+        tx.commit().await?;
+        Ok(id)
+    }
 }
+
+/// The name of a stored PDF within its file's directory.
+const PDF_FILE: &str = "document.pdf";
 
 /// Deletes every file no owner references once its `sweep_after` has passed, and returns how
 /// many went.
@@ -76,6 +106,7 @@ pub async fn sweep(pool: &PgPool, dir: &Path) -> anyhow::Result<usize> {
          AND id NOT IN (SELECT cover_file_id FROM pages WHERE cover_file_id IS NOT NULL)
          AND id NOT IN (SELECT file_id FROM album_photos)
          AND id NOT IN (SELECT logo_file_id FROM partners)
+         AND id NOT IN (SELECT file_id FROM transparency_documents)
          RETURNING id"
     )
     .fetch_all(pool)
@@ -139,26 +170,39 @@ pub fn regenerate(dir: &Path) -> anyhow::Result<usize> {
     Ok(rebuilt)
 }
 
-/// Writes the master and variants beside each other, then moves them into place at once;
-/// the move fails rather than replace an existing file.
+/// Writes the master and variants beside each other, then moves them into place at once.
 fn write_image(dir: &Path, id: Uuid, image: &DynamicImage) -> anyhow::Result<()> {
+    place(dir, id, |staging| {
+        let (master, extension) = imaging::encode_master(image)?;
+        std::fs::write(staging.join(format!("master.{extension}")), master)?;
+        for variant in Variant::ALL {
+            std::fs::write(
+                staging.join(variant.file_name()),
+                imaging::render(image, variant)?,
+            )?;
+        }
+        Ok(())
+    })
+}
+
+/// Has `write` fill a staging directory, then moves it into place as file `id` at once; the
+/// move fails rather than replace an existing file.
+fn place(
+    dir: &Path,
+    id: Uuid,
+    write: impl FnOnce(&Path) -> anyhow::Result<()>,
+) -> anyhow::Result<()> {
     let staging = dir.join(format!(".{id}"));
     std::fs::create_dir(&staging)
         .with_context(|| format!("cannot create {}", staging.display()))?;
-    let (master, extension) = imaging::encode_master(image)?;
-    std::fs::write(staging.join(format!("master.{extension}")), master)?;
-    for variant in Variant::ALL {
-        std::fs::write(
-            staging.join(variant.file_name()),
-            imaging::render(image, variant)?,
-        )?;
-    }
+    write(&staging)?;
     std::fs::rename(&staging, dir.join(id.to_string()))
         .with_context(|| format!("cannot move file {id} into place"))
 }
 
-/// An image's public rendition: `480`, `960` or `1600` (WebP) or `share` (JPEG). Cached
-/// forever, since a file never changes; only images that hold no personal data come here.
+/// An image's public rendition, `480`, `960` or `1600` (WebP) or `share` (JPEG), or a stored
+/// PDF as `pdf`. Cached forever, since a file never changes; only files that hold no personal
+/// data come here. Nothing served may be sniffed or run as a page.
 ///
 /// # Errors
 /// `404` for an unknown file or variant.
@@ -169,10 +213,10 @@ fn write_image(dir: &Path, id: Uuid, image: &DynamicImage) -> anyhow::Result<()>
     tag = "media",
     params(
         ("id" = Uuid, Path, description = "The file"),
-        ("variant" = String, Path, description = "`480`, `960`, `1600` or `share`"),
+        ("variant" = String, Path, description = "`480`, `960`, `1600`, `share` or `pdf`"),
     ),
     responses(
-        (status = OK, description = "The image", content(("image/webp"), ("image/jpeg"))),
+        (status = OK, description = "The file", content(("image/webp"), ("image/jpeg"), ("application/pdf"))),
         (status = NOT_FOUND, description = "There is no such file or variant"),
     ),
 )]
@@ -180,11 +224,16 @@ pub(crate) async fn get_media(
     State(storage): State<std::sync::Arc<Storage>>,
     extract::Path((id, name)): extract::Path<(Uuid, String)>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let variant = Variant::ALL
-        .into_iter()
-        .find(|variant| variant.name() == name)
-        .ok_or(ApiError::Status(StatusCode::NOT_FOUND))?;
-    let path = storage.dir.join(id.to_string()).join(variant.file_name());
+    let (file_name, content_type) = if name == "pdf" {
+        (PDF_FILE, "application/pdf")
+    } else {
+        let variant = Variant::ALL
+            .into_iter()
+            .find(|variant| variant.name() == name)
+            .ok_or(ApiError::Status(StatusCode::NOT_FOUND))?;
+        (variant.file_name(), variant.content_type())
+    };
+    let path = storage.dir.join(id.to_string()).join(file_name);
     let bytes = match tokio::fs::read(&path).await {
         Err(error) if error.kind() == ErrorKind::NotFound => {
             return Err(ApiError::Status(StatusCode::NOT_FOUND));
@@ -193,9 +242,10 @@ pub(crate) async fn get_media(
     };
     Ok((
         [
-            (header::CONTENT_TYPE, variant.content_type()),
+            (header::CONTENT_TYPE, content_type),
             (header::CACHE_CONTROL, "public, max-age=31536000, immutable"),
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
+            (header::CONTENT_SECURITY_POLICY, "sandbox"),
         ],
         bytes,
     ))

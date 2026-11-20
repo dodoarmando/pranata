@@ -25,6 +25,7 @@ mod role;
 mod slug;
 pub mod storage;
 mod throttle;
+mod transparency_document;
 pub mod user;
 pub mod village;
 
@@ -97,6 +98,13 @@ impl FromRef<AppState> for Arc<storage::Storage> {
     fn from_ref(state: &AppState) -> Self {
         state.storage.clone()
     }
+}
+
+/// The newer modules, which own their routes.
+fn modules() -> OpenApiRouter<AppState> {
+    important_contact::routes()
+        .merge(partner::routes())
+        .merge(transparency_document::routes())
 }
 
 fn api() -> OpenApiRouter<AppState> {
@@ -174,8 +182,7 @@ fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(album::upload_photo))
         .routes(routes!(album::list_published))
         .routes(routes!(album::get_published))
-        // Newer modules own their routes.
-        .merge(important_contact::routes().merge(partner::routes()))
+        .merge(modules())
         .routes(routes!(storage::get_media))
         .routes(routes!(auth::use_access_link))
         .routes(routes!(auth::sign_in))
