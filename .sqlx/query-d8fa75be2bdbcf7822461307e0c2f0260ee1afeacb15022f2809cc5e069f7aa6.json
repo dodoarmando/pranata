@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE important_contacts SET published = $1 WHERE id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Bool", "Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "d8fa75be2bdbcf7822461307e0c2f0260ee1afeacb15022f2809cc5e069f7aa6"
+}

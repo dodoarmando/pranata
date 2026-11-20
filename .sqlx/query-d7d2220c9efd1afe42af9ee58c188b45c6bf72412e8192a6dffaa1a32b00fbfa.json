@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM important_contacts WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "d7d2220c9efd1afe42af9ee58c188b45c6bf72412e8192a6dffaa1a32b00fbfa"
+}

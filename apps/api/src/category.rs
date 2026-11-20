@@ -21,8 +21,8 @@ use crate::{
 
 #[derive(Serialize, ToSchema)]
 pub struct Category {
-    id: Uuid,
-    name: String,
+    pub(crate) id: Uuid,
+    pub(crate) name: String,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -32,7 +32,7 @@ pub struct CategoryFields {
 }
 
 impl CategoryFields {
-    fn name(&self) -> Result<&str, ApiError> {
+    pub(crate) fn name(&self) -> Result<&str, ApiError> {
         let name = self.name.trim();
         if name.is_empty() || name.chars().count() > 50 {
             return Err(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY));
@@ -50,7 +50,7 @@ pub(crate) fn ensure_publisher(session: &Session) -> Result<(), ApiError> {
     }
 }
 
-fn unique_name<T>(result: sqlx::Result<T>) -> Result<T, ApiError> {
+pub(crate) fn unique_name<T>(result: sqlx::Result<T>) -> Result<T, ApiError> {
     match result {
         Err(sqlx::Error::Database(error)) if error.is_unique_violation() => {
             Err(ApiError::Status(StatusCode::CONFLICT))

@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO important_contacts (name, category_id, phone, note, sort_order)\n             VALUES ($1, $2, $3, $4, coalesce($5, (SELECT coalesce(max(sort_order), 0) + 1\n                 FROM important_contacts WHERE category_id = $2)))\n             RETURNING id, sort_order",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "important_contacts",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "sort_order",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "important_contacts",
+            "name": "sort_order"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Text", "Uuid", "Text", "Text", "Int4"]
+    },
+    "nullable": [false, false]
+  },
+  "hash": "e71280ee3868ecea41e4353d669956789ac3051c814ea2904140bf0a9092f2ea"
+}

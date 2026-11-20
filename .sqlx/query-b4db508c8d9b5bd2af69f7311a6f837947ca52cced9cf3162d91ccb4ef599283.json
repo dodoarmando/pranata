@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE contact_categories SET name = $1 WHERE id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Text", "Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "b4db508c8d9b5bd2af69f7311a6f837947ca52cced9cf3162d91ccb4ef599283"
+}

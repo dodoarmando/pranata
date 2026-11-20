@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT coalesce(max(sort_order), 0) + 1 AS \"order!\" FROM important_contacts\n                   WHERE category_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "order!",
+        "type_info": "Int4",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": [null]
+  },
+  "hash": "fbe753a8d7ee96aa9b0e934f7345530cc4fbaed6273dd3817df929114cc4f8a0"
+}
