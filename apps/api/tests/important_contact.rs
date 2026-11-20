@@ -156,6 +156,10 @@ async fn a_writer_drafts_a_publisher_publishes_and_the_public_reads_it(pool: PgP
     // Only a Draft is deleted, and only by a publisher.
     let deleted = office.call("DELETE", &path, None, &office.publisher).await;
     assert_eq!(deleted.status, StatusCode::CONFLICT);
+    let by_writer = office
+        .call("POST", &format!("{path}/unpublish"), None, &office.writer)
+        .await;
+    assert_eq!(by_writer.status, StatusCode::FORBIDDEN);
     let unpublished = office
         .call(
             "POST",
