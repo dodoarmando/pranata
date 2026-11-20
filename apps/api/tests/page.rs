@@ -234,6 +234,27 @@ async fn the_public_menus_list_published_pages_in_order(pool: PgPool) {
     assert_eq!(reply.status, StatusCode::NO_CONTENT);
     let (_, menus) = office.app.get("/pages/published").await;
     assert_eq!(menus[0]["title"], "Sejarah Desa");
+
+    // A Draft moved to another menu without an order goes last there.
+    let mut fields = Office::complete("Pindahan", "services");
+    fields["order"] = json!(-5);
+    let (id, _) = office.draft(&fields).await;
+    fields["menu"] = json!("profile");
+    fields["order"] = Value::Null;
+    office
+        .call(
+            "PUT",
+            &format!("/pages/{id}"),
+            Some(&fields),
+            &office.writer,
+        )
+        .await;
+    office.publish(&id).await;
+    let (_, menus) = office.app.get("/pages/published").await;
+    assert_eq!(
+        menus[3],
+        json!({ "menu": "profile", "slug": "pindahan", "title": "Pindahan" })
+    );
 }
 
 #[sqlx::test]

@@ -56,8 +56,8 @@ pub struct PageFields {
     slug: Option<String>,
     /// Locked once first published, like the slug.
     menu: PageMenu,
-    /// The place within the menu, smallest first; a new Page goes last when left out, and an
-    /// edit keeps the place.
+    /// The place within the menu, smallest first; left out, a new Page or one moved to
+    /// another menu goes last there, and any other edit keeps the place.
     #[serde(default)]
     order: Option<i32>,
     /// The meta description, at most 250 characters; required to publish.
@@ -363,7 +363,19 @@ pub(crate) async fn update(
             .unwrap_or_else(|| slug::of(&new.title, "halaman"));
         free_slug(&mut tx, &base, Some(id)).await?
     };
-    let order = new.order.unwrap_or(old.sort_order);
+    let order = match new.order {
+        Some(order) => order,
+        None if new.menu == old.menu => old.sort_order,
+        None => {
+            sqlx::query_scalar!(
+                r#"SELECT coalesce(max(sort_order), 0) + 1 AS "order!" FROM pages
+                   WHERE menu = $1"#,
+                new.menu as PageMenu,
+            )
+            .fetch_one(&mut *tx)
+            .await?
+        }
+    };
     let result = sqlx::query!(
         "UPDATE pages SET title = $1, slug = $2, menu = $3, sort_order = $4, summary = $5,
          cover_file_id = $6, cover_caption = $7, cover_alt = $8, body = $9, updated_at = now()
