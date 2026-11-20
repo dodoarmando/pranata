@@ -2,7 +2,7 @@ import { createFileRoute, getRouteApi, Link, useNavigate, useRouter } from '@tan
 import { createServerFn, useServerFn } from '@tanstack/react-start';
 import type { JSONContent } from '@tiptap/core';
 import { ArrowLeft } from 'lucide-react';
-import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { type ChangeEvent, useState } from 'react';
 import {
   type Category,
   deleteNewsPost,
@@ -15,6 +15,7 @@ import {
   updateNewsPost,
   uploadNewsPostCover,
 } from '../../../api/generated';
+import { useAutosave } from '../../../autosave';
 import { Notice, PageHead } from '../../../components/admin';
 import { RichTextEditor } from '../../../components/rich-text-editor';
 import { Badge } from '../../../components/ui/badge';
@@ -75,8 +76,6 @@ export const Route = createFileRoute('/admin/berita/$id')({
 const root = getRouteApi('__root__');
 
 const MAX_PHOTO_BYTES = 10 << 20;
-// How long the writer pauses before a Draft saves itself.
-const AUTOSAVE_MS = 1500;
 
 const saveErrors: Record<number, string> = {
   403: 'Anda tidak memiliki izin mengubah berita ini; berita yang sudah terbit hanya dapat diubah oleh penerbit.',
@@ -133,78 +132,31 @@ function Form({
   const setPublished = useServerFn(publishFn);
   const remove = useServerFn(deleteFn);
   const uploadCover = useServerFn(uploadCoverFn);
-  const [fields, setFields] = useState<NewsPostFields>(() => ({
-    title: post.title,
-    slug: post.slug ?? null,
-    category: post.category ?? null,
-    summary: post.summary ?? null,
-    cover: post.cover ?? null,
-    coverCaption: post.coverCaption ?? null,
-    coverAlt: post.coverAlt ?? null,
-    body: post.body,
-  }));
-  const [dirty, setDirty] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
-  // Bumped on every edit, so a save only clears `dirty` when nothing changed meanwhile.
-  const edits = useRef(0);
-  const latest = useRef({ fields, dirty });
-  latest.current = { fields, dirty };
+  const { fields, change, dirty, saving, savedAt, flush, discard } = useAutosave<NewsPostFields>(
+    () => ({
+      title: post.title,
+      slug: post.slug ?? null,
+      category: post.category ?? null,
+      summary: post.summary ?? null,
+      cover: post.cover ?? null,
+      coverCaption: post.coverCaption ?? null,
+      coverAlt: post.coverAlt ?? null,
+      body: post.body,
+    }),
+    post.published,
+    (saved) => save({ data: { id: post.id, post: saved } }),
+    (result) =>
+      setMessage(
+        result >= 300 ? { text: saveErrors[result] ?? 'Gagal menyimpan.', error: true } : null,
+      ),
+  );
   const locked = Boolean(post.firstPublishedAt);
   const time = new Intl.DateTimeFormat('id-ID', {
     timeStyle: 'short',
     timeZone: ianaZones[village?.timeZone ?? 'WIB'],
   });
-
-  const change = (patch: Partial<NewsPostFields>) => {
-    edits.current += 1;
-    setFields((current) => ({ ...current, ...patch }));
-    setDirty(true);
-  };
-
-  const flush = useCallback(
-    async (saved: NewsPostFields) => {
-      const edit = edits.current;
-      setSaving(true);
-      const result = await save({ data: { id: post.id, post: saved } }).finally(() =>
-        setSaving(false),
-      );
-      if (result >= 300) {
-        setMessage({ text: saveErrors[result] ?? 'Gagal menyimpan.', error: true });
-        return false;
-      }
-      if (edits.current === edit) setDirty(false);
-      setSavedAt(new Date());
-      setMessage(null);
-      await router.invalidate();
-      return true;
-    },
-    [post.id, router, save],
-  );
-
-  // A Draft saves itself once the writer pauses, one save at a time so none lands out of
-  // order; a Published post waits for Simpan.
-  useEffect(() => {
-    if (!dirty || saving || post.published) return;
-    const timer = setTimeout(() => flush(fields), AUTOSAVE_MS);
-    return () => clearTimeout(timer);
-  }, [dirty, saving, fields, post.published, flush]);
-
-  // Leaving within the pause still saves a Draft; the browser warns before unsaved changes go.
-  useEffect(() => {
-    const warn = (event: BeforeUnloadEvent) => {
-      if (latest.current.dirty) event.preventDefault();
-    };
-    window.addEventListener('beforeunload', warn);
-    return () => {
-      window.removeEventListener('beforeunload', warn);
-      if (latest.current.dirty && !post.published) {
-        void save({ data: { id: post.id, post: latest.current.fields } });
-      }
-    };
-  }, [post.id, post.published, save]);
 
   async function onCover(event: ChangeEvent<HTMLInputElement>) {
     const file = event.currentTarget.files?.[0];
@@ -235,7 +187,7 @@ function Form({
   }
 
   async function onPublish(publish: boolean) {
-    if (dirty && !post.published && !(await flush(fields))) return;
+    if (dirty && !post.published && !(await flush())) return;
     const result = await setPublished({ data: { id: post.id, publish } });
     if (result >= 300) {
       setMessage({ text: publishErrors[result] ?? 'Gagal mengubah status.', error: true });
@@ -255,8 +207,7 @@ function Form({
       setMessage({ text: publishErrors[result] ?? 'Gagal menghapus.', error: true });
       return;
     }
-    setDirty(false);
-    latest.current.dirty = false;
+    discard();
     await navigate({ to: '/admin/berita' });
   }
 
@@ -294,13 +245,7 @@ function Form({
       <div className="flex flex-wrap gap-2">
         {post.published ? (
           <>
-            <Button
-              type="button"
-              size="lg"
-              className="px-4"
-              disabled={saving}
-              onClick={() => flush(fields)}
-            >
+            <Button type="button" size="lg" className="px-4" disabled={saving} onClick={flush}>
               Simpan
             </Button>
             <Button
