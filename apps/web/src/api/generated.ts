@@ -70,6 +70,19 @@ export interface AuditPage {
   next?: string | null;
 }
 
+/**
+ * Who wrote a News Post, as the public sees them.
+ */
+export interface Author {
+  /** The linked Official's name, or else the User's username. */
+  name: string;
+  /**
+     * The linked Official's Position today, if any.
+     * @nullable
+     */
+  position?: string | null;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -77,6 +90,11 @@ export interface Category {
 
 export interface CategoryFields {
   /** 1–50 characters, unique whatever the case. */
+  name: string;
+}
+
+export interface CategoryRef {
+  id: string;
   name: string;
 }
 
@@ -404,6 +422,117 @@ export interface NewUser {
   username: string;
 }
 
+/**
+ * A Published News Post in the public list.
+ */
+export interface NewsCard {
+  /** The Category's name. */
+  category: string;
+  cover: string;
+  coverAlt: string;
+  /** The first publication. */
+  publishedAt: string;
+  readingMinutes: number;
+  slug: string;
+  summary: string;
+  title: string;
+}
+
+/**
+ * One page of the public News Post list.
+ */
+export interface NewsPage {
+  pageSize: number;
+  posts: NewsCard[];
+  /** How many Published News Posts match, over every page. */
+  total: number;
+}
+
+/**
+ * Tiptap JSON of the allowed nodes and marks only: paragraph, h2–h3, bold, italic, link
+ * (`http(s):`, `mailto:`, `tel:`), bullet and ordered list, blockquote, table and `YouTube`.
+ */
+export type NewsPostFieldsBody = { [key: string]: unknown };
+
+/**
+ * What a User writes in a News Post. A Draft may leave out what publishing requires.
+ */
+export interface NewsPostFields {
+  /**
+     * Tiptap JSON of the allowed nodes and marks only: paragraph, h2–h3, bold, italic, link
+     * (`http(s):`, `mailto:`, `tel:`), bullet and ordered list, blockquote, table and `YouTube`.
+     */
+  body?: NewsPostFieldsBody;
+  /**
+     * Required to publish.
+     * @nullable
+     */
+  category?: string | null;
+  /**
+     * The cover photo, uploaded at `/news-posts/cover`; required to publish.
+     * @nullable
+     */
+  cover?: string | null;
+  /**
+     * The cover's alt text, up to 300 characters; required to publish.
+     * @nullable
+     */
+  coverAlt?: string | null;
+  /**
+     * Up to 300 characters.
+     * @nullable
+     */
+  coverCaption?: string | null;
+  /**
+     * Made from the title when blank; transliterated, and locked once first published.
+     * @nullable
+     */
+  slug?: string | null;
+  /**
+     * The lede and meta description, about 200 characters and at most 250; required to
+     * publish.
+     * @nullable
+     */
+  summary?: string | null;
+  /** 1–150 characters. */
+  title: string;
+}
+
+/**
+ * A News Post as the admin area edits it.
+ */
+export type NewsPost = NewsPostFields & ({
+  /**
+     * The public date, kept through an unpublish; null until first published, and the slug is
+     * locked once set.
+     * @nullable
+     */
+  firstPublishedAt?: string | null;
+  id: string;
+  published: boolean;
+  updatedAt: string;
+});
+
+/**
+ * A line of the admin area's News Post list.
+ */
+export interface NewsPostSummary {
+  /** The creating User's username. */
+  author: string;
+  /**
+     * The Category's name.
+     * @nullable
+     */
+  category?: string | null;
+  /** @nullable */
+  firstPublishedAt?: string | null;
+  id: string;
+  published: boolean;
+  slug: string;
+  title: string;
+  updatedAt: string;
+}
+
 export interface OfficialLink {
   /**
      * The Official the User stands for, or null for none.
@@ -508,6 +637,31 @@ export interface Position {
 export interface PositionName {
   /** 1–100 characters. */
   name: string;
+}
+
+/**
+ * Tiptap JSON of the allowed nodes and marks only.
+ */
+export type PublishedNewsPostBody = { [key: string]: unknown };
+
+/**
+ * A Published News Post as the public reads it.
+ */
+export interface PublishedNewsPost {
+  author: Author;
+  /** Tiptap JSON of the allowed nodes and marks only. */
+  body: PublishedNewsPostBody;
+  category: CategoryRef;
+  cover: string;
+  coverAlt: string;
+  /** @nullable */
+  coverCaption?: string | null;
+  /** The first publication. */
+  publishedAt: string;
+  readingMinutes: number;
+  slug: string;
+  summary: string;
+  title: string;
 }
 
 export interface Reauthenticate {
@@ -707,6 +861,16 @@ export type ExportAuditEntriesParams = {
   to?: string;
   /** Only entries older than this one, such as the `next` of the previous page. */
   before?: string;
+};
+
+export type ListPublishedNewsPostsParams = {
+  /** Only News Posts filed under this Category. */
+  category?: string;
+  /**
+   * From 1, the default.
+   * @minimum 0
+   */
+  page?: number;
 };
 
 const getHeaders = (...sources: (RequestInit['headers'] | Record<string, string | undefined>)[]) => {
@@ -2399,6 +2563,588 @@ export const getMedia = async (id: string,
   {
     ...options,
     method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listNewsPostsResponse200 = {
+  data: NewsPostSummary[]
+  status: 200
+}
+
+export type listNewsPostsResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listNewsPostsResponse403 = {
+  data: void
+  status: 403
+}
+
+export type listNewsPostsResponseSuccess = (listNewsPostsResponse200) & {
+  headers: Headers;
+};
+export type listNewsPostsResponseError = (listNewsPostsResponse401 | listNewsPostsResponse403) & {
+  headers: Headers;
+};
+
+export type listNewsPostsResponse = (listNewsPostsResponseSuccess | listNewsPostsResponseError)
+
+export const getListNewsPostsUrl = () => {
+
+
+
+
+  return `/news-posts`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`.
+ * @summary Every News Post, Drafts and Published, the latest changed first.
+ */
+export const listNewsPosts = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listNewsPostsResponse> => {
+
+  return apiFetch<listNewsPostsResponse>(getListNewsPostsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createNewsPostResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createNewsPostResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createNewsPostResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createNewsPostResponse409 = {
+  data: void
+  status: 409
+}
+
+export type createNewsPostResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createNewsPostResponseSuccess = (createNewsPostResponse201) & {
+  headers: Headers;
+};
+export type createNewsPostResponseError = (createNewsPostResponse401 | createNewsPostResponse403 | createNewsPostResponse409 | createNewsPostResponse422) & {
+  headers: Headers;
+};
+
+export type createNewsPostResponse = (createNewsPostResponseSuccess | createNewsPostResponseError)
+
+export const getCreateNewsPostUrl = () => {
+
+
+
+
+  return `/news-posts`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `409`
+ * when another News Post takes the slug meanwhile, `422` for a blank title, a malformed
+ * field, a body outside the allowlist, or an unknown Category or cover.
+ * @summary Starts a Draft written by the signed-in User; only the title is required.
+ */
+export const createNewsPost = async (newsPostFields: NewsPostFields, options?: Parameters<typeof apiFetch>[1]): Promise<createNewsPostResponse> => {
+
+  return apiFetch<createNewsPostResponse>(getCreateNewsPostUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(newsPostFields)
+  }
+);}
+
+
+
+export type uploadNewsPostCoverResponse201 = {
+  data: Upload
+  status: 201
+}
+
+export type uploadNewsPostCoverResponse401 = {
+  data: void
+  status: 401
+}
+
+export type uploadNewsPostCoverResponse403 = {
+  data: void
+  status: 403
+}
+
+export type uploadNewsPostCoverResponse413 = {
+  data: void
+  status: 413
+}
+
+export type uploadNewsPostCoverResponse415 = {
+  data: void
+  status: 415
+}
+
+export type uploadNewsPostCoverResponse422 = {
+  data: void
+  status: 422
+}
+
+export type uploadNewsPostCoverResponseSuccess = (uploadNewsPostCoverResponse201) & {
+  headers: Headers;
+};
+export type uploadNewsPostCoverResponseError = (uploadNewsPostCoverResponse401 | uploadNewsPostCoverResponse403 | uploadNewsPostCoverResponse413 | uploadNewsPostCoverResponse415 | uploadNewsPostCoverResponse422) & {
+  headers: Headers;
+};
+
+export type uploadNewsPostCoverResponse = (uploadNewsPostCoverResponseSuccess | uploadNewsPostCoverResponseError)
+
+export const getUploadNewsPostCoverUrl = () => {
+
+
+
+
+  return `/news-posts/cover`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `413`
+ * over 10 MiB, `415` for content that is not JPEG, PNG or WebP, `422` over 40 megapixels or
+ * undecodable.
+ * @summary Stores a cover photo, a JPEG, PNG or WebP of at most 10 MiB, for saving into a News Post.
+ */
+export const uploadNewsPostCover = async (uploadNewsPostCoverBody: Blob, options?: Parameters<typeof apiFetch>[1]): Promise<uploadNewsPostCoverResponse> => {
+
+  return apiFetch<uploadNewsPostCoverResponse>(getUploadNewsPostCoverUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/octet-stream' }, options?.headers),
+    body: uploadNewsPostCoverBody
+  }
+);}
+
+
+
+export type listPublishedNewsPostsResponse200 = {
+  data: NewsPage
+  status: 200
+}
+
+export type listPublishedNewsPostsResponseSuccess = (listPublishedNewsPostsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listPublishedNewsPostsResponse = (listPublishedNewsPostsResponseSuccess)
+
+export const getListPublishedNewsPostsUrl = (params?: ListPublishedNewsPostsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/news-posts/published?${stringifiedParams}` : `/news-posts/published`
+}
+
+/**
+ * @summary Published News Posts, the first published first, a page at a time.
+ */
+export const listPublishedNewsPosts = async (params?: ListPublishedNewsPostsParams, options?: Parameters<typeof apiFetch>[1]): Promise<listPublishedNewsPostsResponse> => {
+
+  return apiFetch<listPublishedNewsPostsResponse>(getListPublishedNewsPostsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getPublishedNewsPostResponse200 = {
+  data: PublishedNewsPost
+  status: 200
+}
+
+export type getPublishedNewsPostResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getPublishedNewsPostResponseSuccess = (getPublishedNewsPostResponse200) & {
+  headers: Headers;
+};
+export type getPublishedNewsPostResponseError = (getPublishedNewsPostResponse404) & {
+  headers: Headers;
+};
+
+export type getPublishedNewsPostResponse = (getPublishedNewsPostResponseSuccess | getPublishedNewsPostResponseError)
+
+export const getGetPublishedNewsPostUrl = (slug: string,) => {
+
+
+
+
+  return `/news-posts/published/${slug}`
+}
+
+/**
+ * # Errors
+ * `404` for a slug no Published News Post has, such as a Draft's or a deleted one's.
+ * @summary One Published News Post by its slug.
+ */
+export const getPublishedNewsPost = async (slug: string, options?: Parameters<typeof apiFetch>[1]): Promise<getPublishedNewsPostResponse> => {
+
+  return apiFetch<getPublishedNewsPostResponse>(getGetPublishedNewsPostUrl(slug),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getNewsPostResponse200 = {
+  data: NewsPost
+  status: 200
+}
+
+export type getNewsPostResponse401 = {
+  data: void
+  status: 401
+}
+
+export type getNewsPostResponse403 = {
+  data: void
+  status: 403
+}
+
+export type getNewsPostResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getNewsPostResponseSuccess = (getNewsPostResponse200) & {
+  headers: Headers;
+};
+export type getNewsPostResponseError = (getNewsPostResponse401 | getNewsPostResponse403 | getNewsPostResponse404) & {
+  headers: Headers;
+};
+
+export type getNewsPostResponse = (getNewsPostResponseSuccess | getNewsPostResponseError)
+
+export const getGetNewsPostUrl = (id: string,) => {
+
+
+
+
+  return `/news-posts/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` or `content.publish`, `404`
+ * for an unknown News Post.
+ * @summary One News Post, Draft or Published, for editing.
+ */
+export const getNewsPost = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<getNewsPostResponse> => {
+
+  return apiFetch<getNewsPostResponse>(getGetNewsPostUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type updateNewsPostResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateNewsPostResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateNewsPostResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateNewsPostResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateNewsPostResponse409 = {
+  data: void
+  status: 409
+}
+
+export type updateNewsPostResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateNewsPostResponseSuccess = (updateNewsPostResponse204) & {
+  headers: Headers;
+};
+export type updateNewsPostResponseError = (updateNewsPostResponse401 | updateNewsPostResponse403 | updateNewsPostResponse404 | updateNewsPostResponse409 | updateNewsPostResponse422) & {
+  headers: Headers;
+};
+
+export type updateNewsPostResponse = (updateNewsPostResponseSuccess | updateNewsPostResponseError)
+
+export const getUpdateNewsPostUrl = (id: string,) => {
+
+
+
+
+  return `/news-posts/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.write` (or `content.publish`) for a
+ * Draft or without `content.publish` for a Published post, `404` for an unknown News Post,
+ * `409` for a new slug once first published or one another News Post takes meanwhile, `422`
+ * for a blank title, a malformed field, a body outside the allowlist, an unknown Category
+ * or cover, or a Published post missing what publishing requires.
+ * @summary Saves a News Post: a Draft as it autosaves, a Published one live.
+ */
+export const updateNewsPost = async (id: string,
+    newsPostFields: NewsPostFields, options?: Parameters<typeof apiFetch>[1]): Promise<updateNewsPostResponse> => {
+
+  return apiFetch<updateNewsPostResponse>(getUpdateNewsPostUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(newsPostFields)
+  }
+);}
+
+
+
+export type deleteNewsPostResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteNewsPostResponse401 = {
+  data: void
+  status: 401
+}
+
+export type deleteNewsPostResponse403 = {
+  data: void
+  status: 403
+}
+
+export type deleteNewsPostResponse404 = {
+  data: void
+  status: 404
+}
+
+export type deleteNewsPostResponse409 = {
+  data: void
+  status: 409
+}
+
+export type deleteNewsPostResponseSuccess = (deleteNewsPostResponse204) & {
+  headers: Headers;
+};
+export type deleteNewsPostResponseError = (deleteNewsPostResponse401 | deleteNewsPostResponse403 | deleteNewsPostResponse404 | deleteNewsPostResponse409) & {
+  headers: Headers;
+};
+
+export type deleteNewsPostResponse = (deleteNewsPostResponseSuccess | deleteNewsPostResponseError)
+
+export const getDeleteNewsPostUrl = (id: string,) => {
+
+
+
+
+  return `/news-posts/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown News
+ * Post, `409` when it is Published.
+ * @summary Deletes a Draft for good; its slug is free again. A Published post is unpublished first.
+ */
+export const deleteNewsPost = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deleteNewsPostResponse> => {
+
+  return apiFetch<deleteNewsPostResponse>(getDeleteNewsPostUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type publishNewsPostResponse204 = {
+  data: void
+  status: 204
+}
+
+export type publishNewsPostResponse401 = {
+  data: void
+  status: 401
+}
+
+export type publishNewsPostResponse403 = {
+  data: void
+  status: 403
+}
+
+export type publishNewsPostResponse404 = {
+  data: void
+  status: 404
+}
+
+export type publishNewsPostResponse409 = {
+  data: void
+  status: 409
+}
+
+export type publishNewsPostResponse422 = {
+  data: void
+  status: 422
+}
+
+export type publishNewsPostResponseSuccess = (publishNewsPostResponse204) & {
+  headers: Headers;
+};
+export type publishNewsPostResponseError = (publishNewsPostResponse401 | publishNewsPostResponse403 | publishNewsPostResponse404 | publishNewsPostResponse409 | publishNewsPostResponse422) & {
+  headers: Headers;
+};
+
+export type publishNewsPostResponse = (publishNewsPostResponseSuccess | publishNewsPostResponseError)
+
+export const getPublishNewsPostUrl = (id: string,) => {
+
+
+
+
+  return `/news-posts/${id}/publish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown News
+ * Post, `409` when it is already Published, `422` when it lacks a Category, summary, cover
+ * or the cover's alt text.
+ * @summary Puts a Draft on the public site; the first publication fixes its date and locks its slug.
+ */
+export const publishNewsPost = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<publishNewsPostResponse> => {
+
+  return apiFetch<publishNewsPostResponse>(getPublishNewsPostUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type unpublishNewsPostResponse204 = {
+  data: void
+  status: 204
+}
+
+export type unpublishNewsPostResponse401 = {
+  data: void
+  status: 401
+}
+
+export type unpublishNewsPostResponse403 = {
+  data: void
+  status: 403
+}
+
+export type unpublishNewsPostResponse404 = {
+  data: void
+  status: 404
+}
+
+export type unpublishNewsPostResponse409 = {
+  data: void
+  status: 409
+}
+
+export type unpublishNewsPostResponseSuccess = (unpublishNewsPostResponse204) & {
+  headers: Headers;
+};
+export type unpublishNewsPostResponseError = (unpublishNewsPostResponse401 | unpublishNewsPostResponse403 | unpublishNewsPostResponse404 | unpublishNewsPostResponse409) & {
+  headers: Headers;
+};
+
+export type unpublishNewsPostResponse = (unpublishNewsPostResponseSuccess | unpublishNewsPostResponseError)
+
+export const getUnpublishNewsPostUrl = (id: string,) => {
+
+
+
+
+  return `/news-posts/${id}/unpublish`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `content.publish`, `404` for an unknown News
+ * Post, `409` when it is a Draft.
+ * @summary Takes a Published post off the public site, back to Draft; it keeps its date and slug.
+ */
+export const unpublishNewsPost = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<unpublishNewsPostResponse> => {
+
+  return apiFetch<unpublishNewsPostResponse>(getUnpublishNewsPostUrl(id),
+  {
+    ...options,
+    method: 'POST'
 
 
   }

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE news_posts SET title = $1, slug = $2, category_id = $3, summary = $4,\n         cover_file_id = $5, cover_caption = $6, cover_alt = $7, body = $8,\n         reading_minutes = $9, updated_at = now() WHERE id = $10",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Text", "Text", "Uuid", "Text", "Uuid", "Text", "Text", "Jsonb", "Int4", "Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "69c19f57f90458222057fc6b59c795c64e54a41f6c1af04f8537fc6c9b9c366d"
+}

@@ -1,0 +1,101 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT slug, title, summary AS \"summary!\", categories.name AS category,\n           cover_file_id AS \"cover!\", cover_alt AS \"cover_alt!\",\n           first_published_at AS \"published_at!\", reading_minutes\n           FROM news_posts JOIN categories ON categories.id = category_id\n           WHERE published AND ($1::uuid IS NULL OR category_id = $1)\n           ORDER BY first_published_at DESC, news_posts.id DESC LIMIT $2 OFFSET $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "summary!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "category",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "categories",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "cover!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "cover_file_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "cover_alt!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "cover_alt"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "published_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "first_published_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "reading_minutes",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "reading_minutes"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid", "Int8", "Int8"]
+    },
+    "nullable": [false, false, true, false, true, true, true, false]
+  },
+  "hash": "3ffa078bbc4542d11969be3509d895c5741fff72cc282b578a2a2125cdf21a8d"
+}

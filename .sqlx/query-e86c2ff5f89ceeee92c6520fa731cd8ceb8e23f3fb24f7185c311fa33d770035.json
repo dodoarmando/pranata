@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO news_posts (title, slug, category_id, summary, cover_file_id,\n             cover_caption, cover_alt, body, reading_minutes, author_id)\n             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Text", "Text", "Uuid", "Text", "Uuid", "Text", "Text", "Jsonb", "Int4", "Uuid"]
+    },
+    "nullable": [false]
+  },
+  "hash": "e86c2ff5f89ceeee92c6520fa731cd8ceb8e23f3fb24f7185c311fa33d770035"
+}
