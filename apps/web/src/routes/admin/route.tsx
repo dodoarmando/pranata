@@ -17,6 +17,7 @@ import {
   Landmark,
   LogOut,
   MapPinned,
+  Newspaper,
   PanelLeft,
   ScrollText,
   ShieldCheck,
@@ -48,6 +49,7 @@ const pages = [
   { group: 'Desa', to: '/admin/pemerintahan', label: 'Pemerintahan', icon: Building2 },
   { group: 'Desa', to: '/admin/lembaga-desa', label: 'Lembaga desa', icon: Handshake },
   { group: 'Desa', to: '/admin/indeks-desa', label: 'Indeks Desa', icon: ChartLine },
+  { group: 'Situs web', to: '/admin/berita', label: 'Berita', icon: Newspaper },
   { group: 'Sistem', to: '/admin/pengguna', label: 'Pengguna', icon: Users },
   { group: 'Sistem', to: '/admin/peran', label: 'Peran', icon: ShieldCheck },
   { group: 'Sistem', to: '/admin/log-audit', label: 'Log audit', icon: ScrollText },
@@ -76,7 +78,11 @@ function AdminShell() {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = useLocation({ select: (location) => location.pathname });
-  const page = pages.find((entry) => entry.to === pathname.replace(/\/$/, ''));
+  const path = pathname.replace(/\/$/, '');
+  // A page's subpages, such as one News Post, sit under its crumb.
+  const page =
+    pages.find((entry) => entry.to === path) ??
+    pages.find((entry) => entry.to !== '/admin' && path.startsWith(`${entry.to}/`));
   const crumbs = pathname.startsWith('/admin/akun')
     ? ['Akun saya']
     : page?.group
@@ -116,7 +122,7 @@ function AdminShell() {
             )}
             <Link
               to={entry.to}
-              activeOptions={{ exact: true }}
+              activeOptions={{ exact: entry.to === '/admin' }}
               onClick={close}
               className={navItemClass}
             >

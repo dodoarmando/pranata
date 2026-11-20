@@ -172,6 +172,50 @@
   }
 }
 
+/* Rich text from the API's allowlist, in the editor and on the public site alike. */
+@layer components {
+  .rich-text {
+    @apply grid gap-4 leading-relaxed;
+    & h2 {
+      @apply mt-4 text-2xl font-semibold tracking-tight;
+    }
+    & h3 {
+      @apply mt-2 text-xl font-semibold;
+    }
+    & a:not(.youtube) {
+      @apply text-primary underline underline-offset-4;
+    }
+    & ul {
+      @apply list-disc pl-6;
+    }
+    & ol {
+      @apply list-decimal pl-6;
+    }
+    & li > * + * {
+      @apply mt-2;
+    }
+    & blockquote {
+      @apply border-l-4 border-primary/40 pl-4 text-muted-foreground italic;
+    }
+    & table {
+      @apply w-full border-collapse text-left;
+    }
+    & th,
+    & td {
+      @apply border px-3 py-2 align-top;
+    }
+    & th {
+      @apply bg-muted font-semibold;
+    }
+    & .youtube {
+      @apply grid aspect-video w-full place-items-center rounded-md bg-pri-dd font-medium text-white;
+    }
+    & .selectedCell {
+      @apply bg-accent;
+    }
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
