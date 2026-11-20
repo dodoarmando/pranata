@@ -1,6 +1,6 @@
 import { createFileRoute, getRouteApi, Link } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import { period } from '../../announcement';
+import { calendarDate } from '../../announcement';
 import { getDashboard } from '../../api/generated';
 import { PageHead } from '../../components/admin';
 import { Card } from '../../components/ui/card';
@@ -127,7 +127,7 @@ function Dashboard() {
                         {announcement.title}
                       </Link>
                       <span className="text-sm text-muted-foreground">
-                        Berakhir {period(announcement.endDate, announcement.endDate)}
+                        Berakhir {calendarDate(announcement.endDate)}
                       </span>
                     </li>
                   ))}
