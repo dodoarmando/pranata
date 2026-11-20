@@ -143,6 +143,9 @@ function PublicLayout() {
             <Link to="/galeri" className={navItem}>
               Galeri
             </Link>
+            <Link to="/dokumen" className={navItem}>
+              Dokumen
+            </Link>
             <Link to="/kontak" className={navItem}>
               Kontak
             </Link>
