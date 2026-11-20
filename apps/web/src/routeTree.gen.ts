@@ -45,6 +45,7 @@ import { Route as PublicBeritaIndexRouteImport } from './routes/_public/berita/i
 import { Route as PublicBeritaSlugRouteImport } from './routes/_public/berita/$slug'
 import { Route as PublicGaleriIndexRouteImport } from './routes/_public/galeri/index'
 import { Route as PublicGaleriSlugRouteImport } from './routes/_public/galeri/$slug'
+import { Route as PublicPengaduanIndexRouteImport } from './routes/_public/pengaduan/index'
 import { Route as PublicPengumumanIndexRouteImport } from './routes/_public/pengumuman/index'
 import { Route as PublicPengumumanSlugRouteImport } from './routes/_public/pengumuman/$slug'
 import { Route as AdminAgendaIndexRouteImport } from './routes/admin/agenda/index'
@@ -58,6 +59,7 @@ import { Route as AdminHalamanIdRouteImport } from './routes/admin/halaman/$id'
 import { Route as AdminPengumumanIndexRouteImport } from './routes/admin/pengumuman/index'
 import { Route as AdminPengumumanIdRouteImport } from './routes/admin/pengumuman/$id'
 import { Route as MediaIdVariantRouteImport } from './routes/media.$id.$variant'
+import { Route as PublicPengaduanStatusCodeRouteImport } from './routes/_public/pengaduan/status.$code'
 
 const PublicRoute = PublicRouteImport.update({
   id: '/_public',
@@ -238,6 +240,11 @@ const PublicGaleriSlugRoute = PublicGaleriSlugRouteImport.update({
   path: '/galeri/$slug',
   getParentRoute: () => PublicRoute,
 } as any)
+const PublicPengaduanIndexRoute = PublicPengaduanIndexRouteImport.update({
+  id: '/pengaduan/',
+  path: '/pengaduan/',
+  getParentRoute: () => PublicRoute,
+} as any)
 const PublicPengumumanIndexRoute = PublicPengumumanIndexRouteImport.update({
   id: '/pengumuman/',
   path: '/pengumuman/',
@@ -303,6 +310,12 @@ const MediaIdVariantRoute = MediaIdVariantRouteImport.update({
   path: '/media/$id/$variant',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PublicPengaduanStatusCodeRoute =
+  PublicPengaduanStatusCodeRouteImport.update({
+    id: '/pengaduan/status/$code',
+    path: '/pengaduan/status/$code',
+    getParentRoute: () => PublicRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteRouteWithChildren
@@ -347,12 +360,14 @@ export interface FileRoutesByFullPath {
   '/media/$id/$variant': typeof MediaIdVariantRoute
   '/berita/': typeof PublicBeritaIndexRoute
   '/galeri/': typeof PublicGaleriIndexRoute
+  '/pengaduan/': typeof PublicPengaduanIndexRoute
   '/pengumuman/': typeof PublicPengumumanIndexRoute
   '/admin/agenda/': typeof AdminAgendaIndexRoute
   '/admin/berita/': typeof AdminBeritaIndexRoute
   '/admin/galeri/': typeof AdminGaleriIndexRoute
   '/admin/halaman/': typeof AdminHalamanIndexRoute
   '/admin/pengumuman/': typeof AdminPengumumanIndexRoute
+  '/pengaduan/status/$code': typeof PublicPengaduanStatusCodeRoute
 }
 export interface FileRoutesByTo {
   '/akses': typeof AksesRoute
@@ -396,12 +411,14 @@ export interface FileRoutesByTo {
   '/media/$id/$variant': typeof MediaIdVariantRoute
   '/berita': typeof PublicBeritaIndexRoute
   '/galeri': typeof PublicGaleriIndexRoute
+  '/pengaduan': typeof PublicPengaduanIndexRoute
   '/pengumuman': typeof PublicPengumumanIndexRoute
   '/admin/agenda': typeof AdminAgendaIndexRoute
   '/admin/berita': typeof AdminBeritaIndexRoute
   '/admin/galeri': typeof AdminGaleriIndexRoute
   '/admin/halaman': typeof AdminHalamanIndexRoute
   '/admin/pengumuman': typeof AdminPengumumanIndexRoute
+  '/pengaduan/status/$code': typeof PublicPengaduanStatusCodeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -448,12 +465,14 @@ export interface FileRoutesById {
   '/media/$id/$variant': typeof MediaIdVariantRoute
   '/_public/berita/': typeof PublicBeritaIndexRoute
   '/_public/galeri/': typeof PublicGaleriIndexRoute
+  '/_public/pengaduan/': typeof PublicPengaduanIndexRoute
   '/_public/pengumuman/': typeof PublicPengumumanIndexRoute
   '/admin/agenda/': typeof AdminAgendaIndexRoute
   '/admin/berita/': typeof AdminBeritaIndexRoute
   '/admin/galeri/': typeof AdminGaleriIndexRoute
   '/admin/halaman/': typeof AdminHalamanIndexRoute
   '/admin/pengumuman/': typeof AdminPengumumanIndexRoute
+  '/_public/pengaduan/status/$code': typeof PublicPengaduanStatusCodeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -500,12 +519,14 @@ export interface FileRouteTypes {
     | '/media/$id/$variant'
     | '/berita/'
     | '/galeri/'
+    | '/pengaduan/'
     | '/pengumuman/'
     | '/admin/agenda/'
     | '/admin/berita/'
     | '/admin/galeri/'
     | '/admin/halaman/'
     | '/admin/pengumuman/'
+    | '/pengaduan/status/$code'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/akses'
@@ -549,12 +570,14 @@ export interface FileRouteTypes {
     | '/media/$id/$variant'
     | '/berita'
     | '/galeri'
+    | '/pengaduan'
     | '/pengumuman'
     | '/admin/agenda'
     | '/admin/berita'
     | '/admin/galeri'
     | '/admin/halaman'
     | '/admin/pengumuman'
+    | '/pengaduan/status/$code'
   id:
     | '__root__'
     | '/admin'
@@ -600,12 +623,14 @@ export interface FileRouteTypes {
     | '/media/$id/$variant'
     | '/_public/berita/'
     | '/_public/galeri/'
+    | '/_public/pengaduan/'
     | '/_public/pengumuman/'
     | '/admin/agenda/'
     | '/admin/berita/'
     | '/admin/galeri/'
     | '/admin/halaman/'
     | '/admin/pengumuman/'
+    | '/_public/pengaduan/status/$code'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -873,6 +898,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicGaleriSlugRouteImport
       parentRoute: typeof PublicRoute
     }
+    '/_public/pengaduan/': {
+      id: '/_public/pengaduan/'
+      path: '/pengaduan'
+      fullPath: '/pengaduan/'
+      preLoaderRoute: typeof PublicPengaduanIndexRouteImport
+      parentRoute: typeof PublicRoute
+    }
     '/_public/pengumuman/': {
       id: '/_public/pengumuman/'
       path: '/pengumuman'
@@ -964,6 +996,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MediaIdVariantRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_public/pengaduan/status/$code': {
+      id: '/_public/pengaduan/status/$code'
+      path: '/pengaduan/status/$code'
+      fullPath: '/pengaduan/status/$code'
+      preLoaderRoute: typeof PublicPengaduanStatusCodeRouteImport
+      parentRoute: typeof PublicRoute
+    }
   }
 }
 
@@ -1043,7 +1082,9 @@ interface PublicRouteChildren {
   PublicPengumumanSlugRoute: typeof PublicPengumumanSlugRoute
   PublicBeritaIndexRoute: typeof PublicBeritaIndexRoute
   PublicGaleriIndexRoute: typeof PublicGaleriIndexRoute
+  PublicPengaduanIndexRoute: typeof PublicPengaduanIndexRoute
   PublicPengumumanIndexRoute: typeof PublicPengumumanIndexRoute
+  PublicPengaduanStatusCodeRoute: typeof PublicPengaduanStatusCodeRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
@@ -1062,7 +1103,9 @@ const PublicRouteChildren: PublicRouteChildren = {
   PublicPengumumanSlugRoute: PublicPengumumanSlugRoute,
   PublicBeritaIndexRoute: PublicBeritaIndexRoute,
   PublicGaleriIndexRoute: PublicGaleriIndexRoute,
+  PublicPengaduanIndexRoute: PublicPengaduanIndexRoute,
   PublicPengumumanIndexRoute: PublicPengumumanIndexRoute,
+  PublicPengaduanStatusCodeRoute: PublicPengaduanStatusCodeRoute,
 }
 
 const PublicRouteWithChildren =
