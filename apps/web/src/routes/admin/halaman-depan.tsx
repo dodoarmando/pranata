@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from '@tanstack/react-router';
+import { createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router';
 import { createServerFn, useServerFn } from '@tanstack/react-start';
 import { type ChangeEvent, type FormEvent, useState } from 'react';
 import {
@@ -20,6 +20,7 @@ import { Label } from '../../components/ui/label';
 import { NativeSelect, NativeSelectOption } from '../../components/ui/native-select';
 import { Textarea } from '../../components/ui/textarea';
 import { tenureKindLabels } from '../../government';
+import { villageToday } from '../../village';
 
 // Server-only; null for what is not saved yet.
 const fetchHome = createServerFn({ method: 'GET' }).handler(async () => {
@@ -67,6 +68,8 @@ const saveWelcomeFn = createServerFn({ method: 'POST' })
   .validator((welcome: WelcomeFields) => welcome)
   .handler(async ({ data }) => (await updateHomeWelcome(data)).status);
 
+const root = getRouteApi('__root__');
+
 export const Route = createFileRoute('/admin/halaman-depan')({
   loader: () => fetchHome(),
   head: () => ({ meta: [{ title: 'Halaman depan · Pranata' }] }),
@@ -109,8 +112,8 @@ function HomeSettings() {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
 
-  // Tenures of active Positions that have not ended; the API checks against the Village's date.
-  const today = new Date().toISOString().slice(0, 10);
+  // Tenures of active Positions serving today; the API checks the same.
+  const today = villageToday(root.useLoaderData()?.timeZone);
   const signers = positions.flatMap((position) =>
     position.active
       ? position.tenures
