@@ -1190,6 +1190,342 @@
         }
       }
     },
+    "/events": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Every Event, Drafts and Published, the latest changed first.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`.",
+        "operationId": "listEvents",
+        "responses": {
+          "200": {
+            "description": "Every Event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Starts a Draft written by the signed-in User; only the title is required.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `422`\nfor a blank title, a malformed field, an end before the start or an unknown Category.",
+        "operationId": "createEvent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "422": {
+            "description": "A field is malformed"
+          }
+        }
+      }
+    },
+    "/events/past": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "The Published Events that are over, the latest first, a page at a time.",
+        "operationId": "listPastEvents",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "From 1, the default.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of past Events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events/upcoming": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "The Published Events still to come or under way, the soonest first, Cancelled ones\nincluded.",
+        "operationId": "listUpcomingEvents",
+        "responses": {
+          "200": {
+            "description": "The upcoming Events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventCard"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events/{id}": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "One Event, Draft or Published, for editing.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` or `content.publish`, `404`\nfor an unknown Event.",
+        "operationId": "getEvent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Event",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not write content"
+          },
+          "404": {
+            "description": "There is no such Event"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Saves an Event: a Draft as it autosaves, a Published one live.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.write` (or `content.publish`) for a\nDraft or without `content.publish` for a Published Event, `404` for an unknown Event, `422`\nfor a blank title, a malformed field, an end before the start, an unknown Category, or a\nPublished Event missing what publishing requires.",
+        "operationId": "updateEvent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Event",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Event is saved"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not change this Event"
+          },
+          "404": {
+            "description": "There is no such Event"
+          },
+          "422": {
+            "description": "A field is malformed or missing"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Deletes a Draft for good. A Published one is unpublished first.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown Event,\n`409` when it is Published.",
+        "operationId": "deleteEvent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Event",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Draft is deleted"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Event"
+          },
+          "409": {
+            "description": "The Event is Published"
+          }
+        }
+      }
+    },
+    "/events/{id}/publish": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Puts a Draft on the public Agenda.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown Event,\n`409` when it is already Published, `422` when it lacks a Category, start or location.",
+        "operationId": "publishEvent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Event",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Event is Published"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Event"
+          },
+          "409": {
+            "description": "The Event is already Published"
+          },
+          "422": {
+            "description": "A field publishing requires is missing"
+          }
+        }
+      }
+    },
+    "/events/{id}/unpublish": {
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Takes a Published Event off the public Agenda, back to Draft.",
+        "description": "# Errors\n`401` without a live session, `403` without `content.publish`, `404` for an unknown Event,\n`409` when it is a Draft.",
+        "operationId": "unpublishEvent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Event",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Event is a Draft again"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not publish content"
+          },
+          "404": {
+            "description": "There is no such Event"
+          },
+          "409": {
+            "description": "The Event is a Draft"
+          }
+        }
+      }
+    },
     "/government": {
       "get": {
         "tags": [
@@ -3677,6 +4013,240 @@
           }
         }
       },
+      "Event": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EventFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "published",
+              "updatedAt"
+            ],
+            "properties": {
+              "firstPublishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "published": {
+                "type": "boolean"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ],
+        "description": "An Event as the admin area edits it."
+      },
+      "EventCard": {
+        "type": "object",
+        "description": "A Published Event on the public Agenda; it has no detail page.",
+        "required": [
+          "id",
+          "title",
+          "category",
+          "startsAt",
+          "location",
+          "cancelled"
+        ],
+        "properties": {
+          "cancelled": {
+            "type": "boolean",
+            "description": "Shown as \"Dibatalkan\"."
+          },
+          "category": {
+            "type": "string",
+            "description": "The Category's name."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "endsAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "location": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Wall-clock time in the Village's time zone."
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "EventFields": {
+        "type": "object",
+        "description": "What a User writes in an Event. A Draft may leave out what publishing requires.",
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "cancelled": {
+            "type": "boolean",
+            "description": "Called off; it stays listed, labelled \"Dibatalkan\"."
+          },
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The Category it is filed under, from the list News Posts share; required to publish."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional plain text, at most 2000 characters."
+          },
+          "endsAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Optional, not before the start, possibly days later. Without one, the Event is past\nonce the day it starts on is over."
+          },
+          "location": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plain text, at most 200 characters; required to publish."
+          },
+          "startsAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Wall-clock time in the Village's time zone; required to publish."
+          },
+          "title": {
+            "type": "string",
+            "description": "1–150 characters."
+          }
+        }
+      },
+      "EventPage": {
+        "type": "object",
+        "description": "One page of past Events.",
+        "required": [
+          "events",
+          "total",
+          "pageSize"
+        ],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventCard"
+            }
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many past Published Events there are, over every page."
+          }
+        }
+      },
+      "EventSummary": {
+        "type": "object",
+        "description": "A line of the admin area's Event list.",
+        "required": [
+          "id",
+          "title",
+          "cancelled",
+          "published",
+          "updatedAt",
+          "author"
+        ],
+        "properties": {
+          "author": {
+            "type": "string",
+            "description": "The creating User's username."
+          },
+          "cancelled": {
+            "type": "boolean"
+          },
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The Category's name."
+          },
+          "endsAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "published": {
+            "type": "boolean"
+          },
+          "startsAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "timing": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Timing",
+                "description": "Now's, once the start is set."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "ExportReason": {
         "type": "object",
         "description": "Why the User exports; required (Permenkomdigi 5/2025 Art. 93) and kept in the Audit Entry.",
@@ -4974,6 +5544,14 @@
           "WIB",
           "WITA",
           "WIT"
+        ]
+      },
+      "Timing": {
+        "type": "string",
+        "description": "Whether an Event is still to come (or under way) or over.",
+        "enum": [
+          "upcoming",
+          "past"
         ]
       },
       "Upload": {

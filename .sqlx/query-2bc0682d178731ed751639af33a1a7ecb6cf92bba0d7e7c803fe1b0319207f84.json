@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"count!\" FROM events\n           WHERE published AND event_is_past(starts_at, ends_at, $1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": ["Timestamp"]
+    },
+    "nullable": [null]
+  },
+  "hash": "2bc0682d178731ed751639af33a1a7ecb6cf92bba0d7e7c803fe1b0319207f84"
+}

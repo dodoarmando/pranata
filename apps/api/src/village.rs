@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use axum::{Json, body::Body, extract::State, http::StatusCode};
-use chrono::{DateTime, NaiveDate, TimeDelta, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -20,11 +20,16 @@ use crate::{
 
 /// The date at `now` in the Village's time zone, taken as WIB before its code is set.
 pub(crate) async fn today(pool: &PgPool, now: DateTime<Utc>) -> sqlx::Result<NaiveDate> {
+    Ok(wall_clock(pool, now).await?.date())
+}
+
+/// The date and time at `now` in the Village's time zone, taken as WIB before its code is set.
+pub(crate) async fn wall_clock(pool: &PgPool, now: DateTime<Utc>) -> sqlx::Result<NaiveDateTime> {
     let code = sqlx::query_scalar!("SELECT code FROM village")
         .fetch_optional(pool)
         .await?;
     let zone = code.map_or(TimeZone::Wib, |code| TimeZone::of_province(&code));
-    Ok((now + TimeDelta::hours(zone.utc_offset_hours().into())).date_naive())
+    Ok((now + TimeDelta::hours(zone.utc_offset_hours().into())).naive_utc())
 }
 
 /// The national code list, one `dotted-code<TAB>name` row each; see `data/README.md`.
