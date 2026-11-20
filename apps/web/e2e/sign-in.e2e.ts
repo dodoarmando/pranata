@@ -561,6 +561,65 @@ test('a publisher puts a Page under Profil and the public menu lists it', async 
   await expect(page.getByRole('heading', { name: 'Halaman', exact: true })).toBeVisible();
 });
 
+test('a publisher fills an Album with ordered photos and the gallery shows it', async ({
+  page,
+}) => {
+  await page.goto('/masuk');
+  await page.getByLabel('Nama pengguna').fill(username);
+  await page.getByLabel('Kata sandi', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Beranda' })).toBeVisible();
+  page.on('dialog', (dialog) => dialog.accept());
+  // The local database outlives runs, so names are this run's own.
+  const title = `HUT RI ${Date.now()}`;
+  const photo = (x: number) => page.screenshot({ clip: { x, y: 0, width: 300, height: 200 } });
+  const [first, second] = [await photo(0), await photo(300)];
+
+  await page.getByRole('link', { name: 'Galeri', exact: true }).click();
+  await page.getByRole('button', { name: 'Buat album' }).click();
+  await page.getByLabel('Judul').fill(title);
+  await page.getByRole('button', { name: 'Mulai mengisi' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Buat album' })).toBeVisible();
+  const editor = page.url();
+
+  // An empty Album stays a Draft.
+  await page.getByLabel('Mulai').fill('2026-08-17');
+  await expect(page.getByRole('status')).toContainText('Tersimpan otomatis');
+  await page.getByRole('button', { name: 'Terbitkan' }).click();
+  await expect(page.getByText('tambahkan minimal satu foto')).toBeVisible();
+
+  await page.getByLabel(/Tambah foto/).setInputFiles([
+    { name: 'upacara.png', mimeType: 'image/png', buffer: first },
+    { name: 'lomba.png', mimeType: 'image/png', buffer: second },
+  ]);
+  await expect(page.getByText('Foto 2')).toBeVisible();
+  await page.getByLabel('Keterangan (opsional)').first().fill('Upacara bendera');
+  await page.getByLabel('Teks alternatif').nth(1).fill('Lomba balap karung');
+  // The second photo goes first; the other one becomes the cover.
+  await page.getByRole('button', { name: 'Naikkan foto 2' }).click();
+  await page.getByLabel('Sampul album').nth(1).check();
+  await expect(page.getByRole('status')).toContainText('Tersimpan otomatis');
+  await page.getByRole('button', { name: 'Terbitkan' }).click();
+  await expect(page.getByText('Album terbit di situs.')).toBeVisible();
+
+  await page.goto('/galeri');
+  const card = page.getByRole('link', { name: title });
+  await expect(card.getByRole('img')).toHaveAttribute('alt', 'Upacara bendera');
+  await card.click();
+  await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+  await expect(page.getByText('17 Agustus 2026 · 2 foto')).toBeVisible();
+  const photos = page.getByRole('main').getByRole('img');
+  await expect(photos.nth(0)).toHaveAttribute('alt', 'Lomba balap karung');
+  await expect(photos.nth(1)).toHaveAttribute('alt', 'Upacara bendera');
+  await expect(page.getByText('Upacara bendera', { exact: true })).toBeVisible();
+
+  await page.goto(editor);
+  await page.getByRole('button', { name: 'Batalkan terbit' }).click();
+  await expect(page.getByText('Album kembali menjadi draf.')).toBeVisible();
+  await page.getByRole('button', { name: 'Hapus draf' }).click();
+  await expect(page.getByRole('heading', { name: 'Galeri', exact: true })).toBeVisible();
+});
+
 test('every page has the stylesheet, and the public site stays light', async ({ page }) => {
   // Admin code is split into route chunks the public home page never fetches.
   const scripts: Promise<string>[] = [];
@@ -598,6 +657,7 @@ test('every page has the stylesheet, and the public site stays light', async ({ 
     '/admin/pemerintahan',
     '/admin/lembaga-desa',
     '/admin/berita',
+    '/admin/galeri',
     '/admin/pengguna',
     '/admin/peran',
     '/admin/log-audit',
