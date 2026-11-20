@@ -103,6 +103,15 @@ export interface Created {
 }
 
 /**
+ * A Draft waiting to be published; News Posts are the only kind so far.
+ */
+export interface DraftSummary {
+  id: string;
+  title: string;
+  updatedAt: string;
+}
+
+/**
  * What the Village has yet to fill in.
  */
 export interface MissingVillageData {
@@ -117,6 +126,12 @@ export interface MissingVillageData {
  */
 export interface Dashboard {
   activeUsers: number;
+  /**
+     * Konten menunggu terbit: every Draft, the latest changed first; null for a User who may
+     * neither write nor publish content.
+     * @nullable
+     */
+  drafts?: DraftSummary[] | null;
   missingVillageData: MissingVillageData;
 }
 
