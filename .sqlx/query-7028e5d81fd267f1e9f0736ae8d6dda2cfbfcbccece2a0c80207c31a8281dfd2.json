@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM index_editions WHERE id = $1 RETURNING year",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "year",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "index_editions",
+            "name": "year"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": [false]
+  },
+  "hash": "7028e5d81fd267f1e9f0736ae8d6dda2cfbfcbccece2a0c80207c31a8281dfd2"
+}

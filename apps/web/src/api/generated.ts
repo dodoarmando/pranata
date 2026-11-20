@@ -93,6 +93,20 @@ export interface Dashboard {
 }
 
 /**
+ * The status the ministry gave, as entered.
+ */
+export type DevelopmentStatus = typeof DevelopmentStatus[keyof typeof DevelopmentStatus];
+
+
+export const DevelopmentStatus = {
+  independent: 'independent',
+  advanced: 'advanced',
+  developing: 'developing',
+  underdeveloped: 'underdeveloped',
+  very_underdeveloped: 'very_underdeveloped',
+} as const;
+
+/**
  * An exported file, encrypted; only `password` opens it.
  */
 export interface EncryptedFile {
@@ -171,6 +185,63 @@ export const HealthStatus = {
 export interface Health {
   status: HealthStatus;
 }
+
+/**
+ * Which index scored the Village.
+ */
+export type IndexKind = typeof IndexKind[keyof typeof IndexKind];
+
+
+export const IndexKind = {
+  indeks_desa: 'indeks_desa',
+  idm: 'idm',
+} as const;
+
+/**
+ * What a User records about an Edition.
+ */
+export interface IndexEditionFields {
+  /**
+     * Aksesibilitas.
+     * @nullable
+     */
+  accessibility?: number | null;
+  /**
+     * Layanan Dasar; this and the other dimensions are 0–100 with 2 decimals, Indeks Desa only.
+     * @nullable
+     */
+  basicServices?: number | null;
+  /**
+     * Ekonomi.
+     * @nullable
+     */
+  economic?: number | null;
+  /**
+     * Lingkungan.
+     * @nullable
+     */
+  environmental?: number | null;
+  /**
+     * Tata Kelola Pemerintahan.
+     * @nullable
+     */
+  governance?: number | null;
+  kind: IndexKind;
+  /** 0–100 with 2 decimals for Indeks Desa, 0–1 with 4 decimals for IDM. */
+  score: number;
+  /**
+     * Sosial.
+     * @nullable
+     */
+  social?: number | null;
+  status: DevelopmentStatus;
+  /** The data-collection year, 2000–2100; one Edition per year. */
+  year: number;
+}
+
+export type IndexEdition = IndexEditionFields & {
+  id: string;
+};
 
 /**
  * One member of an Institution; members hold no Tenure and sign no letter.
@@ -1609,6 +1680,226 @@ export const getHealth = async ( options?: Parameters<typeof apiFetch>[1]): Prom
   {
     ...options,
     method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listIndexEditionsResponse200 = {
+  data: IndexEdition[]
+  status: 200
+}
+
+export type listIndexEditionsResponseSuccess = (listIndexEditionsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listIndexEditionsResponse = (listIndexEditionsResponseSuccess)
+
+export const getListIndexEditionsUrl = () => {
+
+
+
+
+  return `/index-editions`
+}
+
+/**
+ * @summary Every Edition, the newest year first, for the public site and the admin area.
+ */
+export const listIndexEditions = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listIndexEditionsResponse> => {
+
+  return apiFetch<listIndexEditionsResponse>(getListIndexEditionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createIndexEditionResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createIndexEditionResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createIndexEditionResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createIndexEditionResponse409 = {
+  data: void
+  status: 409
+}
+
+export type createIndexEditionResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createIndexEditionResponseSuccess = (createIndexEditionResponse201) & {
+  headers: Headers;
+};
+export type createIndexEditionResponseError = (createIndexEditionResponse401 | createIndexEditionResponse403 | createIndexEditionResponse409 | createIndexEditionResponse422) & {
+  headers: Headers;
+};
+
+export type createIndexEditionResponse = (createIndexEditionResponseSuccess | createIndexEditionResponseError)
+
+export const getCreateIndexEditionUrl = () => {
+
+
+
+
+  return `/index-editions`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `409` when the year has an
+ * Edition, `422` for a year, score or dimension outside its kind's scale, or dimensions on IDM.
+ * @summary Records an Edition.
+ */
+export const createIndexEdition = async (indexEditionFields: IndexEditionFields, options?: Parameters<typeof apiFetch>[1]): Promise<createIndexEditionResponse> => {
+
+  return apiFetch<createIndexEditionResponse>(getCreateIndexEditionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(indexEditionFields)
+  }
+);}
+
+
+
+export type updateIndexEditionResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateIndexEditionResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateIndexEditionResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateIndexEditionResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateIndexEditionResponse409 = {
+  data: void
+  status: 409
+}
+
+export type updateIndexEditionResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateIndexEditionResponseSuccess = (updateIndexEditionResponse204) & {
+  headers: Headers;
+};
+export type updateIndexEditionResponseError = (updateIndexEditionResponse401 | updateIndexEditionResponse403 | updateIndexEditionResponse404 | updateIndexEditionResponse409 | updateIndexEditionResponse422) & {
+  headers: Headers;
+};
+
+export type updateIndexEditionResponse = (updateIndexEditionResponseSuccess | updateIndexEditionResponseError)
+
+export const getUpdateIndexEditionUrl = (id: string,) => {
+
+
+
+
+  return `/index-editions/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `404` for an unknown Edition,
+ * `409` when the year has another Edition, `422` for a year, score or dimension outside its
+ * kind's scale, or dimensions on IDM.
+ * @summary Changes an Edition.
+ */
+export const updateIndexEdition = async (id: string,
+    indexEditionFields: IndexEditionFields, options?: Parameters<typeof apiFetch>[1]): Promise<updateIndexEditionResponse> => {
+
+  return apiFetch<updateIndexEditionResponse>(getUpdateIndexEditionUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(indexEditionFields)
+  }
+);}
+
+
+
+export type deleteIndexEditionResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteIndexEditionResponse401 = {
+  data: void
+  status: 401
+}
+
+export type deleteIndexEditionResponse403 = {
+  data: void
+  status: 403
+}
+
+export type deleteIndexEditionResponse404 = {
+  data: void
+  status: 404
+}
+
+export type deleteIndexEditionResponseSuccess = (deleteIndexEditionResponse204) & {
+  headers: Headers;
+};
+export type deleteIndexEditionResponseError = (deleteIndexEditionResponse401 | deleteIndexEditionResponse403 | deleteIndexEditionResponse404) & {
+  headers: Headers;
+};
+
+export type deleteIndexEditionResponse = (deleteIndexEditionResponseSuccess | deleteIndexEditionResponseError)
+
+export const getDeleteIndexEditionUrl = (id: string,) => {
+
+
+
+
+  return `/index-editions/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `404` for an unknown Edition.
+ * @summary Deletes an Edition.
+ */
+export const deleteIndexEdition = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deleteIndexEditionResponse> => {
+
+  return apiFetch<deleteIndexEditionResponse>(getDeleteIndexEditionUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
 
 
   }

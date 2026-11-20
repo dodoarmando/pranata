@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE index_editions SET year = $1, kind = $2, score = $3::float8, status = $4,\n             basic_services = $5::float8, social = $6::float8, economic = $7::float8,\n             environmental = $8::float8, accessibility = $9::float8, governance = $10::float8\n             WHERE id = $11",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int2",
+        {
+          "Custom": {
+            "name": "index_kind",
+            "kind": {
+              "Enum": ["indeks_desa", "idm"]
+            }
+          }
+        },
+        "Float8",
+        {
+          "Custom": {
+            "name": "development_status",
+            "kind": {
+              "Enum": [
+                "independent",
+                "advanced",
+                "developing",
+                "underdeveloped",
+                "very_underdeveloped"
+              ]
+            }
+          }
+        },
+        "Float8",
+        "Float8",
+        "Float8",
+        "Float8",
+        "Float8",
+        "Float8",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4d97950e2c48de75a891183c8794a9837e5ef8a6bc3a3399089ee16fc9ff4a93"
+}

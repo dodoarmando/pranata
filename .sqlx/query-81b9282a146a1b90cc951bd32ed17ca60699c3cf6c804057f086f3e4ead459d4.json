@@ -1,0 +1,108 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT year, kind AS \"kind: IndexKind\", score::float8 AS \"score!\",\n           status AS \"status: DevelopmentStatus\", basic_services::float8 AS basic_services,\n           social::float8 AS social, economic::float8 AS economic,\n           environmental::float8 AS environmental, accessibility::float8 AS accessibility,\n           governance::float8 AS governance\n           FROM index_editions WHERE id = $1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "year",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "index_editions",
+            "name": "year"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "kind: IndexKind",
+        "type_info": {
+          "Custom": {
+            "name": "index_kind",
+            "kind": {
+              "Enum": ["indeks_desa", "idm"]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "index_editions",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "score!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "status: DevelopmentStatus",
+        "type_info": {
+          "Custom": {
+            "name": "development_status",
+            "kind": {
+              "Enum": [
+                "independent",
+                "advanced",
+                "developing",
+                "underdeveloped",
+                "very_underdeveloped"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "index_editions",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "basic_services",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "social",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "economic",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "environmental",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "accessibility",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "governance",
+        "type_info": "Float8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": [false, false, null, false, null, null, null, null, null, null]
+  },
+  "hash": "81b9282a146a1b90cc951bd32ed17ca60699c3cf6c804057f086f3e4ead459d4"
+}
