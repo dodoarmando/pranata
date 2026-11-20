@@ -657,6 +657,31 @@
         }
       }
     },
+    "/government": {
+      "get": {
+        "tags": [
+          "government"
+        ],
+        "summary": "The Officials serving today and the Hamlets with their heads, for the public site.",
+        "description": "# Errors\n`404` before the Village Code is set.",
+        "operationId": "getGovernment",
+        "responses": {
+          "200": {
+            "description": "The government structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Government"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The Village Code is not set yet"
+          }
+        }
+      }
+    },
     "/healthz": {
       "get": {
         "tags": [
@@ -2009,6 +2034,35 @@
           "to": {}
         }
       },
+      "Government": {
+        "type": "object",
+        "description": "The government structure on the public site; never a NIPD or decree.",
+        "required": [
+          "officials",
+          "hamletLabel",
+          "hamlets"
+        ],
+        "properties": {
+          "hamletLabel": {
+            "type": "string",
+            "description": "The local name for a Hamlet, such as dusun."
+          },
+          "hamlets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicHamlet"
+            },
+            "description": "The active Hamlets in their manual order."
+          },
+          "officials": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServingOfficial"
+            },
+            "description": "Serving today in the Village's time zone, in the government's order."
+          }
+        }
+      },
       "HamletOrder": {
         "type": "object",
         "required": [
@@ -2330,6 +2384,30 @@
           }
         }
       },
+      "PublicHamlet": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "heads"
+        ],
+        "properties": {
+          "heads": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The names of the Officials serving today as its head."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
       "Reauthenticate": {
         "type": "object",
         "required": [
@@ -2523,6 +2601,39 @@
             "items": {
               "$ref": "#/components/schemas/Permission"
             }
+          }
+        }
+      },
+      "ServingOfficial": {
+        "type": "object",
+        "description": "An Official serving today, as the public sees them.",
+        "required": [
+          "name",
+          "position",
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/TenureKind"
+          },
+          "name": {
+            "type": "string"
+          },
+          "photo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "photoAlt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "position": {
+            "type": "string"
           }
         }
       },

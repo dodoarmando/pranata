@@ -94,6 +94,7 @@ fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(government::create_tenure))
         .routes(routes!(government::update_tenure))
         .routes(routes!(government::upload_photo))
+        .routes(routes!(government::get_government))
         .routes(routes!(storage::get_media))
         .routes(routes!(auth::use_access_link))
         .routes(routes!(auth::sign_in))

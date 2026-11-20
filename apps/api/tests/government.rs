@@ -468,3 +468,59 @@ async fn a_hamlet_brings_its_head_position_and_leaves_only_once_its_head_has_end
         json!(true)
     );
 }
+
+#[sqlx::test]
+async fn the_public_sees_serving_officials_and_hamlet_heads_without_nipd_or_decree(pool: PgPool) {
+    let (app, cookie) = manager(&pool).await;
+    let krajan = hamlet(&app, &cookie, "Krajan").await;
+    let kidul = hamlet(&app, &cookie, "Kidul").await;
+    let closed = hamlet(&app, &cookie, "Lama").await;
+    assert_eq!(
+        set_hamlet_active(&app, &cookie, &closed, "Lama", false).await,
+        StatusCode::NO_CONTENT
+    );
+    let head = position(&app, &cookie, "Kepala Desa").await;
+    let secretary = position(&app, &cookie, "Sekretaris Desa").await;
+    let krajan_head = position(&app, &cookie, "Kepala Dusun Krajan").await;
+
+    let photo = app
+        .upload("/tenures/photo", common::png(64, 64), &cookie)
+        .await;
+    let mut serving = tenure(&head, "Budi", "appointee", "2020-01-01", None);
+    serving["nipd"] = json!("1101012001001");
+    serving["photo"] = photo.body["id"].clone();
+    serving["photoAlt"] = json!("Budi");
+    for body in [
+        serving,
+        tenure(&head, "Ani", "definitive", "2010-01-01", Some("2015-12-31")),
+        tenure(&secretary, "Siti", "definitive", "2999-01-01", None),
+        tenure(&secretary, "Cahya", "acting", "2020-01-01", None),
+        tenure(&krajan_head, "Pak Sastro", "definitive", "2020-01-01", None),
+    ] {
+        assert_eq!(
+            add_tenure(&app, &cookie, &body).await.status,
+            StatusCode::CREATED
+        );
+    }
+
+    let (status, body) = app.get("/government").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        body,
+        json!({
+            "officials": [
+                { "name": "Budi", "position": "Kepala Desa", "kind": "appointee",
+                  "photo": photo.body["id"], "photoAlt": "Budi" },
+                { "name": "Cahya", "position": "Sekretaris Desa", "kind": "acting",
+                  "photo": null, "photoAlt": null },
+                { "name": "Pak Sastro", "position": "Kepala Dusun Krajan", "kind": "definitive",
+                  "photo": null, "photoAlt": null },
+            ],
+            "hamletLabel": "dusun",
+            "hamlets": [
+                { "id": krajan, "name": "Krajan", "heads": ["Pak Sastro"] },
+                { "id": kidul, "name": "Kidul", "heads": [] },
+            ],
+        })
+    );
+}

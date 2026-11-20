@@ -22,7 +22,7 @@ use crate::{
     imaging::Kind,
     role::Permission,
     storage::{self, Storage},
-    village::{Upload, diff},
+    village::{TimeZone, Upload, diff},
 };
 
 /// How an Official holds a Position.
@@ -644,4 +644,106 @@ pub(crate) async fn upload_photo(
         .save_image(&pool, Kind::Photo, upload.into())
         .await?;
     Ok((StatusCode::CREATED, Json(Upload { id })))
+}
+
+/// An Official serving today, as the public sees them.
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ServingOfficial {
+    name: String,
+    position: String,
+    kind: TenureKind,
+    photo: Option<Uuid>,
+    photo_alt: Option<String>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct PublicHamlet {
+    id: Uuid,
+    name: String,
+    /// The names of the Officials serving today as its head.
+    heads: Vec<String>,
+}
+
+/// The government structure on the public site; never a NIPD or decree.
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Government {
+    /// Serving today in the Village's time zone, in the government's order.
+    officials: Vec<ServingOfficial>,
+    /// The local name for a Hamlet, such as dusun.
+    hamlet_label: String,
+    /// The active Hamlets in their manual order.
+    hamlets: Vec<PublicHamlet>,
+}
+
+/// The Officials serving today and the Hamlets with their heads, for the public site.
+///
+/// # Errors
+/// `404` before the Village Code is set.
+#[utoipa::path(
+    get,
+    path = "/government",
+    operation_id = "getGovernment",
+    tag = "government",
+    responses(
+        (status = OK, description = "The government structure", body = Government),
+        (status = NOT_FOUND, description = "The Village Code is not set yet"),
+    ),
+)]
+pub(crate) async fn get_government(
+    State(pool): State<PgPool>,
+) -> Result<Json<Government>, ApiError> {
+    let village = sqlx::query!("SELECT code, hamlet_label FROM village")
+        .fetch_optional(&pool)
+        .await?
+        .ok_or(ApiError::Status(StatusCode::NOT_FOUND))?;
+    let serving = sqlx::query!(
+        r#"SELECT officials.name, coalesce(positions.name,
+               'Kepala ' || initcap($2) || ' ' || hamlets.name) AS "position!",
+           tenures.kind AS "kind: TenureKind", photo_file_id, photo_alt, hamlet_id
+           FROM tenures JOIN officials ON officials.id = official_id
+           JOIN positions ON positions.id = position_id
+           LEFT JOIN region_units hamlets ON hamlets.id = hamlet_id
+           CROSS JOIN LATERAL (SELECT (now() AT TIME ZONE $1)::date AS today) AS now
+           WHERE positions.active AND start_date <= today AND (end_date IS NULL OR end_date >= today)
+           ORDER BY hamlet_id IS NOT NULL, positions.sort_order, hamlets.sort_order, tenures.kind,
+               start_date"#,
+        TimeZone::of_province(&village.code).iana(),
+        village.hamlet_label,
+    )
+    .fetch_all(&pool)
+    .await?;
+    let hamlets = sqlx::query!(
+        "SELECT id, name AS \"name!\" FROM region_units WHERE kind = 'hamlet' AND active
+         ORDER BY sort_order"
+    )
+    .fetch_all(&pool)
+    .await?
+    .into_iter()
+    .map(|hamlet| PublicHamlet {
+        heads: serving
+            .iter()
+            .filter(|official| official.hamlet_id == Some(hamlet.id))
+            .map(|official| official.name.clone())
+            .collect(),
+        id: hamlet.id,
+        name: hamlet.name,
+    })
+    .collect();
+    let officials = serving
+        .into_iter()
+        .map(|official| ServingOfficial {
+            name: official.name,
+            position: official.position,
+            kind: official.kind,
+            photo: official.photo_file_id,
+            photo_alt: official.photo_alt,
+        })
+        .collect();
+    Ok(Json(Government {
+        officials,
+        hamlet_label: village.hamlet_label,
+        hamlets,
+    }))
 }
