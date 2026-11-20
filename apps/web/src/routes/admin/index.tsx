@@ -1,5 +1,6 @@
 import { createFileRoute, getRouteApi, Link } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
+import { period } from '../../announcement';
 import { getDashboard } from '../../api/generated';
 import { PageHead } from '../../components/admin';
 import { Card } from '../../components/ui/card';
@@ -83,20 +84,56 @@ function Dashboard() {
                   {dashboard.drafts.map((draft) => (
                     <li key={draft.id} className="flex flex-wrap justify-between gap-x-3">
                       <Link
-                        to="/admin/berita/$id"
+                        to={
+                          draft.kind === 'announcement'
+                            ? '/admin/pengumuman/$id'
+                            : '/admin/berita/$id'
+                        }
                         params={{ id: draft.id }}
                         className="min-w-0 truncate font-medium underline-offset-4 hover:underline"
                       >
                         {draft.title}
                       </Link>
                       <span className="text-sm text-muted-foreground">
-                        Berita · {date.format(new Date(draft.updatedAt))}
+                        {draft.kind === 'announcement' ? 'Pengumuman' : 'Berita'} ·{' '}
+                        {date.format(new Date(draft.updatedAt))}
                       </span>
                     </li>
                   ))}
                 </ul>
               ) : (
                 <p className="font-medium">Tidak ada draf.</p>
+              )}
+            </Card>
+          )}
+          {dashboard.endingAnnouncements && (
+            <Card
+              role="region"
+              aria-labelledby="ending-announcements"
+              className="col-span-2 gap-2 px-5 py-5"
+            >
+              <h2 id="ending-announcements" className="text-muted-foreground">
+                Pengumuman segera berakhir
+              </h2>
+              {dashboard.endingAnnouncements.length ? (
+                <ul className="grid gap-1">
+                  {dashboard.endingAnnouncements.map((announcement) => (
+                    <li key={announcement.id} className="flex flex-wrap justify-between gap-x-3">
+                      <Link
+                        to="/admin/pengumuman/$id"
+                        params={{ id: announcement.id }}
+                        className="min-w-0 truncate font-medium underline-offset-4 hover:underline"
+                      >
+                        {announcement.title}
+                      </Link>
+                      <span className="text-sm text-muted-foreground">
+                        Berakhir {period(announcement.endDate, announcement.endDate)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="font-medium">Tidak ada yang berakhir dalam 7 hari.</p>
               )}
             </Card>
           )}
