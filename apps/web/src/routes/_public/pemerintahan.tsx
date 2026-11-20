@@ -1,7 +1,14 @@
 import { createFileRoute, getRouteApi } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import { type Government, getGovernment, type Village } from '../../api/generated';
+import {
+  type Government,
+  getGovernment,
+  type Institution,
+  listInstitutions,
+  type Village,
+} from '../../api/generated';
 import { tenureKindLabels } from '../../government';
+import { institutionTitle } from '../../institution';
 import { villageTitle } from '../../village';
 
 // Server-only; null before the Village Code is set, or when the API cannot be reached.
@@ -16,10 +23,25 @@ const fetchGovernment = createServerFn({ method: 'GET' }).handler(
   },
 );
 
+// Server-only; empty when the API cannot be reached.
+const fetchInstitutions = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<Institution[]> => {
+    try {
+      const response = await listInstitutions();
+      return response.status === 200 ? response.data : [];
+    } catch {
+      return [];
+    }
+  },
+);
+
 const root = getRouteApi('__root__');
 
 export const Route = createFileRoute('/_public/pemerintahan')({
-  loader: () => fetchGovernment(),
+  loader: async () => {
+    const [government, institutions] = await Promise.all([fetchGovernment(), fetchInstitutions()]);
+    return { government, institutions };
+  },
   head: ({ matches }) => {
     // The root match comes first; its loader data is typed only through getRouteApi.
     const village = matches[0]?.loaderData as Village | null | undefined;
@@ -34,7 +56,7 @@ const capitalized = (text: string) => text.charAt(0).toUpperCase() + text.slice(
 
 function GovernmentPage() {
   const village = root.useLoaderData();
-  const government = Route.useLoaderData();
+  const { government, institutions } = Route.useLoaderData();
   const label = capitalized(government?.hamletLabel ?? 'dusun');
   return (
     <main className="site-container grid gap-12 pt-10 pb-sec md:pt-16">
@@ -106,6 +128,60 @@ function GovernmentPage() {
           </dl>
         ) : (
           <p className="text-muted-foreground">Data {label.toLowerCase()} belum tersedia.</p>
+        )}
+      </section>
+      <section id="lembaga" aria-labelledby="institutions-title" className="grid gap-6">
+        <h2 id="institutions-title" className="text-2xl font-semibold tracking-tight md:text-3xl">
+          Lembaga desa
+        </h2>
+        {institutions.length ? (
+          <ul className="grid gap-4 md:grid-cols-2">
+            {institutions.map((institution) => (
+              <li
+                key={institution.id}
+                className="grid content-start gap-3 rounded-md border bg-card p-5"
+              >
+                <div className="flex items-center gap-3">
+                  {institution.logo && (
+                    <img
+                      src={`/media/${institution.logo}/480`}
+                      alt={`Logo ${institution.name}`}
+                      width={48}
+                      height={48}
+                      loading="lazy"
+                      className="size-12 object-contain"
+                    />
+                  )}
+                  <h3 className="text-lg leading-snug font-semibold">
+                    {institutionTitle(institution)}
+                  </h3>
+                </div>
+                <p className="text-muted-foreground">{institution.description}</p>
+                {institution.members.length > 0 && (
+                  <details>
+                    <summary className="cursor-pointer font-medium text-primary">
+                      {institution.members.length} pengurus/anggota
+                    </summary>
+                    <ul className="mt-2 grid">
+                      {institution.members.map((member, index) => (
+                        <li
+                          // Members have no id; their place in the list is who they are.
+                          // biome-ignore lint/suspicious/noArrayIndexKey: see above
+                          key={index}
+                          className="flex justify-between gap-3 border-b py-2 last:border-b-0"
+                        >
+                          <span>{member.name}</span>
+                          <span className="text-right text-muted-foreground">{member.role}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-muted-foreground">Data lembaga desa belum tersedia.</p>
         )}
       </section>
     </main>

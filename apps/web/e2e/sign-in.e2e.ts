@@ -280,6 +280,41 @@ test('a village manager records a Hamlet head on Pemerintahan, shown publicly an
   await expect(official.locator('option:checked')).toHaveText(head);
 });
 
+test('a village manager records an Institution with ordered members, listed publicly', async ({
+  page,
+}) => {
+  await page.goto('/masuk');
+  await page.getByLabel('Nama pengguna').fill(username);
+  await page.getByLabel('Kata sandi', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Beranda' })).toBeVisible();
+
+  // A fresh name each run, since the local database outlives runs.
+  const name = `Karang Taruna ${Date.now()}`;
+  await page.getByRole('link', { name: 'Lembaga desa' }).click();
+  await page.getByRole('button', { name: 'Tambah lembaga' }).click();
+  await page.getByLabel('Nama lembaga').fill(name);
+  await page.getByLabel('Deskripsi').fill('Wadah generasi muda desa.');
+  for (const [index, [member, role]] of [
+    ['Sinta Dewi', 'Sekretaris'],
+    ['Fajar Nugraha', 'Ketua'],
+  ].entries()) {
+    await page.getByRole('button', { name: 'Tambah pengurus' }).click();
+    await page.getByLabel(`Nama pengurus ${index + 1}`).fill(member ?? '');
+    await page.getByLabel(`Jabatan pengurus ${index + 1}`).fill(role ?? '');
+  }
+  await page.getByRole('button', { name: 'Naikkan pengurus 2' }).click();
+  await page.getByRole('button', { name: 'Simpan', exact: true }).click();
+  const card = page.getByRole('region', { name });
+  await expect(card).toContainText('Fajar Nugraha · KetuaSinta Dewi · Sekretaris');
+
+  await page.goto('/pemerintahan');
+  const institutions = page.getByRole('region', { name: 'Lembaga desa' });
+  const item = institutions.getByRole('listitem').filter({ hasText: name });
+  await item.getByText('2 pengurus/anggota').click();
+  await expect(item).toContainText('Fajar NugrahaKetuaSinta DewiSekretaris');
+});
+
 test('every page has the stylesheet, and the public site stays light', async ({ page }) => {
   // Admin code is split into route chunks the public home page never fetches.
   const scripts: Promise<string>[] = [];
@@ -315,6 +350,7 @@ test('every page has the stylesheet, and the public site stays light', async ({ 
     '/admin',
     '/admin/akun',
     '/admin/pemerintahan',
+    '/admin/lembaga-desa',
     '/admin/pengguna',
     '/admin/peran',
     '/admin/log-audit',
