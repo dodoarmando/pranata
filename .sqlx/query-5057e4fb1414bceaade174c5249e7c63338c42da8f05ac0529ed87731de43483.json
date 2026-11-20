@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT menu AS \"menu: PageMenu\", slug, updated_at FROM pages WHERE published",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "menu: PageMenu",
+        "type_info": {
+          "Custom": {
+            "name": "page_menu",
+            "kind": {
+              "Enum": ["profile", "government", "services"]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "pages",
+            "name": "menu"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "pages",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "pages",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, false, false]
+  },
+  "hash": "5057e4fb1414bceaade174c5249e7c63338c42da8f05ac0529ed87731de43483"
+}

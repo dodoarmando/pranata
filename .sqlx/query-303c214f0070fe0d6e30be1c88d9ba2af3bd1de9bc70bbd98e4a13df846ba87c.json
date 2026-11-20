@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT slug, updated_at FROM announcements WHERE published AND has_body",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "announcements",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "announcements",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, false]
+  },
+  "hash": "303c214f0070fe0d6e30be1c88d9ba2af3bd1de9bc70bbd98e4a13df846ba87c"
+}

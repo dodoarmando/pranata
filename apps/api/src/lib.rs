@@ -25,6 +25,7 @@ mod region;
 mod rich_text;
 mod role;
 mod search;
+mod sitemap;
 mod slug;
 pub mod storage;
 mod throttle;
@@ -111,6 +112,7 @@ fn modules() -> OpenApiRouter<AppState> {
         .merge(transparency_document::routes())
         .merge(home::routes())
         .merge(search::routes())
+        .merge(sitemap::routes())
 }
 
 fn api() -> OpenApiRouter<AppState> {

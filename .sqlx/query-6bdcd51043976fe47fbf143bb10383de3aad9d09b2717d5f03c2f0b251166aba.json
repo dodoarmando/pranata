@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT fiscal_year, updated_at FROM apbdes_summaries WHERE published",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiscal_year",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "fiscal_year"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "apbdes_summaries",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, false]
+  },
+  "hash": "6bdcd51043976fe47fbf143bb10383de3aad9d09b2717d5f03c2f0b251166aba"
+}

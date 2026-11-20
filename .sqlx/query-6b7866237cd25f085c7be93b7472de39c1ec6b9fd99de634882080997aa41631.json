@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT slug, updated_at FROM news_posts WHERE published",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "news_posts",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, false]
+  },
+  "hash": "6b7866237cd25f085c7be93b7472de39c1ec6b9fd99de634882080997aa41631"
+}
