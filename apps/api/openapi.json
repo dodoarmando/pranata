@@ -713,6 +713,152 @@
         }
       }
     },
+    "/institutions": {
+      "get": {
+        "tags": [
+          "institution"
+        ],
+        "summary": "Every Institution by name with its members, for the public site and the admin area.",
+        "operationId": "listInstitutions",
+        "responses": {
+          "200": {
+            "description": "Every Institution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Institution"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "institution"
+        ],
+        "summary": "Records an Institution and its members.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `422` for a blank name or\ndescription, a malformed field, a blank member, over 100 members, or an unknown logo.",
+        "operationId": "createInstitution",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstitutionFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Institution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "422": {
+            "description": "A field is malformed or unknown"
+          }
+        }
+      }
+    },
+    "/institutions/{id}": {
+      "put": {
+        "tags": [
+          "institution"
+        ],
+        "summary": "Changes an Institution and replaces its members.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `404` for an unknown\nInstitution, `422` for a blank name or description, a malformed field, a blank member, over 100 members, or an unknown\nlogo.",
+        "operationId": "updateInstitution",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Institution",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstitutionFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Institution is changed"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "404": {
+            "description": "There is no such Institution"
+          },
+          "422": {
+            "description": "A field is malformed or unknown"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "institution"
+        ],
+        "summary": "Deletes an Institution and its members.",
+        "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `404` for an unknown\nInstitution.",
+        "operationId": "deleteInstitution",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Institution",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Institution is deleted"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not manage the Village"
+          },
+          "404": {
+            "description": "There is no such Institution"
+          }
+        }
+      }
+    },
     "/media/{id}/{variant}": {
       "get": {
         "tags": [
@@ -1735,7 +1881,7 @@
         "tags": [
           "village"
         ],
-        "summary": "Stores a Village logo, a PNG or SVG of at most 2 MiB, for saving into the profile.",
+        "summary": "Stores a logo, a PNG or SVG of at most 2 MiB, for saving into the profile or an\nInstitution.",
         "description": "# Errors\n`401` without a live session, `403` without `village.manage`, `413` over 2 MiB, `415`\nfor content that is not PNG or SVG, `422` over 40 megapixels or undecodable.",
         "operationId": "uploadVillageLogo",
         "requestBody": {
@@ -2156,6 +2302,66 @@
           "unavailable"
         ]
       },
+      "Institution": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/InstitutionFields"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ]
+      },
+      "InstitutionFields": {
+        "type": "object",
+        "description": "What a User records about an Institution.",
+        "required": [
+          "name",
+          "description",
+          "members"
+        ],
+        "properties": {
+          "abbreviation": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Such as BPD; up to 30 characters."
+          },
+          "description": {
+            "type": "string",
+            "description": "1–2000 characters."
+          },
+          "logo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The logo's file, uploaded at `/village/logo` and served at `/media/{logo}/{variant}`."
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Member"
+            },
+            "description": "In order; at most 100."
+          },
+          "name": {
+            "type": "string",
+            "description": "1–100 characters."
+          }
+        }
+      },
       "Me": {
         "type": "object",
         "required": [
@@ -2169,6 +2375,24 @@
           },
           "username": {
             "type": "string"
+          }
+        }
+      },
+      "Member": {
+        "type": "object",
+        "description": "One member of an Institution; members hold no Tenure and sign no letter.",
+        "required": [
+          "name",
+          "role"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "1–100 characters."
+          },
+          "role": {
+            "type": "string",
+            "description": "Such as Ketua or Anggota; 1–100 characters."
           }
         }
       },

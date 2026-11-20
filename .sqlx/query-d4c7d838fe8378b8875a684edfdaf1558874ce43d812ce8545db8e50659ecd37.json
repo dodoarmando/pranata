@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM institution_members WHERE institution_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": []
+  },
+  "hash": "d4c7d838fe8378b8875a684edfdaf1558874ce43d812ce8545db8e50659ecd37"
+}

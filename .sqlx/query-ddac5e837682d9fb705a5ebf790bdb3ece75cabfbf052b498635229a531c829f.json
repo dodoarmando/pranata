@@ -1,0 +1,68 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, name, abbreviation, description, logo_file_id FROM institutions\n         ORDER BY name, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "institutions",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "institutions",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "abbreviation",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "institutions",
+            "name": "abbreviation"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "institutions",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "logo_file_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "institutions",
+            "name": "logo_file_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [false, false, true, false, true]
+  },
+  "hash": "ddac5e837682d9fb705a5ebf790bdb3ece75cabfbf052b498635229a531c829f"
+}

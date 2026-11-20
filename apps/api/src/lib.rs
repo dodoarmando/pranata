@@ -6,6 +6,7 @@ mod export;
 mod government;
 mod health;
 mod imaging;
+mod institution;
 mod passkey;
 mod password;
 mod region;
@@ -95,6 +96,8 @@ fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(government::update_tenure))
         .routes(routes!(government::upload_photo))
         .routes(routes!(government::get_government))
+        .routes(routes!(institution::list, institution::create))
+        .routes(routes!(institution::update, institution::delete))
         .routes(routes!(storage::get_media))
         .routes(routes!(auth::use_access_link))
         .routes(routes!(auth::sign_in))

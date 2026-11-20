@@ -172,6 +172,42 @@ export interface Health {
   status: HealthStatus;
 }
 
+/**
+ * One member of an Institution; members hold no Tenure and sign no letter.
+ */
+export interface Member {
+  /** 1–100 characters. */
+  name: string;
+  /** Such as Ketua or Anggota; 1–100 characters. */
+  role: string;
+}
+
+/**
+ * What a User records about an Institution.
+ */
+export interface InstitutionFields {
+  /**
+     * Such as BPD; up to 30 characters.
+     * @nullable
+     */
+  abbreviation?: string | null;
+  /** 1–2000 characters. */
+  description: string;
+  /**
+     * The logo's file, uploaded at `/village/logo` and served at `/media/{logo}/{variant}`.
+     * @nullable
+     */
+  logo?: string | null;
+  /** In order; at most 100. */
+  members: Member[];
+  /** 1–100 characters. */
+  name: string;
+}
+
+export type Institution = InstitutionFields & {
+  id: string;
+};
+
 export interface Me {
   /** The name of the User's Role. */
   role: string;
@@ -1573,6 +1609,217 @@ export const getHealth = async ( options?: Parameters<typeof apiFetch>[1]): Prom
   {
     ...options,
     method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listInstitutionsResponse200 = {
+  data: Institution[]
+  status: 200
+}
+
+export type listInstitutionsResponseSuccess = (listInstitutionsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listInstitutionsResponse = (listInstitutionsResponseSuccess)
+
+export const getListInstitutionsUrl = () => {
+
+
+
+
+  return `/institutions`
+}
+
+/**
+ * @summary Every Institution by name with its members, for the public site and the admin area.
+ */
+export const listInstitutions = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listInstitutionsResponse> => {
+
+  return apiFetch<listInstitutionsResponse>(getListInstitutionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createInstitutionResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createInstitutionResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createInstitutionResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createInstitutionResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createInstitutionResponseSuccess = (createInstitutionResponse201) & {
+  headers: Headers;
+};
+export type createInstitutionResponseError = (createInstitutionResponse401 | createInstitutionResponse403 | createInstitutionResponse422) & {
+  headers: Headers;
+};
+
+export type createInstitutionResponse = (createInstitutionResponseSuccess | createInstitutionResponseError)
+
+export const getCreateInstitutionUrl = () => {
+
+
+
+
+  return `/institutions`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `422` for a blank name or
+ * description, a malformed field, a blank member, over 100 members, or an unknown logo.
+ * @summary Records an Institution and its members.
+ */
+export const createInstitution = async (institutionFields: InstitutionFields, options?: Parameters<typeof apiFetch>[1]): Promise<createInstitutionResponse> => {
+
+  return apiFetch<createInstitutionResponse>(getCreateInstitutionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(institutionFields)
+  }
+);}
+
+
+
+export type updateInstitutionResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateInstitutionResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateInstitutionResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateInstitutionResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateInstitutionResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateInstitutionResponseSuccess = (updateInstitutionResponse204) & {
+  headers: Headers;
+};
+export type updateInstitutionResponseError = (updateInstitutionResponse401 | updateInstitutionResponse403 | updateInstitutionResponse404 | updateInstitutionResponse422) & {
+  headers: Headers;
+};
+
+export type updateInstitutionResponse = (updateInstitutionResponseSuccess | updateInstitutionResponseError)
+
+export const getUpdateInstitutionUrl = (id: string,) => {
+
+
+
+
+  return `/institutions/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `404` for an unknown
+ * Institution, `422` for a blank name or description, a malformed field, a blank member, over 100 members, or an unknown
+ * logo.
+ * @summary Changes an Institution and replaces its members.
+ */
+export const updateInstitution = async (id: string,
+    institutionFields: InstitutionFields, options?: Parameters<typeof apiFetch>[1]): Promise<updateInstitutionResponse> => {
+
+  return apiFetch<updateInstitutionResponse>(getUpdateInstitutionUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(institutionFields)
+  }
+);}
+
+
+
+export type deleteInstitutionResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteInstitutionResponse401 = {
+  data: void
+  status: 401
+}
+
+export type deleteInstitutionResponse403 = {
+  data: void
+  status: 403
+}
+
+export type deleteInstitutionResponse404 = {
+  data: void
+  status: 404
+}
+
+export type deleteInstitutionResponseSuccess = (deleteInstitutionResponse204) & {
+  headers: Headers;
+};
+export type deleteInstitutionResponseError = (deleteInstitutionResponse401 | deleteInstitutionResponse403 | deleteInstitutionResponse404) & {
+  headers: Headers;
+};
+
+export type deleteInstitutionResponse = (deleteInstitutionResponseSuccess | deleteInstitutionResponseError)
+
+export const getDeleteInstitutionUrl = (id: string,) => {
+
+
+
+
+  return `/institutions/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `village.manage`, `404` for an unknown
+ * Institution.
+ * @summary Deletes an Institution and its members.
+ */
+export const deleteInstitution = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deleteInstitutionResponse> => {
+
+  return apiFetch<deleteInstitutionResponse>(getDeleteInstitutionUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
 
 
   }
@@ -3114,7 +3361,8 @@ export const getUploadVillageLogoUrl = () => {
  * # Errors
  * `401` without a live session, `403` without `village.manage`, `413` over 2 MiB, `415`
  * for content that is not PNG or SVG, `422` over 40 megapixels or undecodable.
- * @summary Stores a Village logo, a PNG or SVG of at most 2 MiB, for saving into the profile.
+ * @summary Stores a logo, a PNG or SVG of at most 2 MiB, for saving into the profile or an
+Institution.
  */
 export const uploadVillageLogo = async (uploadVillageLogoBody: Blob, options?: Parameters<typeof apiFetch>[1]): Promise<uploadVillageLogoResponse> => {
 

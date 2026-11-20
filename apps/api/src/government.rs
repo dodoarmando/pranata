@@ -146,10 +146,10 @@ pub struct NewTenure {
 
 #[derive(Serialize, ToSchema)]
 pub struct Created {
-    id: Uuid,
+    pub(crate) id: Uuid,
 }
 
-fn ensure_manager(session: &Session) -> Result<(), ApiError> {
+pub(crate) fn ensure_manager(session: &Session) -> Result<(), ApiError> {
     if session.holds(Permission::VillageManage) {
         Ok(())
     } else {
@@ -158,7 +158,7 @@ fn ensure_manager(session: &Session) -> Result<(), ApiError> {
 }
 
 /// A foreign key, such as an unknown photo or Official, says the body is wrong.
-fn known<T>(result: sqlx::Result<T>, status: StatusCode) -> Result<T, ApiError> {
+pub(crate) fn known<T>(result: sqlx::Result<T>, status: StatusCode) -> Result<T, ApiError> {
     match result {
         Err(sqlx::Error::Database(error)) if error.is_foreign_key_violation() => {
             Err(ApiError::Status(status))

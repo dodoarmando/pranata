@@ -1,0 +1,57 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT name, abbreviation, description, logo_file_id FROM institutions\n         WHERE id = $1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "institutions",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "abbreviation",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "institutions",
+            "name": "abbreviation"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "institutions",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "logo_file_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "institutions",
+            "name": "logo_file_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": [false, true, false, true]
+  },
+  "hash": "07181479334b49cc6991b74648a499bf15eb3996085f92e0318fe3c7023bec91"
+}
