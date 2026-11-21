@@ -77,11 +77,11 @@
              | map('regex_replace', '\.container$', '.service') | list
              + (['caddy.service'] if pranata_caddyfile is changed or pranata_socket is changed else []) }}
 
+    # Every run: a run that failed after writing the quadlets left them unchanged but never loaded.
     - name: Generate the services from the quadlets
       ansible.builtin.systemd_service:
         scope: user
         daemon_reload: true
-      when: pranata_quadlets is changed or pranata_socket is changed
 
     - name: Start PostgreSQL
       ansible.builtin.systemd_service:
