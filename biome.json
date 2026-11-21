@@ -22,7 +22,7 @@
   },
   "overrides": [
     {
-      "includes": ["apps/web/src/routes/_public/**"],
+      "includes": ["apps/web/src/routes/_public.tsx", "apps/web/src/routes/_public/**"],
       "linter": {
         "rules": {
           "style": {
@@ -33,6 +33,17 @@
                   {
                     "group": ["@tiptap/*", "**/rich-text", "**/components/rich-text-editor"],
                     "message": "Public pages never ship Tiptap: render rich text in a server function with a dynamic import of rich-text-html."
+                  },
+                  {
+                    "group": [
+                      "**/admin/**",
+                      "**/components/admin",
+                      "**/sudo",
+                      "**/autosave",
+                      "**/device",
+                      "**/order"
+                    ],
+                    "message": "Admin code never loads on public pages (performance budget)."
                   }
                 ]
               }
