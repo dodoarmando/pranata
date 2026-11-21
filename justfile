@@ -43,7 +43,7 @@ gen:
     cd apps/web && bun run gen
 
 # Every required CI job except perf, which runs as `just perf`
-check: check-commits check-api check-web check-contract images e2e
+check: check-commits check-api check-web check-contract check-infra images e2e
 
 # Run all tests
 test: test-api test-web
@@ -74,6 +74,14 @@ check-web:
 check-contract: gen
     test -z "$(git status --porcelain -- apps/api/openapi.json apps/web/src/api)" \
         || { git status --short -- apps/api/openapi.json apps/web/src/api; echo 'Run `just gen` and commit the result.'; exit 1; }
+
+# CI job `infra`: lint the Ansible role, with the tools pinned in infra/requirements.txt
+check-infra:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    python3 -m venv target/infra
+    target/infra/bin/pip install -q -r infra/requirements.txt
+    cd infra && PATH="$PWD/../target/infra/bin:$PATH" ansible-lint
 
 # CI job `images`: build both production images (amd64), tagged `local`
 images:
