@@ -1,27 +1,30 @@
 //! Complaints: what residents send from the public site, anonymously or with a name and phone,
-//! and follow with their Complaint Code.
+//! and follow with their Complaint Code; staff answer them with Complaint Responses, then close
+//! or reject them.
 
 use std::sync::Arc;
 
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use sqlx::PgPool;
-use utoipa::ToSchema;
+use sqlx::{PgConnection, PgPool};
+use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
 use crate::{
     ApiError, AppState, Clock,
     audit::{self, Actor},
-    auth::client_ip,
+    auth::{Session, client_ip},
+    government::Created,
     home::{required, text},
     public_form::{Proof, PublicForm},
+    role::Permission,
     village::phone_ok,
 };
 
@@ -30,10 +33,14 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
         .routes(routes!(get_form))
         .routes(routes!(submit))
         .routes(routes!(get_status))
+        .routes(routes!(list))
+        .routes(routes!(get))
+        .routes(routes!(respond))
+        .routes(routes!(change_state))
 }
 
 /// Where a Complaint stands.
-#[derive(Serialize, ToSchema, sqlx::Type, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, ToSchema, sqlx::Type, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[sqlx(type_name = "complaint_state", rename_all = "snake_case")]
 pub enum ComplaintState {
@@ -301,6 +308,352 @@ pub(crate) async fn get_status(
         rejection_reason: complaint.rejection_reason,
         responses,
     }))
+}
+
+/// Refuses with `403` unless the User's Role holds `permission`.
+fn ensure(session: &Session, permission: Permission) -> Result<(), ApiError> {
+    if session.holds(permission) {
+        Ok(())
+    } else {
+        Err(ApiError::Status(StatusCode::FORBIDDEN))
+    }
+}
+
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct ComplaintFilter {
+    /// Only Complaints in this state.
+    #[param(inline)]
+    state: Option<ComplaintState>,
+}
+
+/// A Complaint in the staff queue.
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ComplaintSummary {
+    id: Uuid,
+    topic: String,
+    text: String,
+    state: ComplaintState,
+    submitted_at: DateTime<Utc>,
+}
+
+/// One Complaint Response as staff see it.
+#[derive(Serialize, ToSchema)]
+pub struct StaffComplaintResponse {
+    at: DateTime<Utc>,
+    text: String,
+    /// The username of the User who posted it.
+    author: String,
+}
+
+/// A Complaint as staff see it, with what the sender left to be reached by.
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ComplaintDetail {
+    id: Uuid,
+    code: String,
+    topic: String,
+    text: String,
+    submitted_at: DateTime<Utc>,
+    state: ComplaintState,
+    rejection_reason: Option<String>,
+    /// The name of the sender's Hamlet.
+    hamlet: Option<String>,
+    name: Option<String>,
+    phone: Option<String>,
+    /// Oldest first.
+    responses: Vec<StaffComplaintResponse>,
+}
+
+/// A Complaint Response to post.
+#[derive(Deserialize, ToSchema)]
+pub struct NewComplaintResponse {
+    /// 1–2,000 characters, shown to the sender on the status page.
+    text: String,
+}
+
+/// Where to move a Complaint.
+#[derive(Deserialize, ToSchema)]
+pub struct ComplaintStateChange {
+    /// `in_progress` from `new`; `closed` or `rejected` from either.
+    state: ComplaintState,
+    /// For `closed`, the final Complaint Response; for `rejected`, the reason; 1–2,000
+    /// characters either way.
+    text: Option<String>,
+}
+
+/// Every Complaint, or those in one state, the latest first.
+///
+/// # Errors
+/// `401` without a live session, `403` without `complaint.read`.
+#[utoipa::path(
+    get,
+    path = "/complaints",
+    operation_id = "listComplaints",
+    tag = "complaints",
+    params(ComplaintFilter),
+    responses(
+        (status = OK, description = "The Complaints", body = Vec<ComplaintSummary>),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User may not read Complaints"),
+    ),
+)]
+pub(crate) async fn list(
+    State(pool): State<PgPool>,
+    session: Session,
+    Query(filter): Query<ComplaintFilter>,
+) -> Result<Json<Vec<ComplaintSummary>>, ApiError> {
+    ensure(&session, Permission::ComplaintRead)?;
+    // shortcut: no paging; a Village gets few Complaints, page once a queue grows past hundreds.
+    let complaints = sqlx::query_as!(
+        ComplaintSummary,
+        r#"SELECT complaints.id, complaint_topics.name AS topic, text,
+           state AS "state: ComplaintState", created_at AS submitted_at
+           FROM complaints JOIN complaint_topics ON complaint_topics.id = topic_id
+           WHERE $1::complaint_state IS NULL OR state = $1
+           ORDER BY created_at DESC, complaints.id DESC"#,
+        filter.state as Option<ComplaintState>,
+    )
+    .fetch_all(&pool)
+    .await?;
+    Ok(Json(complaints))
+}
+
+/// One Complaint with its sender's Hamlet, name and phone and every Response.
+///
+/// # Errors
+/// `401` without a live session, `403` without `complaint.read`, `404` for an unknown
+/// Complaint.
+#[utoipa::path(
+    get,
+    path = "/complaints/{id}",
+    operation_id = "getComplaint",
+    tag = "complaints",
+    params(("id" = Uuid, Path, description = "The Complaint")),
+    responses(
+        (status = OK, description = "The Complaint", body = ComplaintDetail),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User may not read Complaints"),
+        (status = NOT_FOUND, description = "There is no such Complaint"),
+    ),
+)]
+pub(crate) async fn get(
+    State(pool): State<PgPool>,
+    session: Session,
+    Path(id): Path<Uuid>,
+) -> Result<Json<ComplaintDetail>, ApiError> {
+    ensure(&session, Permission::ComplaintRead)?;
+    let complaint = sqlx::query!(
+        r#"SELECT code, complaint_topics.name AS topic, text, created_at,
+           state AS "state: ComplaintState", rejection_reason,
+           region_units.name AS "hamlet?", complaints.name, phone
+           FROM complaints JOIN complaint_topics ON complaint_topics.id = topic_id
+           LEFT JOIN region_units ON region_units.id = hamlet_id
+           WHERE complaints.id = $1"#,
+        id
+    )
+    .fetch_optional(&pool)
+    .await?
+    .ok_or(ApiError::Status(StatusCode::NOT_FOUND))?;
+    let responses = sqlx::query_as!(
+        StaffComplaintResponse,
+        r#"SELECT complaint_responses.created_at AS at, complaint_responses.text,
+           username AS author
+           FROM complaint_responses JOIN users ON users.id = user_id
+           WHERE complaint_id = $1 ORDER BY complaint_responses.created_at, complaint_responses.id"#,
+        id
+    )
+    .fetch_all(&pool)
+    .await?;
+    Ok(Json(ComplaintDetail {
+        id,
+        code: complaint.code,
+        topic: complaint.topic,
+        text: complaint.text,
+        submitted_at: complaint.created_at,
+        state: complaint.state,
+        rejection_reason: complaint.rejection_reason,
+        hamlet: complaint.hamlet,
+        name: complaint.name,
+        phone: complaint.phone,
+        responses,
+    }))
+}
+
+/// Locks a Complaint that is still open and returns its state: `404` for an unknown one,
+/// `409` once Closed or Rejected.
+async fn lock_open(tx: &mut PgConnection, id: Uuid) -> Result<ComplaintState, ApiError> {
+    let state = sqlx::query_scalar!(
+        r#"SELECT state AS "state: ComplaintState" FROM complaints WHERE id = $1 FOR UPDATE"#,
+        id
+    )
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or(ApiError::Status(StatusCode::NOT_FOUND))?;
+    match state {
+        ComplaintState::New | ComplaintState::InProgress => Ok(state),
+        ComplaintState::Closed | ComplaintState::Rejected => {
+            Err(ApiError::Status(StatusCode::CONFLICT))
+        }
+    }
+}
+
+/// Posts a Complaint Response and audits it.
+async fn post_response(
+    tx: &mut PgConnection,
+    session: &Session,
+    id: Uuid,
+    text: &str,
+) -> Result<Uuid, ApiError> {
+    let response = sqlx::query_scalar!(
+        "INSERT INTO complaint_responses (complaint_id, user_id, text) VALUES ($1, $2, $3)
+         RETURNING id",
+        id,
+        session.user_id,
+        text,
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    audit::record(
+        tx,
+        Actor::User(session.user_id),
+        "complaint.respond",
+        ("complaint", Some(&id.to_string())),
+        json!({ "response": response }),
+    )
+    .await?;
+    Ok(response)
+}
+
+/// Moves a Complaint and audits it; a rejection takes its reason.
+async fn set_state(
+    tx: &mut PgConnection,
+    session: &Session,
+    id: Uuid,
+    (from, to): (ComplaintState, ComplaintState),
+    rejection_reason: Option<&str>,
+) -> Result<(), ApiError> {
+    sqlx::query!(
+        "UPDATE complaints SET state = $1, rejection_reason = $2 WHERE id = $3",
+        to as ComplaintState,
+        rejection_reason,
+        id,
+    )
+    .execute(&mut *tx)
+    .await?;
+    let mut changes = vec![json!({ "field": "state", "from": from, "to": to })];
+    if let Some(reason) = rejection_reason {
+        changes.push(json!({ "field": "rejectionReason", "from": null, "to": reason }));
+    }
+    audit::record_change(
+        tx,
+        Actor::User(session.user_id),
+        "complaint.state",
+        ("complaint", Some(&id.to_string())),
+        json!(changes),
+    )
+    .await?;
+    Ok(())
+}
+
+/// Posts a Complaint Response, which the sender sees on the status page and nobody edits; a New
+/// Complaint moves to `InProgress` with it.
+///
+/// # Errors
+/// `401` without a live session, `403` without `complaint.handle`, `404` for an unknown
+/// Complaint, `409` once it is Closed or Rejected, `422` for a blank or overlong text.
+#[utoipa::path(
+    post,
+    path = "/complaints/{id}/responses",
+    operation_id = "respondToComplaint",
+    tag = "complaints",
+    params(("id" = Uuid, Path, description = "The Complaint")),
+    request_body = NewComplaintResponse,
+    responses(
+        (status = CREATED, description = "The new Complaint Response", body = Created),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User may not handle Complaints"),
+        (status = NOT_FOUND, description = "There is no such Complaint"),
+        (status = CONFLICT, description = "The Complaint is Closed or Rejected"),
+        (status = UNPROCESSABLE_ENTITY, description = "The text is blank or too long"),
+    ),
+)]
+pub(crate) async fn respond(
+    State(pool): State<PgPool>,
+    session: Session,
+    Path(id): Path<Uuid>,
+    Json(body): Json<NewComplaintResponse>,
+) -> Result<(StatusCode, Json<Created>), ApiError> {
+    ensure(&session, Permission::ComplaintHandle)?;
+    let text = required(&body.text, 2000)?;
+    let mut tx = pool.begin().await?;
+    let state = lock_open(&mut tx, id).await?;
+    let response = post_response(&mut tx, &session, id, &text).await?;
+    if state == ComplaintState::New {
+        set_state(
+            &mut tx,
+            &session,
+            id,
+            (state, ComplaintState::InProgress),
+            None,
+        )
+        .await?;
+    }
+    tx.commit().await?;
+    Ok((StatusCode::CREATED, Json(Created { id: response })))
+}
+
+/// Moves a Complaint: a New one to `InProgress`; an open one to Closed with a final Complaint
+/// Response, or to Rejected with a reason. Closed and Rejected are final.
+///
+/// # Errors
+/// `401` without a live session, `403` without `complaint.handle`, `404` for an unknown
+/// Complaint, `409` for a move its state does not allow, `422` for `new`, or a missing, blank
+/// or overlong text.
+#[utoipa::path(
+    put,
+    path = "/complaints/{id}/state",
+    operation_id = "changeComplaintState",
+    tag = "complaints",
+    params(("id" = Uuid, Path, description = "The Complaint")),
+    request_body = ComplaintStateChange,
+    responses(
+        (status = NO_CONTENT, description = "The Complaint is moved"),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User may not handle Complaints"),
+        (status = NOT_FOUND, description = "There is no such Complaint"),
+        (status = CONFLICT, description = "The Complaint's state does not allow the move"),
+        (status = UNPROCESSABLE_ENTITY, description = "The state is new, or the text is missing, blank or too long"),
+    ),
+)]
+pub(crate) async fn change_state(
+    State(pool): State<PgPool>,
+    session: Session,
+    Path(id): Path<Uuid>,
+    Json(body): Json<ComplaintStateChange>,
+) -> Result<StatusCode, ApiError> {
+    ensure(&session, Permission::ComplaintHandle)?;
+    let to = body.state;
+    let text = match to {
+        ComplaintState::New => return Err(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY)),
+        ComplaintState::InProgress => None,
+        ComplaintState::Closed | ComplaintState::Rejected => {
+            Some(required(body.text.as_deref().unwrap_or_default(), 2000)?)
+        }
+    };
+    let mut tx = pool.begin().await?;
+    let from = lock_open(&mut tx, id).await?;
+    if to == ComplaintState::InProgress && from != ComplaintState::New {
+        return Err(ApiError::Status(StatusCode::CONFLICT));
+    }
+    if to == ComplaintState::Closed {
+        post_response(&mut tx, &session, id, text.as_deref().unwrap_or_default()).await?;
+    }
+    let reason = text.as_deref().filter(|_| to == ComplaintState::Rejected);
+    set_state(&mut tx, &session, id, (from, to), reason).await?;
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[cfg(test)]

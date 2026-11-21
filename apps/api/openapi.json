@@ -1852,6 +1852,53 @@
       }
     },
     "/complaints": {
+      "get": {
+        "tags": [
+          "complaints"
+        ],
+        "summary": "Every Complaint, or those in one state, the latest first.",
+        "description": "# Errors\n`401` without a live session, `403` without `complaint.read`.",
+        "operationId": "listComplaints",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "description": "Only Complaints in this state.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Where a Complaint stands.",
+              "enum": [
+                "new",
+                "in_progress",
+                "closed",
+                "rejected"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Complaints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ComplaintSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not read Complaints"
+          }
+        }
+      },
       "post": {
         "tags": [
           "complaints"
@@ -1946,6 +1993,160 @@
           },
           "429": {
             "description": "Too many lookups from the address; try again later"
+          }
+        }
+      }
+    },
+    "/complaints/{id}": {
+      "get": {
+        "tags": [
+          "complaints"
+        ],
+        "summary": "One Complaint with its sender's Hamlet, name and phone and every Response.",
+        "description": "# Errors\n`401` without a live session, `403` without `complaint.read`, `404` for an unknown\nComplaint.",
+        "operationId": "getComplaint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Complaint",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Complaint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not read Complaints"
+          },
+          "404": {
+            "description": "There is no such Complaint"
+          }
+        }
+      }
+    },
+    "/complaints/{id}/responses": {
+      "post": {
+        "tags": [
+          "complaints"
+        ],
+        "summary": "Posts a Complaint Response, which the sender sees on the status page and nobody edits; a New\nComplaint moves to `InProgress` with it.",
+        "description": "# Errors\n`401` without a live session, `403` without `complaint.handle`, `404` for an unknown\nComplaint, `409` once it is Closed or Rejected, `422` for a blank or overlong text.",
+        "operationId": "respondToComplaint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Complaint",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewComplaintResponse"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Complaint Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not handle Complaints"
+          },
+          "404": {
+            "description": "There is no such Complaint"
+          },
+          "409": {
+            "description": "The Complaint is Closed or Rejected"
+          },
+          "422": {
+            "description": "The text is blank or too long"
+          }
+        }
+      }
+    },
+    "/complaints/{id}/state": {
+      "put": {
+        "tags": [
+          "complaints"
+        ],
+        "summary": "Moves a Complaint: a New one to `InProgress`; an open one to Closed with a final Complaint\nResponse, or to Rejected with a reason. Closed and Rejected are final.",
+        "description": "# Errors\n`401` without a live session, `403` without `complaint.handle`, `404` for an unknown\nComplaint, `409` for a move its state does not allow, `422` for `new`, or a missing, blank\nor overlong text.",
+        "operationId": "changeComplaintState",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Complaint",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComplaintStateChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Complaint is moved"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not handle Complaints"
+          },
+          "404": {
+            "description": "There is no such Complaint"
+          },
+          "409": {
+            "description": "The Complaint's state does not allow the move"
+          },
+          "422": {
+            "description": "The state is new, or the text is missing, blank or too long"
           }
         }
       }
@@ -6955,6 +7156,73 @@
           }
         }
       },
+      "ComplaintDetail": {
+        "type": "object",
+        "description": "A Complaint as staff see it, with what the sender left to be reached by.",
+        "required": [
+          "id",
+          "code",
+          "topic",
+          "text",
+          "submittedAt",
+          "state",
+          "responses"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "hamlet": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The name of the sender's Hamlet."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rejectionReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "responses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StaffComplaintResponse"
+            },
+            "description": "Oldest first."
+          },
+          "state": {
+            "$ref": "#/components/schemas/ComplaintState"
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "text": {
+            "type": "string"
+          },
+          "topic": {
+            "type": "string"
+          }
+        }
+      },
       "ComplaintForm": {
         "type": "object",
         "description": "What the public Complaint form offers.",
@@ -7011,6 +7279,26 @@
           "rejected"
         ]
       },
+      "ComplaintStateChange": {
+        "type": "object",
+        "description": "Where to move a Complaint.",
+        "required": [
+          "state"
+        ],
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/ComplaintState",
+            "description": "`in_progress` from `new`; `closed` or `rejected` from either."
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "For `closed`, the final Complaint Response; for `rejected`, the reason; 1–2,000\ncharacters either way."
+          }
+        }
+      },
       "ComplaintStatus": {
         "type": "object",
         "description": "A Complaint as its sender sees it; never the name, phone or Hamlet.",
@@ -7040,6 +7328,36 @@
           "submittedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "topic": {
+            "type": "string"
+          }
+        }
+      },
+      "ComplaintSummary": {
+        "type": "object",
+        "description": "A Complaint in the staff queue.",
+        "required": [
+          "id",
+          "topic",
+          "text",
+          "state",
+          "submittedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ComplaintState"
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "text": {
+            "type": "string"
           },
           "topic": {
             "type": "string"
@@ -8012,6 +8330,19 @@
               "null"
             ],
             "description": "The honeypot, which people leave empty."
+          }
+        }
+      },
+      "NewComplaintResponse": {
+        "type": "object",
+        "description": "A Complaint Response to post.",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "1–2,000 characters, shown to the sender on the status page."
           }
         }
       },
@@ -9631,6 +9962,28 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "StaffComplaintResponse": {
+        "type": "object",
+        "description": "One Complaint Response as staff see it.",
+        "required": [
+          "at",
+          "text",
+          "author"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "author": {
+            "type": "string",
+            "description": "The username of the User who posted it."
+          },
+          "text": {
+            "type": "string"
           }
         }
       },
