@@ -18,7 +18,9 @@ export function useProof(challenge: Challenge) {
   const [proof, setProof] = useState<Proof | null>(null);
   useEffect(() => {
     setProof(null);
-    const worker = new Worker(new URL('../proof-of-work.worker.ts', import.meta.url));
+    const worker = new Worker(new URL('../proof-of-work.worker.ts', import.meta.url), {
+      name: 'proof-of-work',
+    });
     worker.addEventListener('message', (event: MessageEvent<Proof | null>) => setProof(event.data));
     worker.postMessage(challenge);
     const timer = setTimeout(() => void router.invalidate(), 90 * 60_000);

@@ -68,7 +68,7 @@ check-api: db-migrate
 # CI job `web`
 check-web:
     bunx biome ci --error-on-warnings .
-    cd apps/web && bun run typecheck && bun run test && bun run build
+    cd apps/web && bun run typecheck && bun run test && bun run build && bun run size
 
 # CI job `contract`: the committed spec and client match the code
 check-contract: gen
