@@ -1,0 +1,19 @@
+# {{ ansible_managed }}
+[Unit]
+Wants=postgres.service
+After=postgres.service
+
+[Container]
+ContainerName=api
+Image={{ pranata_api_image }}
+Network=pranata.network
+Volume=pranata-files:/var/lib/pranata/files
+Environment=PRANATA_PUBLIC_ORIGIN={{ pranata_public_origin }}
+Secret=pranata-database-url,type=env,target=DATABASE_URL
+
+[Service]
+Restart=always
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target

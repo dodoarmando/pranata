@@ -1,6 +1,6 @@
 # The `perf` job's stand-in for the Installation's Caddy: HTTP/2 over TLS and the same
 # compression, so Lighthouse measures transfer as production serves it. Keep it in step with
-# the Caddyfile in infra/ once that exists.
+# infra/roles/pranata/templates/Caddyfile.j2.
 {
 	auto_https disable_redirects
 	skip_install_trust

@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+[Container]
+ContainerName=postgres
+Image={{ pranata_postgres_image }}
+Network=pranata.network
+Volume=pranata-postgres:/var/lib/postgresql
+Environment=POSTGRES_USER=pranata POSTGRES_DB=pranata
+Secret=pranata-postgres-password,type=env,target=POSTGRES_PASSWORD
+# Over TCP: during first start the init server answers on the socket only, then restarts.
+HealthCmd=pg_isready -q -h 127.0.0.1 -U pranata -d pranata
+HealthInterval=10s
+# The service is up once PostgreSQL accepts connections, so migrations can follow.
+Notify=healthy
+
+[Service]
+Restart=always
+# Room to pull the image on first start.
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target

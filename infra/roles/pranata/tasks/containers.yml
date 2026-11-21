@@ -1,0 +1,145 @@
+---
+- name: Create the pranata user, who runs the containers
+  ansible.builtin.user:
+    name: pranata
+    home: "{{ pranata_home }}"
+    shell: /usr/sbin/nologin
+  register: pranata_user
+
+- name: Give the pranata user subordinate IDs for rootless Podman
+  ansible.builtin.lineinfile:
+    path: /etc/{{ item }}
+    regexp: "^pranata:"
+    line: pranata:100000:65536
+  loop: [subuid, subgid]
+
+- name: Keep the pranata user's services running without a login
+  ansible.builtin.command: loginctl enable-linger pranata
+  args:
+    creates: /var/lib/systemd/linger/pranata
+
+- name: Run the containers as the pranata user
+  become: true
+  become_user: pranata
+  environment:
+    XDG_RUNTIME_DIR: /run/user/{{ pranata_user.uid }}
+  block:
+    - name: Create the configuration directories
+      ansible.builtin.file:
+        path: "{{ pranata_home }}/{{ item }}"
+        state: directory
+        mode: "0700"
+      loop:
+        - .config/containers/systemd
+        - .config/systemd/user
+        - .config/pranata
+        - .local/state/pranata
+
+    - name: Store the database credentials as Podman secrets
+      no_log: true
+      containers.podman.podman_secret:
+        name: "{{ item.name }}"
+        data: "{{ item.data }}"
+      loop:
+        - name: pranata-postgres-password
+          data: "{{ pranata_postgres_password }}"
+        - name: pranata-database-url
+          data: postgres://pranata:{{ pranata_postgres_password | urlencode }}@postgres:5432/pranata
+
+    - name: Write the quadlets
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "{{ pranata_home }}/.config/containers/systemd/{{ item }}"
+        mode: "0600"
+      loop: [pranata.network, postgres.container, api.container, web.container, caddy.container]
+      register: pranata_quadlets
+
+    - name: Write the socket that hands Caddy ports 80 and 443
+      ansible.builtin.copy:
+        src: caddy.socket
+        dest: "{{ pranata_home }}/.config/systemd/user/caddy.socket"
+        mode: "0600"
+      register: pranata_socket
+
+    - name: Write the Caddyfile
+      ansible.builtin.template:
+        src: Caddyfile.j2
+        dest: "{{ pranata_home }}/.config/pranata/Caddyfile"
+        mode: "0600"
+        validate: podman run --rm -v %s:/Caddyfile:ro {{ pranata_caddy_image }} caddy validate --config /Caddyfile
+      register: pranata_caddyfile
+
+    - name: Find the services whose definition changed
+      ansible.builtin.set_fact:
+        pranata_restart: >-
+          {{ pranata_quadlets.results | selectattr('changed') | map(attribute='item')
+             | map('regex_replace', '\.container$', '.service') | list
+             + (['caddy.service'] if pranata_caddyfile is changed or pranata_socket is changed else []) }}
+
+    - name: Generate the services from the quadlets
+      ansible.builtin.systemd_service:
+        scope: user
+        daemon_reload: true
+      when: pranata_quadlets is changed or pranata_socket is changed
+
+    - name: Start PostgreSQL
+      ansible.builtin.systemd_service:
+        name: postgres.service
+        scope: user
+        state: "{{ 'restarted' if 'postgres.service' in pranata_restart else 'started' }}"
+
+    # Forward-only and a no-op when the schema is current; the API refuses to start without it.
+    - name: Migrate the database
+      ansible.builtin.command:
+        argv: "{{ pranata_cli + ['migrate'] }}"
+      changed_when: false
+
+    - name: Check whether the Installation was bootstrapped
+      ansible.builtin.stat:
+        path: "{{ pranata_bootstrapped }}"
+      register: pranata_bootstrap_marker
+
+    - name: Bootstrap the Installation
+      when: not pranata_bootstrap_marker.stat.exists
+      block:
+        - name: Set the Village Code
+          ansible.builtin.command:
+            argv: "{{ pranata_cli + ['village', 'set-code', pranata_village_code] }}"
+          changed_when: true
+
+        - name: Seed the synthetic demo content
+          ansible.builtin.command:
+            argv: "{{ pranata_cli + ['seed'] }}"
+          changed_when: true
+          when: pranata_seed_demo
+
+        - name: Create the first Administrator
+          ansible.builtin.command:
+            argv: "{{ pranata_cli + ['user', 'create', '--admin', pranata_administrator_username] }}"
+          changed_when: true
+          register: pranata_administrator
+
+        # Printed before anything else can fail: a lost link takes `pranata user reset` to replace.
+        - name: Print the first Administrator's Access Link
+          ansible.builtin.debug:
+            msg: "{{ pranata_administrator.stdout }}"
+
+        - name: Record the bootstrap
+          ansible.builtin.file:
+            path: "{{ pranata_bootstrapped }}"
+            state: touch
+            mode: "0600"
+
+    - name: Listen on ports 80 and 443
+      ansible.builtin.systemd_service:
+        name: caddy.socket
+        scope: user
+        enabled: true
+        state: started
+
+    - name: Start the API, the web app and Caddy
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        scope: user
+        state: "{{ 'restarted' if item in pranata_restart else 'started' }}"
+      loop: [api.service, web.service, caddy.service]
