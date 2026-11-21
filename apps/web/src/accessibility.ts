@@ -3,9 +3,10 @@
 
 export const switches = ['contrast', 'solid', 'underline', 'spacing'] as const;
 export type Switch = (typeof switches)[number];
-export type Settings = { size?: string } & { [key in Switch]?: boolean };
+export type Settings = { size?: TextSize } & { [key in Switch]?: boolean };
 
 export const textSizes = ['87.5%', '100%', '112.5%', '125%'] as const;
+export type TextSize = (typeof textSizes)[number];
 
 const key = 'a11y';
 
