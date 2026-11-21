@@ -87,6 +87,9 @@ function Complaints() {
                 </Link>
               ))}
             </nav>
+            <Link to="/admin/pengaduan/topik" className={buttonVariants({ variant: 'outline' })}>
+              Kelola topik
+            </Link>
           </div>
           {complaints.length === 0 ? (
             <p className="text-muted-foreground">Tidak ada pengaduan.</p>
