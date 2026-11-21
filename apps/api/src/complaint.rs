@@ -381,6 +381,8 @@ pub struct ComplaintDetail {
     phone: Option<String>,
     /// Oldest first.
     responses: Vec<StaffComplaintResponse>,
+    /// Whether the reading User holds `complaint.handle`, to answer, close or reject it.
+    can_handle: bool,
 }
 
 /// A Complaint Response to post.
@@ -495,6 +497,7 @@ pub(crate) async fn get(
         name: complaint.name,
         phone: complaint.phone,
         responses,
+        can_handle: session.holds(Permission::ComplaintHandle),
     }))
 }
 

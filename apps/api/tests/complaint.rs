@@ -408,6 +408,7 @@ async fn a_reader_sees_the_queue_and_the_sender_without_writing_audit_entries(po
     assert_eq!(reply.body["name"], "Warga");
     assert_eq!(reply.body["phone"], "08123456789");
     assert_eq!(reply.body["responses"], json!([]));
+    assert_eq!(reply.body["canHandle"], false, "a reader may not answer");
 
     let reply = app
         .call(
@@ -506,6 +507,7 @@ async fn responses_appear_on_the_status_page_and_start_the_handling(pool: PgPool
         detail["state"], "in_progress",
         "answering starts the handling"
     );
+    assert_eq!(detail["canHandle"], true);
     assert_eq!(detail["responses"][0]["text"], "Kami cek besok.");
     assert_eq!(detail["responses"][0]["author"], "handler");
     let status = status_of(&app, "203.0.113.22", &code).await.body;
