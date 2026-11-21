@@ -2241,7 +2241,7 @@ dependencies = [
 
 [[package]]
 name = "pranata"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "argon2 0.6.0",
