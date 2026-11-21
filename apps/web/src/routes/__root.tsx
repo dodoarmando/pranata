@@ -1,3 +1,4 @@
+import geist from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url';
 import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { getVillage, type Village } from '../api/generated';
@@ -21,6 +22,10 @@ export const Route = createRootRoute({
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { title: 'Pranata' },
+    ],
+    // The same hashed file styles.css names, fetched before the stylesheet asks for it.
+    links: [
+      { rel: 'preload', href: geist, as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' },
     ],
   }),
   loader: () => fetchVillage(),
