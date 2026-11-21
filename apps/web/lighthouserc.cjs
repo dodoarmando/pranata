@@ -31,7 +31,7 @@ module.exports = {
       url: [
         `${origin}/`,
         `${origin}/berita`,
-        // The seed's long article.
+        // The seed's long News Post.
         `${origin}/berita/musyawarah-desa-menyepakati-rencana-kerja-tahun-depan`,
         `${origin}/pengaduan`,
         `${origin}/pengaduan/status/${code}`,
