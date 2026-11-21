@@ -61,11 +61,12 @@
         mode: "0600"
       register: pranata_socket
 
-    - name: Write the Caddyfile
+    # No mode: with validate, Ansible chmods its temporary copy, which the SSH user owns, so the
+    # pranata user gets EPERM. The 0700 directory keeps the file private anyway.
+    - name: Write the Caddyfile # noqa: risky-file-permissions
       ansible.builtin.template:
         src: Caddyfile.j2
         dest: "{{ pranata_home }}/.config/pranata/Caddyfile"
-        mode: "0600"
         validate: podman run --rm -v %s:/Caddyfile:ro {{ pranata_caddy_image }} caddy validate --config /Caddyfile
       register: pranata_caddyfile
 
