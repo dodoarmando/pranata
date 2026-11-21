@@ -18,7 +18,17 @@
 # Keyslot 0 holds the fallback passphrase, typed at the console or over SSH when Tang is down.
 - name: Encrypt the data device with LUKS2
   ansible.builtin.command:
-    argv: [cryptsetup, luksFormat, --batch-mode, --type, luks2, --key-file, "-", "{{ pranata_data_device }}"]
+    argv:
+      [
+        cryptsetup,
+        luksFormat,
+        --batch-mode,
+        --type,
+        luks2,
+        --key-file,
+        "-",
+        "{{ pranata_data_device }}",
+      ]
     stdin: "{{ pranata_luks_passphrase }}"
     stdin_add_newline: false
   no_log: true
