@@ -324,6 +324,18 @@ fn ensure(session: &Session, permission: Permission) -> Result<(), ApiError> {
     }
 }
 
+/// How many Complaints are New, for the menu badge and the dashboard; `None` without
+/// `complaint.read`.
+pub(crate) async fn count_new(pool: &PgPool, session: &Session) -> sqlx::Result<Option<i64>> {
+    if !session.holds(Permission::ComplaintRead) {
+        return Ok(None);
+    }
+    sqlx::query_scalar!(r#"SELECT count(*) AS "count!" FROM complaints WHERE state = 'new'"#)
+        .fetch_one(pool)
+        .await
+        .map(Some)
+}
+
 #[derive(Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct ComplaintFilter {

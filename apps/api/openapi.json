@@ -7680,6 +7680,14 @@
           },
           "missingVillageData": {
             "$ref": "#/components/schemas/MissingVillageData"
+          },
+          "newComplaints": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Pengaduan baru: how many Complaints are New; null without `complaint.read`."
           }
         }
       },
@@ -8464,6 +8472,14 @@
           "role"
         ],
         "properties": {
+          "newComplaints": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "How many Complaints are New, for the menu badge; null without `complaint.read`."
+          },
           "role": {
             "type": "string",
             "description": "The name of the User's Role."

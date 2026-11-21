@@ -608,6 +608,11 @@ export interface Dashboard {
      */
   endingAnnouncements?: EndingAnnouncement[] | null;
   missingVillageData: MissingVillageData;
+  /**
+     * Pengaduan baru: how many Complaints are New; null without `complaint.read`.
+     * @nullable
+     */
+  newComplaints?: number | null;
 }
 
 /**
@@ -1029,6 +1034,11 @@ export type Institution = InstitutionFields & {
 };
 
 export interface Me {
+  /**
+     * How many Complaints are New, for the menu badge; null without `complaint.read`.
+     * @nullable
+     */
+  newComplaints?: number | null;
   /** The name of the User's Role. */
   role: string;
   username: string;

@@ -791,3 +791,30 @@ async fn the_last_active_topic_stays_active(pool: PgPool) {
     let reply = app.call("DELETE", &path, None, Some(&handler)).await;
     assert_eq!(reply.status, StatusCode::CONFLICT);
 }
+
+#[sqlx::test]
+async fn the_dashboard_and_the_menu_count_new_complaints_for_readers(pool: PgPool) {
+    let (app, _) = village(&pool).await;
+    let (first, _) = received(&app, &pool, "203.0.113.26").await;
+    received(&app, &pool, "203.0.113.26").await;
+    let reader = app
+        .user_with(&pool, "reader", &["complaint.read", "complaint.handle"])
+        .await;
+    let writer = app.user_with(&pool, "writer", &["content.write"]).await;
+    let reply = app
+        .call(
+            "PUT",
+            &format!("/complaints/{first}/state"),
+            Some(&json!({ "state": "in_progress" })),
+            Some(&reader),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT);
+
+    for path in ["/dashboard", "/auth/me"] {
+        let reply = app.call("GET", path, None, Some(&reader)).await;
+        assert_eq!(reply.body["newComplaints"], 1, "{path}");
+        let reply = app.call("GET", path, None, Some(&writer)).await;
+        assert_eq!(reply.body["newComplaints"], Value::Null, "{path}");
+    }
+}
