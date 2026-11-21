@@ -290,6 +290,7 @@ function HomePage() {
                   alt={partner.name}
                   width={160}
                   height={64}
+                  sizes="10rem"
                   loading="lazy"
                   className="h-16 w-40 object-contain"
                 />

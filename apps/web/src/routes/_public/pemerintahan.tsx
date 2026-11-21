@@ -72,6 +72,7 @@ function GovernmentPage() {
                     alt={official.photoAlt ?? ''}
                     width={480}
                     height={600}
+                    sizes="(min-width: 1024px) 18rem, (min-width: 640px) 33vw, 50vw"
                     loading="lazy"
                     className="aspect-4/5 w-full object-cover"
                   />
@@ -138,6 +139,7 @@ function GovernmentPage() {
                       alt={`Logo ${institution.name}`}
                       width={48}
                       height={48}
+                      sizes="3rem"
                       loading="lazy"
                       className="size-12 object-contain"
                     />

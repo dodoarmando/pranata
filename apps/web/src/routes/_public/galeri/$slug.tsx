@@ -63,7 +63,8 @@ function AlbumPage() {
                   alt={photo.alt}
                   width={480}
                   height={320}
-                  loading={index < 3 ? 'eager' : 'lazy'}
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                  fetchPriority={index === 0 ? 'high' : 'auto'}
                   className="aspect-3/2 w-full rounded-md object-cover"
                 />
               </a>

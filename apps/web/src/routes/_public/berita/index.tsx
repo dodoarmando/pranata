@@ -105,6 +105,7 @@ function NewsList() {
                     width={480}
                     height={270}
                     loading={index === 0 ? 'eager' : 'lazy'}
+                    fetchPriority={index === 0 ? 'high' : 'auto'}
                     className="aspect-video w-full object-cover"
                   />
                   <div className="grid gap-2 p-5">
