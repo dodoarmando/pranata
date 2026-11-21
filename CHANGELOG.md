@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/dodoarmando/pranata/compare/v0.2.0...v0.3.0) (2026-11-21)
+
+
+### Features
+
+* **infra:** encrypt the data volume at rest with LUKS2 and Tang ([1655587](https://github.com/dodoarmando/pranata/commit/165558792d4cbf3e1c3e839b3091dce528724358)), closes [#60](https://github.com/dodoarmando/pranata/issues/60)
+
 ## [0.2.0](https://github.com/dodoarmando/pranata/compare/v0.1.0...v0.2.0) (2026-11-21)
 
 
