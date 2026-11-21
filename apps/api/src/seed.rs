@@ -5,7 +5,7 @@
 //! It goes through the HTTP API in process, signed in as a User of its own, so every rule a
 //! publisher meets applies to it too.
 
-use std::{fmt::Write, io::Cursor, path::Path};
+use std::{io::Cursor, path::Path};
 
 use anyhow::{Context, bail, ensure};
 use axum::{
@@ -16,9 +16,10 @@ use axum::{
 use chrono::{Days, NaiveDateTime, NaiveTime, Utc};
 use image::{ImageFormat, Rgb, RgbImage};
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use tower::ServiceExt;
+
+use crate::public_form::{find_number, hex};
 
 /// The User the content is written as; its password is random and thrown away.
 const USERNAME: &str = "redaksi";
@@ -141,8 +142,7 @@ async fn complaint(api: &Api) -> anyhow::Result<String> {
     let challenge = api.get("/public-form/challenge").await?;
     let salt = text(&challenge["salt"])?;
     let max = challenge["maxNumber"].as_u64().context("maxNumber")?;
-    let number = (0..=max)
-        .find(|n| hex(&Sha256::digest(format!("{salt}{n}"))) == challenge["challenge"])
+    let number = find_number(salt, text(&challenge["challenge"])?, u32::try_from(max)?)
         .context("the challenge has no solution")?;
     let reply = api
         .send(
@@ -250,13 +250,6 @@ fn text(value: &Value) -> anyhow::Result<&str> {
         .with_context(|| format!("expected a string, got {value}"))
 }
 
-fn hex(bytes: &[u8]) -> String {
-    bytes.iter().fold(String::new(), |mut hex, byte| {
-        _ = write!(hex, "{byte:02x}");
-        hex
-    })
-}
-
 /// A JPEG of a hilly landscape, varied by `seed`, with grain so it weighs what a photo does.
 fn photo(width: u32, height: u32, seed: usize) -> Vec<u8> {
     let shift = f64::from(u32::try_from(seed % 7).unwrap_or(0));
@@ -311,14 +304,14 @@ fn short_body(title: &str) -> Value {
     ]})
 }
 
-/// About 1,500 words over headings, lists, a quote and a table: the long article `perf`
+/// About 1,500 words over headings, lists, a quote and a table: the long News Post `perf`
 /// measures.
 fn long_body() -> Value {
-    let lorem = "Musyawarah desa membahas rencana kerja tahun depan secara terbuka. Setiap dusun \
+    let minutes = "Musyawarah desa membahas rencana kerja tahun depan secara terbuka. Setiap dusun \
         menyampaikan usulan yang telah dibahas di tingkat RT dan RW, lalu usulan itu disusun \
         menurut prioritas: kebutuhan dasar, pelayanan umum, dan pengembangan ekonomi warga. \
         Badan Permusyawaratan Desa mencatat setiap keputusan agar dapat diawasi bersama.";
-    let mut content = vec![paragraph(lorem)];
+    let mut content = vec![paragraph(minutes)];
     for section in [
         "Latar belakang",
         "Usulan dari dusun",
@@ -328,7 +321,7 @@ fn long_body() -> Value {
         content.push(json!({ "type": "heading", "attrs": { "level": 2 },
             "content": [{ "type": "text", "text": section }] }));
         for _ in 0..4 {
-            content.push(paragraph(lorem));
+            content.push(paragraph(minutes));
         }
         content.push(json!({ "type": "bulletList", "content": [
             { "type": "listItem", "content": [paragraph("Perbaikan saluran air di dua dusun")] },
@@ -346,7 +339,7 @@ fn long_body() -> Value {
         { "type": "tableRow", "content": [cell("tableCell", "Pemberdayaan"), cell("tableCell", "8")] },
         { "type": "tableRow", "content": [cell("tableCell", "Pelayanan"), cell("tableCell", "5")] },
     ]}));
-    content.push(paragraph(lorem));
+    content.push(paragraph(minutes));
     json!({ "type": "doc", "content": content })
 }
 
