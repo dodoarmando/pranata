@@ -15,3 +15,6 @@ playwright-report/
 
 # Lighthouse CI reports from `just perf`.
 .lighthouseci/
+
+# Collections ansible-lint installs for `just check-infra`.
+infra/.ansible/
