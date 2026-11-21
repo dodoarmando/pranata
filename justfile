@@ -42,7 +42,7 @@ gen:
     cargo run -q -p pranata -- openapi > apps/api/openapi.json
     cd apps/web && bun run gen
 
-# Every required CI job except perf
+# Every required CI job except perf, which runs as `just perf`
 check: check-commits check-api check-web check-contract images e2e
 
 # Run all tests
@@ -109,3 +109,40 @@ e2e-run: db-up
     cd apps/web
     bunx playwright install chromium
     bun run e2e
+
+# CI job `perf`: Lighthouse CI on the production images with the demo seed (not part of `check`)
+perf: images perf-run
+
+# Run Lighthouse CI on images already built (CI loads them from `images`)
+perf-run:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # A throwaway database and files volume, since the seed only fills an empty Installation.
+    db=postgres://postgres@127.0.0.1:55433/pranata
+    # Caddy fronts the web app on https://localhost:13443, as on an Installation.
+    origin=https://localhost:13443
+    api=(--network host -v pranata-perf-files:/var/lib/pranata/files -e DATABASE_URL=$db
+        -e PRANATA_LISTEN=127.0.0.1:18081 -e PRANATA_PUBLIC_ORIGIN=$origin)
+    web=(--network host -e HOST=127.0.0.1 -e PORT=13001 -e PRANATA_API_URL=http://127.0.0.1:18081 -e PRANATA_PUBLIC_ORIGIN=$origin)
+    cleanup() {
+        if [ "$1" -ne 0 ]; then podman logs pranata-perf-api; podman logs pranata-perf-web; fi || true
+        podman rm -fi -t 0 pranata-perf-caddy pranata-perf-api pranata-perf-web pranata-perf-db >/dev/null
+        podman volume rm -f pranata-perf-files >/dev/null
+    }
+    trap 'cleanup $?' EXIT
+    podman run -d --name pranata-perf-db -p 127.0.0.1:55433:5432 -e POSTGRES_DB=pranata \
+        -e POSTGRES_HOST_AUTH_METHOD=trust docker.io/library/postgres:18 >/dev/null
+    # Over TCP: during first start the init server answers on the socket only, then restarts.
+    until podman exec pranata-perf-db pg_isready -q -h 127.0.0.1 -d pranata; do sleep 0.5; done
+    podman run --rm "${api[@]}" pranata-api:local migrate
+    podman run --rm "${api[@]}" pranata-api:local village set-code 1101012001
+    PRANATA_PERF_COMPLAINT_CODE=$(podman run --rm "${api[@]}" pranata-api:local seed)
+    export PRANATA_PERF_COMPLAINT_CODE
+    podman run -d --name pranata-perf-api "${api[@]}" pranata-api:local
+    podman run -d --name pranata-perf-web "${web[@]}" pranata-web:local
+    podman run -d --name pranata-perf-caddy --network host \
+        -v "$PWD/apps/web/lighthouse.Caddyfile:/etc/caddy/Caddyfile:ro,Z" docker.io/library/caddy:2.11.9 >/dev/null
+    timeout 60 bash -c 'until curl -sfo /dev/null http://127.0.0.1:18081/healthz && curl -skfo /dev/null https://localhost:13443/; do sleep 0.5; done'
+    cd apps/web
+    bunx playwright install chromium
+    bunx lhci autorun --config=lighthouserc.cjs

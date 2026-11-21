@@ -1,0 +1,13 @@
+# The `perf` job's stand-in for the Installation's Caddy: HTTP/2 over TLS and the same
+# compression, so Lighthouse measures transfer as production serves it. Keep it in step with
+# the Caddyfile in infra/ once that exists.
+{
+	auto_https disable_redirects
+	skip_install_trust
+}
+
+localhost:13443 {
+	tls internal
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:13001
+}

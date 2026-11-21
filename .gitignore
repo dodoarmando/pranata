@@ -12,3 +12,6 @@ dist/
 # Playwright output
 test-results/
 playwright-report/
+
+# Lighthouse CI reports from `just perf`.
+.lighthouseci/
