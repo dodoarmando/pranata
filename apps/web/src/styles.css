@@ -233,3 +233,35 @@
   outline: 2px solid var(--pri);
   outline-offset: 2px;
 }
+
+/* The accessibility panel's settings, which accessibility.ts sets on <html>. */
+.a11y-contrast {
+  --fg: #000;
+  --muted-fg: #333;
+  --border: #767676;
+}
+
+.a11y-underline :is(main, footer) a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.a11y-spacing body {
+  line-height: 1.8;
+  letter-spacing: 0.03em;
+  word-spacing: 0.12em;
+}
+
+.a11y-spacing :is(p, li, dd, h3, blockquote) {
+  line-height: 1.8;
+}
+
+:is(.a11y-solid, .a11y-contrast) .backdrop::before {
+  display: none;
+}
+
+:is(.a11y-solid, .a11y-contrast) .glass {
+  background-color: #fff;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}

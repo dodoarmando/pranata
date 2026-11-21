@@ -1,6 +1,7 @@
 import geist from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url';
 import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
+import { applySavedSettings } from '../accessibility';
 import { getVillage, type Village } from '../api/generated';
 import '../styles.css';
 
@@ -16,15 +17,23 @@ const fetchVillage = createServerFn({ method: 'GET' }).handler(
   },
 );
 
+// The head script's CSP source; computed once, as the script never changes at runtime.
+let scriptHash: Promise<string> | undefined;
+const hashOf = async (script: string) => {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(script));
+  return `'sha256-${btoa(String.fromCharCode(...new Uint8Array(digest)))}'`;
+};
+
 export const Route = createRootRoute({
-  // Scripts run only from this origin and, for the framework's inline ones, by the request's
-  // nonce.
-  headers: ({ ssr }) =>
-    ssr?.nonce
-      ? {
-          'Content-Security-Policy': `script-src 'self' 'nonce-${ssr.nonce}'; object-src 'none'; base-uri 'none'`,
-        }
-      : undefined,
+  // Scripts run only from this origin, the framework's own inline ones by the request's
+  // nonce, and the accessibility head script by its hash.
+  headers: async ({ ssr }) => {
+    if (!ssr?.nonce) return;
+    scriptHash ??= hashOf(applySavedSettings);
+    return {
+      'Content-Security-Policy': `script-src 'self' 'nonce-${ssr.nonce}' ${await scriptHash}; object-src 'none'; base-uri 'none'`,
+    };
+  },
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
@@ -42,8 +51,11 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <html lang="id">
+    // The head script sets the saved accessibility classes and font size before hydration.
+    <html lang="id" suppressHydrationWarning>
       <head>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: a constant, allowed by its CSP hash */}
+        <script dangerouslySetInnerHTML={{ __html: applySavedSettings }} />
         <HeadContent />
       </head>
       <body>

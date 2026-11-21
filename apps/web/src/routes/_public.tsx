@@ -4,6 +4,7 @@ import { ChevronDown } from 'lucide-react';
 import type { MouseEvent } from 'react';
 import { publicOrigin } from '../api/fetch';
 import { getHomeHero, listPublishedPages, type PageLink, type PageMenu } from '../api/generated';
+import { AccessibilityPanel } from '../components/accessibility-panel';
 import { VillageLogo } from '../components/village-logo';
 import { pageMenus } from '../page';
 import type { Site } from '../seo';
@@ -197,6 +198,7 @@ function PublicLayout() {
           </div>
         </div>
       </footer>
+      <AccessibilityPanel />
     </div>
   );
 }
