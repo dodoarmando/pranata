@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE complaints SET state = $1, rejection_reason = $2 WHERE id = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "complaint_state",
+            "kind": {
+              "Enum": ["new", "in_progress", "closed", "rejected"]
+            }
+          }
+        },
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "29e205ae1eac8e0bd7231888cec8bc8eb6532df9255c31266a43e493a7035365"
+}

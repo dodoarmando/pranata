@@ -396,6 +396,54 @@ export interface ComplaintCode {
 }
 
 /**
+ * One Complaint Response as staff see it.
+ */
+export interface StaffComplaintResponse {
+  at: string;
+  /** The username of the User who posted it. */
+  author: string;
+  text: string;
+}
+
+/**
+ * Where a Complaint stands.
+ */
+export type ComplaintState = typeof ComplaintState[keyof typeof ComplaintState];
+
+
+export const ComplaintState = {
+  new: 'new',
+  in_progress: 'in_progress',
+  closed: 'closed',
+  rejected: 'rejected',
+} as const;
+
+/**
+ * A Complaint as staff see it, with what the sender left to be reached by.
+ */
+export interface ComplaintDetail {
+  code: string;
+  /**
+     * The name of the sender's Hamlet.
+     * @nullable
+     */
+  hamlet?: string | null;
+  id: string;
+  /** @nullable */
+  name?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  rejectionReason?: string | null;
+  /** Oldest first. */
+  responses: StaffComplaintResponse[];
+  state: ComplaintState;
+  submittedAt: string;
+  text: string;
+  topic: string;
+}
+
+/**
  * What the public Complaint form offers.
  */
 export interface ComplaintForm {
@@ -416,17 +464,18 @@ export interface ComplaintResponse {
 }
 
 /**
- * Where a Complaint stands.
+ * Where to move a Complaint.
  */
-export type ComplaintState = typeof ComplaintState[keyof typeof ComplaintState];
-
-
-export const ComplaintState = {
-  new: 'new',
-  in_progress: 'in_progress',
-  closed: 'closed',
-  rejected: 'rejected',
-} as const;
+export interface ComplaintStateChange {
+  /** `in_progress` from `new`; `closed` or `rejected` from either. */
+  state: ComplaintState;
+  /**
+     * For `closed`, the final Complaint Response; for `rejected`, the reason; 1–2,000
+     * characters either way.
+     * @nullable
+     */
+  text?: string | null;
+}
 
 /**
  * A Complaint as its sender sees it; never the name, phone or Hamlet.
@@ -438,6 +487,17 @@ export interface ComplaintStatus {
   responses: ComplaintResponse[];
   state: ComplaintState;
   submittedAt: string;
+  topic: string;
+}
+
+/**
+ * A Complaint in the staff queue.
+ */
+export interface ComplaintSummary {
+  id: string;
+  state: ComplaintState;
+  submittedAt: string;
+  text: string;
   topic: string;
 }
 
@@ -992,6 +1052,14 @@ export interface NewComplaint {
      * @nullable
      */
   website?: string | null;
+}
+
+/**
+ * A Complaint Response to post.
+ */
+export interface NewComplaintResponse {
+  /** 1–2,000 characters, shown to the sender on the status page. */
+  text: string;
 }
 
 /**
@@ -1939,6 +2007,21 @@ export type ExportAuditEntriesParams = {
   /** Only entries older than this one, such as the `next` of the previous page. */
   before?: string;
 };
+
+export type ListComplaintsParams = {
+  /** Where a Complaint stands. */
+  state?: ListComplaintsState;
+};
+
+export type ListComplaintsState = typeof ListComplaintsState[keyof typeof ListComplaintsState];
+
+
+export const ListComplaintsState = {
+  new: 'new',
+  in_progress: 'in_progress',
+  closed: 'closed',
+  rejected: 'rejected',
+} as const;
 
 export type ListPastEventsParams = {
   /**
@@ -4628,6 +4711,63 @@ export const deleteCategory = async (id: string, options?: Parameters<typeof api
 
 
 
+export type listComplaintsResponse200 = {
+  data: ComplaintSummary[]
+  status: 200
+}
+
+export type listComplaintsResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listComplaintsResponse403 = {
+  data: void
+  status: 403
+}
+
+export type listComplaintsResponseSuccess = (listComplaintsResponse200) & {
+  headers: Headers;
+};
+export type listComplaintsResponseError = (listComplaintsResponse401 | listComplaintsResponse403) & {
+  headers: Headers;
+};
+
+export type listComplaintsResponse = (listComplaintsResponseSuccess | listComplaintsResponseError)
+
+export const getListComplaintsUrl = (params?: ListComplaintsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/complaints?${stringifiedParams}` : `/complaints`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `complaint.read`.
+ * @summary Every Complaint, or those in one state, the latest first.
+ */
+export const listComplaints = async (params?: ListComplaintsParams, options?: Parameters<typeof apiFetch>[1]): Promise<listComplaintsResponse> => {
+
+  return apiFetch<listComplaintsResponse>(getListComplaintsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
 export type submitComplaintResponse201 = {
   data: ComplaintCode
   status: 201
@@ -4766,6 +4906,199 @@ export const getComplaintStatus = async (code: string, options?: Parameters<type
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type getComplaintResponse200 = {
+  data: ComplaintDetail
+  status: 200
+}
+
+export type getComplaintResponse401 = {
+  data: void
+  status: 401
+}
+
+export type getComplaintResponse403 = {
+  data: void
+  status: 403
+}
+
+export type getComplaintResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getComplaintResponseSuccess = (getComplaintResponse200) & {
+  headers: Headers;
+};
+export type getComplaintResponseError = (getComplaintResponse401 | getComplaintResponse403 | getComplaintResponse404) & {
+  headers: Headers;
+};
+
+export type getComplaintResponse = (getComplaintResponseSuccess | getComplaintResponseError)
+
+export const getGetComplaintUrl = (id: string,) => {
+
+
+
+
+  return `/complaints/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `complaint.read`, `404` for an unknown
+ * Complaint.
+ * @summary One Complaint with its sender's Hamlet, name and phone and every Response.
+ */
+export const getComplaint = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<getComplaintResponse> => {
+
+  return apiFetch<getComplaintResponse>(getGetComplaintUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type respondToComplaintResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type respondToComplaintResponse401 = {
+  data: void
+  status: 401
+}
+
+export type respondToComplaintResponse403 = {
+  data: void
+  status: 403
+}
+
+export type respondToComplaintResponse404 = {
+  data: void
+  status: 404
+}
+
+export type respondToComplaintResponse409 = {
+  data: void
+  status: 409
+}
+
+export type respondToComplaintResponse422 = {
+  data: void
+  status: 422
+}
+
+export type respondToComplaintResponseSuccess = (respondToComplaintResponse201) & {
+  headers: Headers;
+};
+export type respondToComplaintResponseError = (respondToComplaintResponse401 | respondToComplaintResponse403 | respondToComplaintResponse404 | respondToComplaintResponse409 | respondToComplaintResponse422) & {
+  headers: Headers;
+};
+
+export type respondToComplaintResponse = (respondToComplaintResponseSuccess | respondToComplaintResponseError)
+
+export const getRespondToComplaintUrl = (id: string,) => {
+
+
+
+
+  return `/complaints/${id}/responses`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `complaint.handle`, `404` for an unknown
+ * Complaint, `409` once it is Closed or Rejected, `422` for a blank or overlong text.
+ * @summary Posts a Complaint Response, which the sender sees on the status page and nobody edits; a New
+Complaint moves to `InProgress` with it.
+ */
+export const respondToComplaint = async (id: string,
+    newComplaintResponse: NewComplaintResponse, options?: Parameters<typeof apiFetch>[1]): Promise<respondToComplaintResponse> => {
+
+  return apiFetch<respondToComplaintResponse>(getRespondToComplaintUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(newComplaintResponse)
+  }
+);}
+
+
+
+export type changeComplaintStateResponse204 = {
+  data: void
+  status: 204
+}
+
+export type changeComplaintStateResponse401 = {
+  data: void
+  status: 401
+}
+
+export type changeComplaintStateResponse403 = {
+  data: void
+  status: 403
+}
+
+export type changeComplaintStateResponse404 = {
+  data: void
+  status: 404
+}
+
+export type changeComplaintStateResponse409 = {
+  data: void
+  status: 409
+}
+
+export type changeComplaintStateResponse422 = {
+  data: void
+  status: 422
+}
+
+export type changeComplaintStateResponseSuccess = (changeComplaintStateResponse204) & {
+  headers: Headers;
+};
+export type changeComplaintStateResponseError = (changeComplaintStateResponse401 | changeComplaintStateResponse403 | changeComplaintStateResponse404 | changeComplaintStateResponse409 | changeComplaintStateResponse422) & {
+  headers: Headers;
+};
+
+export type changeComplaintStateResponse = (changeComplaintStateResponseSuccess | changeComplaintStateResponseError)
+
+export const getChangeComplaintStateUrl = (id: string,) => {
+
+
+
+
+  return `/complaints/${id}/state`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `complaint.handle`, `404` for an unknown
+ * Complaint, `409` for a move its state does not allow, `422` for `new`, or a missing, blank
+ * or overlong text.
+ * @summary Moves a Complaint: a New one to `InProgress`; an open one to Closed with a final Complaint
+Response, or to Rejected with a reason. Closed and Rejected are final.
+ */
+export const changeComplaintState = async (id: string,
+    complaintStateChange: ComplaintStateChange, options?: Parameters<typeof apiFetch>[1]): Promise<changeComplaintStateResponse> => {
+
+  return apiFetch<changeComplaintStateResponse>(getChangeComplaintStateUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(complaintStateChange)
   }
 );}
 
