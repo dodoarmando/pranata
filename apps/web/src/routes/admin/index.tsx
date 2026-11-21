@@ -64,6 +64,20 @@ function Dashboard() {
               {dashboard.activeUsers}
             </p>
           </Card>
+          {dashboard.newComplaints != null && (
+            <Card role="region" aria-labelledby="new-complaints" className="gap-1 px-5 py-5">
+              <h2 id="new-complaints" className="text-muted-foreground">
+                Pengaduan baru
+              </h2>
+              <Link
+                to="/admin/pengaduan"
+                search={{ state: 'new' }}
+                className="text-[1.625rem] leading-tight font-semibold tracking-tight underline-offset-4 hover:underline"
+              >
+                {dashboard.newComplaints}
+              </Link>
+            </Card>
+          )}
           <Card
             role="region"
             aria-labelledby="missing-village-data"

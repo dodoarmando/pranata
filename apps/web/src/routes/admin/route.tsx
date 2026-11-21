@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { Fragment, useState } from 'react';
 import { getMe, type Me, signOut } from '../../api/generated';
+import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '../../components/ui/sheet';
 import { VillageLogo } from '../../components/village-logo';
@@ -148,6 +149,12 @@ function AdminShell() {
             >
               <entry.icon aria-hidden="true" />
               {entry.label}
+              {entry.to === '/admin/pengaduan' && !!me.newComplaints && (
+                <Badge className="ml-auto">
+                  {me.newComplaints}
+                  <span className="sr-only"> baru</span>
+                </Badge>
+              )}
             </Link>
           </Fragment>
         ))}
