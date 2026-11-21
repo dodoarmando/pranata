@@ -17,6 +17,14 @@ const fetchVillage = createServerFn({ method: 'GET' }).handler(
 );
 
 export const Route = createRootRoute({
+  // Scripts run only from this origin and, for the framework's inline ones, by the request's
+  // nonce.
+  headers: ({ ssr }) =>
+    ssr?.nonce
+      ? {
+          'Content-Security-Policy': `script-src 'self' 'nonce-${ssr.nonce}'; object-src 'none'; base-uri 'none'`,
+        }
+      : undefined,
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
