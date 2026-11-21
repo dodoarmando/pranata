@@ -29,7 +29,7 @@ async fn signing_in_starts_a_session_that_signing_out_ends(pool: PgPool) {
     assert_eq!(me.status, StatusCode::OK);
     assert_eq!(
         me.body,
-        json!({ "username": "admin", "role": "Administrator" })
+        json!({ "username": "admin", "role": "Administrator", "newComplaints": 0 })
     );
 
     let sign_out = app.call("POST", "/auth/sign-out", None, Some(cookie)).await;

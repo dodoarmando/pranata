@@ -17,6 +17,7 @@ use uuid::Uuid;
 use crate::{
     ApiError,
     audit::{self, Actor},
+    complaint,
     password::{self, PasswordProblem, Verdict},
     role::Permission,
     throttle::Throttle,
@@ -486,10 +487,13 @@ pub async fn sign_out(
 }
 
 #[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Me {
     username: String,
     /// The name of the User's Role.
     role: String,
+    /// How many Complaints are New, for the menu badge; null without `complaint.read`.
+    new_complaints: Option<i64>,
 }
 
 /// The signed-in User.
@@ -506,11 +510,13 @@ pub struct Me {
         (status = UNAUTHORIZED, description = "There is no live session"),
     ),
 )]
-pub async fn me(session: Session) -> Json<Me> {
-    Json(Me {
+pub async fn me(State(pool): State<PgPool>, session: Session) -> Result<Json<Me>, ApiError> {
+    let new_complaints = complaint::count_new(&pool, &session).await?;
+    Ok(Json(Me {
         username: session.username,
         role: session.role,
-    })
+        new_complaints,
+    }))
 }
 
 #[derive(Serialize, ToSchema)]

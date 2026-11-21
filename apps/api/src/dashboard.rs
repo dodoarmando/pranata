@@ -8,6 +8,7 @@ use uuid::Uuid;
 use crate::{
     ApiError, Clock,
     auth::Session,
+    complaint,
     role::Permission,
     village::{self, TimeZone},
 };
@@ -24,6 +25,8 @@ pub struct Dashboard {
     /// Pengumuman segera berakhir: Published Announcements in effect today that end within 7
     /// days, the soonest first; null for a User who may neither write nor publish content.
     ending_announcements: Option<Vec<EndingAnnouncement>>,
+    /// Pengaduan baru: how many Complaints are New; null without `complaint.read`.
+    new_complaints: Option<i64>,
 }
 
 /// What kind of website item a Draft is.
@@ -162,8 +165,10 @@ pub async fn get(
         } else {
             (None, None)
         };
+    let new_complaints = complaint::count_new(&pool, &session).await?;
     Ok(Json(Dashboard {
         active_users,
+        new_complaints,
         drafts,
         ending_announcements,
         missing_village_data: MissingVillageData {
