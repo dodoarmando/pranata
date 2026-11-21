@@ -356,6 +356,12 @@ async fn received(app: &TestApp, pool: &PgPool, ip: &str) -> (String, String) {
     (id.to_string(), code)
 }
 
+async fn topics(app: &TestApp, cookie: &str) -> Value {
+    app.call("GET", "/complaints/topics", None, Some(cookie))
+        .await
+        .body
+}
+
 async fn audit_actions(app: &TestApp, cookie: &str) -> Vec<String> {
     let reply = app
         .call(
@@ -419,12 +425,14 @@ async fn a_reader_sees_the_queue_and_the_sender_without_writing_audit_entries(po
 async fn complaints_need_their_permissions(pool: PgPool) {
     let (app, _) = village(&pool).await;
     let (id, _) = received(&app, &pool, "203.0.113.21").await;
+    let topic = id_of(&pool, "Lainnya").await;
     let writer = app
         .user_with(&pool, "writer", &["content.write", "content.publish"])
         .await;
     let reader = app.user_with(&pool, "reader", &["complaint.read"]).await;
     let text = json!({ "text": "Siap." });
     let state = json!({ "state": "in_progress" });
+    let topic_body = json!({ "name": "Air", "active": true });
 
     let reads = [
         ("GET", "/complaints".to_owned(), None),
@@ -433,6 +441,19 @@ async fn complaints_need_their_permissions(pool: PgPool) {
     let handles = [
         ("POST", format!("/complaints/{id}/responses"), Some(&text)),
         ("PUT", format!("/complaints/{id}/state"), Some(&state)),
+        ("GET", "/complaints/topics".to_owned(), None),
+        ("POST", "/complaints/topics".to_owned(), Some(&topic_body)),
+        (
+            "PUT",
+            format!("/complaints/topics/{topic}"),
+            Some(&topic_body),
+        ),
+        ("DELETE", format!("/complaints/topics/{topic}"), None),
+        (
+            "PUT",
+            "/complaints/topics/order".to_owned(),
+            Some(&json!({ "ids": [] })),
+        ),
     ];
     for (method, path, body) in reads.iter().chain(&handles) {
         let reply = app.call(method, path, *body, None).await;
@@ -628,4 +649,145 @@ async fn closing_takes_a_final_response_and_rejecting_a_reason(pool: PgPool) {
             .all(|(_, changes)| changes[0]["field"] == "state"),
         "{changes:?}"
     );
+}
+
+#[sqlx::test]
+async fn used_topics_are_deactivated_never_deleted(pool: PgPool) {
+    let (app, admin) = village(&pool).await;
+    received(&app, &pool, "203.0.113.25").await;
+    let handler = app.user_with(&pool, "handler", &["complaint.handle"]).await;
+
+    let reply = app
+        .call(
+            "POST",
+            "/complaints/topics",
+            Some(&json!({ "name": " Air Bersih ", "active": true })),
+            Some(&handler),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED);
+    let air = reply.body["id"].as_str().unwrap().to_owned();
+    for (body, status) in [
+        (
+            json!({ "name": "air bersih", "active": true }),
+            StatusCode::CONFLICT,
+        ),
+        (
+            json!({ "name": " ", "active": true }),
+            StatusCode::UNPROCESSABLE_ENTITY,
+        ),
+    ] {
+        let reply = app
+            .call("POST", "/complaints/topics", Some(&body), Some(&handler))
+            .await;
+        assert_eq!(reply.status, status, "{body}");
+    }
+    let list = topics(&app, &handler).await;
+    let last = list.as_array().unwrap().last().unwrap();
+    assert_eq!(last["name"], "Air Bersih");
+    assert_eq!(last["active"], true);
+    assert_eq!(last["used"], false);
+    assert_eq!(list[0]["name"], "Infrastruktur");
+    assert_eq!(list[0]["used"], true);
+
+    let infrastruktur = id_of(&pool, "Infrastruktur").await;
+    let reply = app
+        .call(
+            "DELETE",
+            &format!("/complaints/topics/{infrastruktur}"),
+            None,
+            Some(&handler),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::CONFLICT, "a used Topic stays");
+    let reply = app
+        .call(
+            "PUT",
+            &format!("/complaints/topics/{infrastruktur}"),
+            Some(&json!({ "name": "Jalan dan Jembatan", "active": false })),
+            Some(&handler),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT);
+    let (_, form) = app.get("/complaints/form").await;
+    assert!(!form["topics"].to_string().contains("Jalan"));
+    let reply = app
+        .call(
+            "DELETE",
+            &format!("/complaints/topics/{air}"),
+            None,
+            Some(&handler),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "an unused Topic goes");
+
+    let ids: Vec<Value> = topics(&app, &handler)
+        .await
+        .as_array()
+        .unwrap()
+        .iter()
+        .rev()
+        .map(|topic| topic["id"].clone())
+        .collect();
+    let reply = app
+        .call(
+            "PUT",
+            "/complaints/topics/order",
+            Some(&json!({ "ids": ids[1..] })),
+            Some(&handler),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
+    let reply = app
+        .call(
+            "PUT",
+            "/complaints/topics/order",
+            Some(&json!({ "ids": ids })),
+            Some(&handler),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT);
+    assert_eq!(topics(&app, &handler).await[0]["name"], "Lainnya");
+
+    let reply = app
+        .call(
+            "GET",
+            "/audit-entries?objectType=complaint_topic",
+            None,
+            Some(&admin),
+        )
+        .await;
+    let mut actions: Vec<&str> = reply.body["entries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|entry| entry["action"].as_str().unwrap())
+        .collect();
+    actions.sort_unstable();
+    assert_eq!(
+        actions,
+        [
+            "complaint_topic.create",
+            "complaint_topic.delete",
+            "complaint_topic.order",
+            "complaint_topic.update"
+        ]
+    );
+}
+
+#[sqlx::test]
+async fn the_last_active_topic_stays_active(pool: PgPool) {
+    let (app, _) = village(&pool).await;
+    sqlx::query("DELETE FROM complaint_topics WHERE name <> 'Lainnya'")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let handler = app.user_with(&pool, "handler", &["complaint.handle"]).await;
+    let lainnya = id_of(&pool, "Lainnya").await;
+    let path = format!("/complaints/topics/{lainnya}");
+    let body = json!({ "name": "Lainnya", "active": false });
+    let reply = app.call("PUT", &path, Some(&body), Some(&handler)).await;
+    assert_eq!(reply.status, StatusCode::CONFLICT);
+    let reply = app.call("DELETE", &path, None, Some(&handler)).await;
+    assert_eq!(reply.status, StatusCode::CONFLICT);
 }

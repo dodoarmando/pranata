@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO complaint_topics (name, active, sort_order)\n             SELECT $1, $2, coalesce(max(sort_order), 0) + 1 FROM complaint_topics\n             RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "complaint_topics",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Text", "Bool"]
+    },
+    "nullable": [false]
+  },
+  "hash": "107cbb2093f5c50336f9e5bb517da92f3e3892f4125f5b2034c57bf4d3a2bdaa"
+}

@@ -1997,6 +1997,202 @@
         }
       }
     },
+    "/complaints/topics": {
+      "get": {
+        "tags": [
+          "complaints"
+        ],
+        "summary": "Every Complaint Topic in order, active or not.",
+        "description": "# Errors\n`401` without a live session, `403` without `complaint.handle`.",
+        "operationId": "listComplaintTopics",
+        "responses": {
+          "200": {
+            "description": "Every Complaint Topic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ComplaintTopic"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not handle Complaints"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "complaints"
+        ],
+        "summary": "Adds a Complaint Topic at the end of the list.",
+        "description": "# Errors\n`401` without a live session, `403` without `complaint.handle`, `409` for a name in use or\nwhen no active Topic would be left, `422` for a blank name or one over 50 characters.",
+        "operationId": "createComplaintTopic",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComplaintTopicFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new Complaint Topic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not handle Complaints"
+          },
+          "409": {
+            "description": "Another Topic has the name, or no active Topic would be left"
+          },
+          "422": {
+            "description": "The name is blank or too long"
+          }
+        }
+      }
+    },
+    "/complaints/topics/order": {
+      "put": {
+        "tags": [
+          "complaints"
+        ],
+        "summary": "Puts every Complaint Topic, active or not, in a new order.",
+        "description": "# Errors\n`401` without a live session, `403` without `complaint.handle`, `422` unless the list holds\nevery Topic exactly once.",
+        "operationId": "orderComplaintTopics",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Order"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Complaint Topics are reordered"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not handle Complaints"
+          },
+          "422": {
+            "description": "The list is not every Topic exactly once"
+          }
+        }
+      }
+    },
+    "/complaints/topics/{id}": {
+      "put": {
+        "tags": [
+          "complaints"
+        ],
+        "summary": "Renames a Complaint Topic or (de)activates it; an inactive Topic keeps its Complaints but\ntakes no new ones.",
+        "description": "# Errors\n`401` without a live session, `403` without `complaint.handle`, `404` for an unknown Topic,\n`409` for a name in use or when no active Topic would be left, `422` for a blank name or one\nover 50 characters.",
+        "operationId": "updateComplaintTopic",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Complaint Topic",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComplaintTopicFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The Complaint Topic is saved"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not handle Complaints"
+          },
+          "404": {
+            "description": "There is no such Complaint Topic"
+          },
+          "409": {
+            "description": "Another Topic has the name, or no active Topic would be left"
+          },
+          "422": {
+            "description": "The name is blank or too long"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "complaints"
+        ],
+        "summary": "Deletes a Complaint Topic no Complaint is filed under; a used one can only be deactivated.",
+        "description": "# Errors\n`401` without a live session, `403` without `complaint.handle`, `404` for an unknown Topic,\n`409` while a Complaint is filed under it or when no active Topic would be left.",
+        "operationId": "deleteComplaintTopic",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The Complaint Topic",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The Complaint Topic is deleted"
+          },
+          "401": {
+            "description": "There is no live session"
+          },
+          "403": {
+            "description": "The User may not handle Complaints"
+          },
+          "404": {
+            "description": "There is no such Complaint Topic"
+          },
+          "409": {
+            "description": "A Complaint is filed under the Topic, or no active Topic would be left"
+          }
+        }
+      }
+    },
     "/complaints/{id}": {
       "get": {
         "tags": [
@@ -7361,6 +7557,50 @@
           },
           "topic": {
             "type": "string"
+          }
+        }
+      },
+      "ComplaintTopic": {
+        "type": "object",
+        "description": "A Complaint Topic as staff keep it.",
+        "required": [
+          "id",
+          "name",
+          "active",
+          "used"
+        ],
+        "properties": {
+          "active": {
+            "type": "boolean",
+            "description": "Whether the public form offers it."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "used": {
+            "type": "boolean",
+            "description": "Whether any Complaint is filed under it, which keeps it from being deleted."
+          }
+        }
+      },
+      "ComplaintTopicFields": {
+        "type": "object",
+        "description": "What staff set on a Complaint Topic.",
+        "required": [
+          "name",
+          "active"
+        ],
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string",
+            "description": "1–50 characters, unique whatever the case."
           }
         }
       },
