@@ -1,0 +1,110 @@
+---
+# The pranata user's home is the LUKS2 data volume, so the Podman volumes, secrets and images
+# are all encrypted at rest. Clevis unlocks it at boot against the Vendor's Tang server.
+# wipefs, unlike blkid, also reports a partition table on a whole disk.
+- name: Read what the data device holds
+  ansible.builtin.command: wipefs --noheadings --output TYPE {{ pranata_data_device }}
+  register: pranata_data_device_type
+  changed_when: false
+
+- name: Refuse a data device that holds something other than LUKS
+  ansible.builtin.assert:
+    that: pranata_data_device_type.stdout_lines | difference(['crypto_LUKS']) == []
+    fail_msg: >-
+      {{ pranata_data_device }} holds {{ pranata_data_device_type.stdout_lines | join(', ') }},
+      not LUKS. The role formats only an empty device; check that pranata_data_device is the
+      data volume.
+
+# Keyslot 0 holds the fallback passphrase, typed at the console or over SSH when Tang is down.
+- name: Encrypt the data device with LUKS2
+  ansible.builtin.command:
+    argv: [cryptsetup, luksFormat, --batch-mode, --type, luks2, --key-file, "-", "{{ pranata_data_device }}"]
+    stdin: "{{ pranata_luks_passphrase }}"
+    stdin_add_newline: false
+  no_log: true
+  changed_when: true
+  when: pranata_data_device_type.stdout == ''
+
+# A Vault value changed after formatting would leave no working fallback.
+- name: Check that the fallback passphrase opens the data device
+  ansible.builtin.command:
+    argv: [cryptsetup, open, --test-passphrase, --key-file, "-", "{{ pranata_data_device }}"]
+    stdin: "{{ pranata_luks_passphrase }}"
+    stdin_add_newline: false
+  no_log: true
+  changed_when: false
+
+- name: List the Clevis bindings
+  ansible.builtin.command: clevis luks list -d {{ pranata_data_device }}
+  register: pranata_clevis_bindings
+  changed_when: false
+
+- name: Bind the data device to the Tang server
+  ansible.builtin.command:
+    argv:
+      - clevis
+      - luks
+      - bind
+      - -d
+      - "{{ pranata_data_device }}"
+      - -k
+      - "-"
+      - tang
+      - "{{ {'url': pranata_tang_url, 'thp': pranata_tang_thumbprint} | to_json }}"
+    stdin: "{{ pranata_luks_passphrase }}"
+    stdin_add_newline: false
+  no_log: true
+  changed_when: true
+  # shortcut: a changed URL or rotated Tang key adds a binding but leaves the old one; clean up
+  # with `clevis luks unbind` or `clevis luks regen` by hand until rotation is routine.
+  when: ('"url":"' ~ pranata_tang_url ~ '"') not in pranata_clevis_bindings.stdout
+
+- name: Read the data device's UUID
+  ansible.builtin.command: blkid -o value -s UUID {{ pranata_data_device }}
+  register: pranata_data_device_uuid
+  changed_when: false
+
+# _netdev waits for the network, which Tang needs; nofail still boots, so SSH stays reachable.
+- name: Unlock the data volume at boot
+  ansible.builtin.lineinfile:
+    path: /etc/crypttab
+    regexp: ^pranata\s
+    line: pranata UUID={{ pranata_data_device_uuid.stdout }} none luks,_netdev,nofail
+    create: true
+    mode: "0600"
+
+- name: Answer the boot-time passphrase prompt with Clevis
+  ansible.builtin.systemd_service:
+    name: clevis-luks-askpass.path
+    enabled: true
+
+# Through Tang rather than the passphrase, so a run fails here when Tang can't unlock it.
+- name: Unlock the data volume now
+  ansible.builtin.command: clevis luks unlock -d {{ pranata_data_device }} -n pranata
+  args:
+    creates: /dev/mapper/pranata
+
+- name: Read what the data volume holds
+  ansible.builtin.command: blkid -o value -s TYPE /dev/mapper/pranata
+  register: pranata_data_volume_type
+  changed_when: false
+  failed_when: pranata_data_volume_type.rc not in [0, 2]
+
+- name: Create the data volume's file system
+  ansible.builtin.command: mkfs.ext4 -q /dev/mapper/pranata
+  changed_when: true
+  when: pranata_data_volume_type.stdout == ''
+
+# Mounting over a home that already holds data, from before encryption, would hide it.
+- name: Refuse to mount over an unencrypted home
+  ansible.builtin.shell: mountpoint -q {{ pranata_home }} || [ -z "$(ls -A {{ pranata_home }} 2>/dev/null)" ]
+  changed_when: false
+
+# No device timeout: when Tang is late, Clevis keeps retrying and the containers start after it.
+- name: Mount the data volume as the pranata user's home
+  ansible.posix.mount:
+    path: "{{ pranata_home }}"
+    src: /dev/mapper/pranata
+    fstype: ext4
+    opts: _netdev,nofail,x-systemd.device-timeout=0
+    state: mounted

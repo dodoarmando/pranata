@@ -40,6 +40,32 @@ argument_specs:
         description: >-
           Public keys of the Vendor's login user. Root login and passwords are turned off,
           so later runs connect as pranata_vendor_user.
+      pranata_data_device:
+        type: str
+        required: true
+        description: >-
+          The empty block device for the data volume, such as /dev/vdb. The role encrypts it with
+          LUKS2 and mounts it as the pranata user's home; it refuses a device that holds anything
+          but LUKS.
+      pranata_luks_passphrase:
+        type: str
+        required: true
+        no_log: true
+        description: >-
+          From Ansible Vault, such as `openssl rand -hex 32`. The fallback that unlocks the data
+          volume when Tang can't; set when the volume is first encrypted.
+      pranata_tang_url:
+        type: str
+        required: true
+        description: >-
+          This Installation's own URL on the Vendor's Tang server in Indonesia, such as
+          http://tang.vendor.id/desa-contoh, so that its key can be revoked alone.
+      pranata_tang_thumbprint:
+        type: str
+        required: true
+        description: >-
+          The thumbprint of the Tang server's signing key (`tang-show-keys` on the server), so
+          the binding trusts that server only.
       pranata_vendor_user:
         type: str
         description: The Vendor's login user, with passwordless sudo.
