@@ -30,6 +30,7 @@
     "srvx": "1.0.8"
   },
   "devDependencies": {
+    "@lhci/cli": "0.16.1",
     "@playwright/test": "1.65.1",
     "@rsbuild/core": "2.3.3",
     "@rsbuild/plugin-react": "2.1.1",
