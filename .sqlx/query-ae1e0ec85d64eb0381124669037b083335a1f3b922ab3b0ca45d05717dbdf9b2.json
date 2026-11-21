@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM complaint_topics WHERE id = $1 RETURNING name",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "complaint_topics",
+            "name": "name"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": ["Uuid"]
+    },
+    "nullable": [false]
+  },
+  "hash": "ae1e0ec85d64eb0381124669037b083335a1f3b922ab3b0ca45d05717dbdf9b2"
+}

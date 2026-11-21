@@ -1,6 +1,6 @@
 //! Complaints: what residents send from the public site, anonymously or with a name and phone,
 //! and follow with their Complaint Code; staff answer them with Complaint Responses, then close
-//! or reject them.
+//! or reject them, and keep the Complaint Topics.
 
 use std::sync::Arc;
 
@@ -21,11 +21,13 @@ use crate::{
     ApiError, AppState, Clock,
     audit::{self, Actor},
     auth::{Session, client_ip},
+    category::{label, unique_name},
     government::Created,
     home::{required, text},
+    order::Order,
     public_form::{Proof, PublicForm},
     role::Permission,
-    village::phone_ok,
+    village::{diff, phone_ok},
 };
 
 pub(crate) fn routes() -> OpenApiRouter<AppState> {
@@ -37,6 +39,9 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
         .routes(routes!(get))
         .routes(routes!(respond))
         .routes(routes!(change_state))
+        .routes(routes!(list_topics, create_topic))
+        .routes(routes!(update_topic, delete_topic))
+        .routes(routes!(order_topics))
 }
 
 /// Where a Complaint stands.
@@ -652,6 +657,298 @@ pub(crate) async fn change_state(
     }
     let reason = text.as_deref().filter(|_| to == ComplaintState::Rejected);
     set_state(&mut tx, &session, id, (from, to), reason).await?;
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// A Complaint Topic as staff keep it.
+#[derive(Serialize, ToSchema)]
+pub struct ComplaintTopic {
+    id: Uuid,
+    name: String,
+    /// Whether the public form offers it.
+    active: bool,
+    /// Whether any Complaint is filed under it, which keeps it from being deleted.
+    used: bool,
+}
+
+/// What staff set on a Complaint Topic.
+#[derive(Deserialize, ToSchema)]
+pub struct ComplaintTopicFields {
+    /// 1–50 characters, unique whatever the case.
+    name: String,
+    active: bool,
+}
+
+/// Refuses with `409` when no active Topic is left, which would leave the public form empty.
+async fn ensure_active_topic(tx: &mut PgConnection) -> Result<(), ApiError> {
+    let any = sqlx::query_scalar!(
+        r#"SELECT EXISTS (SELECT 1 FROM complaint_topics WHERE active) AS "any!""#
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    if any {
+        Ok(())
+    } else {
+        Err(ApiError::Status(StatusCode::CONFLICT))
+    }
+}
+
+/// Every Complaint Topic in order, active or not.
+///
+/// # Errors
+/// `401` without a live session, `403` without `complaint.handle`.
+#[utoipa::path(
+    get,
+    path = "/complaints/topics",
+    operation_id = "listComplaintTopics",
+    tag = "complaints",
+    responses(
+        (status = OK, description = "Every Complaint Topic", body = Vec<ComplaintTopic>),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User may not handle Complaints"),
+    ),
+)]
+pub(crate) async fn list_topics(
+    State(pool): State<PgPool>,
+    session: Session,
+) -> Result<Json<Vec<ComplaintTopic>>, ApiError> {
+    ensure(&session, Permission::ComplaintHandle)?;
+    let topics = sqlx::query_as!(
+        ComplaintTopic,
+        r#"SELECT id, name, active,
+           EXISTS (SELECT 1 FROM complaints WHERE topic_id = complaint_topics.id) AS "used!"
+           FROM complaint_topics ORDER BY sort_order, id"#
+    )
+    .fetch_all(&pool)
+    .await?;
+    Ok(Json(topics))
+}
+
+/// Adds a Complaint Topic at the end of the list.
+///
+/// # Errors
+/// `401` without a live session, `403` without `complaint.handle`, `409` for a name in use or
+/// when no active Topic would be left, `422` for a blank name or one over 50 characters.
+#[utoipa::path(
+    post,
+    path = "/complaints/topics",
+    operation_id = "createComplaintTopic",
+    tag = "complaints",
+    request_body = ComplaintTopicFields,
+    responses(
+        (status = CREATED, description = "The new Complaint Topic", body = Created),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User may not handle Complaints"),
+        (status = CONFLICT, description = "Another Topic has the name, or no active Topic would be left"),
+        (status = UNPROCESSABLE_ENTITY, description = "The name is blank or too long"),
+    ),
+)]
+pub(crate) async fn create_topic(
+    State(pool): State<PgPool>,
+    session: Session,
+    Json(body): Json<ComplaintTopicFields>,
+) -> Result<(StatusCode, Json<Created>), ApiError> {
+    ensure(&session, Permission::ComplaintHandle)?;
+    let name = label(&body.name)?;
+    let mut tx = pool.begin().await?;
+    let id = unique_name(
+        sqlx::query_scalar!(
+            "INSERT INTO complaint_topics (name, active, sort_order)
+             SELECT $1, $2, coalesce(max(sort_order), 0) + 1 FROM complaint_topics
+             RETURNING id",
+            name,
+            body.active,
+        )
+        .fetch_one(&mut *tx)
+        .await,
+    )?;
+    ensure_active_topic(&mut tx).await?;
+    audit::record_change(
+        &mut tx,
+        Actor::User(session.user_id),
+        "complaint_topic.create",
+        ("complaint_topic", Some(&id.to_string())),
+        json!([
+            { "field": "name", "from": null, "to": name },
+            { "field": "active", "from": null, "to": body.active },
+        ]),
+    )
+    .await?;
+    tx.commit().await?;
+    Ok((StatusCode::CREATED, Json(Created { id })))
+}
+
+/// Renames a Complaint Topic or (de)activates it; an inactive Topic keeps its Complaints but
+/// takes no new ones.
+///
+/// # Errors
+/// `401` without a live session, `403` without `complaint.handle`, `404` for an unknown Topic,
+/// `409` for a name in use or when no active Topic would be left, `422` for a blank name or one
+/// over 50 characters.
+#[utoipa::path(
+    put,
+    path = "/complaints/topics/{id}",
+    operation_id = "updateComplaintTopic",
+    tag = "complaints",
+    params(("id" = Uuid, Path, description = "The Complaint Topic")),
+    request_body = ComplaintTopicFields,
+    responses(
+        (status = NO_CONTENT, description = "The Complaint Topic is saved"),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User may not handle Complaints"),
+        (status = NOT_FOUND, description = "There is no such Complaint Topic"),
+        (status = CONFLICT, description = "Another Topic has the name, or no active Topic would be left"),
+        (status = UNPROCESSABLE_ENTITY, description = "The name is blank or too long"),
+    ),
+)]
+pub(crate) async fn update_topic(
+    State(pool): State<PgPool>,
+    session: Session,
+    Path(id): Path<Uuid>,
+    Json(body): Json<ComplaintTopicFields>,
+) -> Result<StatusCode, ApiError> {
+    ensure(&session, Permission::ComplaintHandle)?;
+    let name = label(&body.name)?;
+    let mut tx = pool.begin().await?;
+    let old = sqlx::query!(
+        "SELECT name, active FROM complaint_topics WHERE id = $1 FOR UPDATE",
+        id
+    )
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or(ApiError::Status(StatusCode::NOT_FOUND))?;
+    let changes = diff(
+        &json!({ "name": old.name, "active": old.active }),
+        &json!({ "name": name, "active": body.active }),
+    );
+    if !changes.is_empty() {
+        unique_name(
+            sqlx::query!(
+                "UPDATE complaint_topics SET name = $1, active = $2 WHERE id = $3",
+                name,
+                body.active,
+                id
+            )
+            .execute(&mut *tx)
+            .await,
+        )?;
+        ensure_active_topic(&mut tx).await?;
+        audit::record_change(
+            &mut tx,
+            Actor::User(session.user_id),
+            "complaint_topic.update",
+            ("complaint_topic", Some(&id.to_string())),
+            json!(changes),
+        )
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Deletes a Complaint Topic no Complaint is filed under; a used one can only be deactivated.
+///
+/// # Errors
+/// `401` without a live session, `403` without `complaint.handle`, `404` for an unknown Topic,
+/// `409` while a Complaint is filed under it or when no active Topic would be left.
+#[utoipa::path(
+    delete,
+    path = "/complaints/topics/{id}",
+    operation_id = "deleteComplaintTopic",
+    tag = "complaints",
+    params(("id" = Uuid, Path, description = "The Complaint Topic")),
+    responses(
+        (status = NO_CONTENT, description = "The Complaint Topic is deleted"),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User may not handle Complaints"),
+        (status = NOT_FOUND, description = "There is no such Complaint Topic"),
+        (status = CONFLICT, description = "A Complaint is filed under the Topic, or no active Topic would be left"),
+    ),
+)]
+pub(crate) async fn delete_topic(
+    State(pool): State<PgPool>,
+    session: Session,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, ApiError> {
+    ensure(&session, Permission::ComplaintHandle)?;
+    let mut tx = pool.begin().await?;
+    // Complaints reference their Topic, so the delete itself refuses a used one.
+    let name = match sqlx::query_scalar!(
+        "DELETE FROM complaint_topics WHERE id = $1 RETURNING name",
+        id
+    )
+    .fetch_optional(&mut *tx)
+    .await
+    {
+        Err(sqlx::Error::Database(error)) if error.is_foreign_key_violation() => {
+            return Err(ApiError::Status(StatusCode::CONFLICT));
+        }
+        name => name?.ok_or(ApiError::Status(StatusCode::NOT_FOUND))?,
+    };
+    ensure_active_topic(&mut tx).await?;
+    audit::record_change(
+        &mut tx,
+        Actor::User(session.user_id),
+        "complaint_topic.delete",
+        ("complaint_topic", Some(&id.to_string())),
+        json!([{ "field": "name", "from": name, "to": null }]),
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Puts every Complaint Topic, active or not, in a new order.
+///
+/// # Errors
+/// `401` without a live session, `403` without `complaint.handle`, `422` unless the list holds
+/// every Topic exactly once.
+#[utoipa::path(
+    put,
+    path = "/complaints/topics/order",
+    operation_id = "orderComplaintTopics",
+    tag = "complaints",
+    request_body = Order,
+    responses(
+        (status = NO_CONTENT, description = "The Complaint Topics are reordered"),
+        (status = UNAUTHORIZED, description = "There is no live session"),
+        (status = FORBIDDEN, description = "The User may not handle Complaints"),
+        (status = UNPROCESSABLE_ENTITY, description = "The list is not every Topic exactly once"),
+    ),
+)]
+pub(crate) async fn order_topics(
+    State(pool): State<PgPool>,
+    session: Session,
+    Json(body): Json<Order>,
+) -> Result<StatusCode, ApiError> {
+    ensure(&session, Permission::ComplaintHandle)?;
+    let mut tx = pool.begin().await?;
+    let old =
+        sqlx::query_scalar!("SELECT id FROM complaint_topics ORDER BY sort_order, id FOR UPDATE")
+            .fetch_all(&mut *tx)
+            .await?;
+    if !body.matches(&old) {
+        return Err(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY));
+    }
+    sqlx::query!(
+        "UPDATE complaint_topics SET sort_order = ordered.sort_order
+         FROM unnest($1::uuid[]) WITH ORDINALITY AS ordered (id, sort_order)
+         WHERE complaint_topics.id = ordered.id",
+        &body.ids,
+    )
+    .execute(&mut *tx)
+    .await?;
+    if old != body.ids {
+        audit::record_change(
+            &mut tx,
+            Actor::User(session.user_id),
+            "complaint_topic.order",
+            ("complaint_topic", None),
+            json!([{ "field": "order", "from": old, "to": body.ids }]),
+        )
+        .await?;
+    }
     tx.commit().await?;
     Ok(StatusCode::NO_CONTENT)
 }

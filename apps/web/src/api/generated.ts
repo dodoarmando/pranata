@@ -502,6 +502,27 @@ export interface ComplaintSummary {
 }
 
 /**
+ * A Complaint Topic as staff keep it.
+ */
+export interface ComplaintTopic {
+  /** Whether the public form offers it. */
+  active: boolean;
+  id: string;
+  name: string;
+  /** Whether any Complaint is filed under it, which keeps it from being deleted. */
+  used: boolean;
+}
+
+/**
+ * What staff set on a Complaint Topic.
+ */
+export interface ComplaintTopicFields {
+  active: boolean;
+  /** 1–50 characters, unique whatever the case. */
+  name: string;
+}
+
+/**
  * One of the Village's ordered labels Important Contacts are grouped under.
  */
 export interface ContactCategory {
@@ -4904,6 +4925,303 @@ export const getComplaintStatus = async (code: string, options?: Parameters<type
   {
     ...options,
     method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listComplaintTopicsResponse200 = {
+  data: ComplaintTopic[]
+  status: 200
+}
+
+export type listComplaintTopicsResponse401 = {
+  data: void
+  status: 401
+}
+
+export type listComplaintTopicsResponse403 = {
+  data: void
+  status: 403
+}
+
+export type listComplaintTopicsResponseSuccess = (listComplaintTopicsResponse200) & {
+  headers: Headers;
+};
+export type listComplaintTopicsResponseError = (listComplaintTopicsResponse401 | listComplaintTopicsResponse403) & {
+  headers: Headers;
+};
+
+export type listComplaintTopicsResponse = (listComplaintTopicsResponseSuccess | listComplaintTopicsResponseError)
+
+export const getListComplaintTopicsUrl = () => {
+
+
+
+
+  return `/complaints/topics`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `complaint.handle`.
+ * @summary Every Complaint Topic in order, active or not.
+ */
+export const listComplaintTopics = async ( options?: Parameters<typeof apiFetch>[1]): Promise<listComplaintTopicsResponse> => {
+
+  return apiFetch<listComplaintTopicsResponse>(getListComplaintTopicsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createComplaintTopicResponse201 = {
+  data: Created
+  status: 201
+}
+
+export type createComplaintTopicResponse401 = {
+  data: void
+  status: 401
+}
+
+export type createComplaintTopicResponse403 = {
+  data: void
+  status: 403
+}
+
+export type createComplaintTopicResponse409 = {
+  data: void
+  status: 409
+}
+
+export type createComplaintTopicResponse422 = {
+  data: void
+  status: 422
+}
+
+export type createComplaintTopicResponseSuccess = (createComplaintTopicResponse201) & {
+  headers: Headers;
+};
+export type createComplaintTopicResponseError = (createComplaintTopicResponse401 | createComplaintTopicResponse403 | createComplaintTopicResponse409 | createComplaintTopicResponse422) & {
+  headers: Headers;
+};
+
+export type createComplaintTopicResponse = (createComplaintTopicResponseSuccess | createComplaintTopicResponseError)
+
+export const getCreateComplaintTopicUrl = () => {
+
+
+
+
+  return `/complaints/topics`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `complaint.handle`, `409` for a name in use or
+ * when no active Topic would be left, `422` for a blank name or one over 50 characters.
+ * @summary Adds a Complaint Topic at the end of the list.
+ */
+export const createComplaintTopic = async (complaintTopicFields: ComplaintTopicFields, options?: Parameters<typeof apiFetch>[1]): Promise<createComplaintTopicResponse> => {
+
+  return apiFetch<createComplaintTopicResponse>(getCreateComplaintTopicUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(complaintTopicFields)
+  }
+);}
+
+
+
+export type orderComplaintTopicsResponse204 = {
+  data: void
+  status: 204
+}
+
+export type orderComplaintTopicsResponse401 = {
+  data: void
+  status: 401
+}
+
+export type orderComplaintTopicsResponse403 = {
+  data: void
+  status: 403
+}
+
+export type orderComplaintTopicsResponse422 = {
+  data: void
+  status: 422
+}
+
+export type orderComplaintTopicsResponseSuccess = (orderComplaintTopicsResponse204) & {
+  headers: Headers;
+};
+export type orderComplaintTopicsResponseError = (orderComplaintTopicsResponse401 | orderComplaintTopicsResponse403 | orderComplaintTopicsResponse422) & {
+  headers: Headers;
+};
+
+export type orderComplaintTopicsResponse = (orderComplaintTopicsResponseSuccess | orderComplaintTopicsResponseError)
+
+export const getOrderComplaintTopicsUrl = () => {
+
+
+
+
+  return `/complaints/topics/order`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `complaint.handle`, `422` unless the list holds
+ * every Topic exactly once.
+ * @summary Puts every Complaint Topic, active or not, in a new order.
+ */
+export const orderComplaintTopics = async (order: Order, options?: Parameters<typeof apiFetch>[1]): Promise<orderComplaintTopicsResponse> => {
+
+  return apiFetch<orderComplaintTopicsResponse>(getOrderComplaintTopicsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(order)
+  }
+);}
+
+
+
+export type updateComplaintTopicResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateComplaintTopicResponse401 = {
+  data: void
+  status: 401
+}
+
+export type updateComplaintTopicResponse403 = {
+  data: void
+  status: 403
+}
+
+export type updateComplaintTopicResponse404 = {
+  data: void
+  status: 404
+}
+
+export type updateComplaintTopicResponse409 = {
+  data: void
+  status: 409
+}
+
+export type updateComplaintTopicResponse422 = {
+  data: void
+  status: 422
+}
+
+export type updateComplaintTopicResponseSuccess = (updateComplaintTopicResponse204) & {
+  headers: Headers;
+};
+export type updateComplaintTopicResponseError = (updateComplaintTopicResponse401 | updateComplaintTopicResponse403 | updateComplaintTopicResponse404 | updateComplaintTopicResponse409 | updateComplaintTopicResponse422) & {
+  headers: Headers;
+};
+
+export type updateComplaintTopicResponse = (updateComplaintTopicResponseSuccess | updateComplaintTopicResponseError)
+
+export const getUpdateComplaintTopicUrl = (id: string,) => {
+
+
+
+
+  return `/complaints/topics/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `complaint.handle`, `404` for an unknown Topic,
+ * `409` for a name in use or when no active Topic would be left, `422` for a blank name or one
+ * over 50 characters.
+ * @summary Renames a Complaint Topic or (de)activates it; an inactive Topic keeps its Complaints but
+takes no new ones.
+ */
+export const updateComplaintTopic = async (id: string,
+    complaintTopicFields: ComplaintTopicFields, options?: Parameters<typeof apiFetch>[1]): Promise<updateComplaintTopicResponse> => {
+
+  return apiFetch<updateComplaintTopicResponse>(getUpdateComplaintTopicUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(complaintTopicFields)
+  }
+);}
+
+
+
+export type deleteComplaintTopicResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteComplaintTopicResponse401 = {
+  data: void
+  status: 401
+}
+
+export type deleteComplaintTopicResponse403 = {
+  data: void
+  status: 403
+}
+
+export type deleteComplaintTopicResponse404 = {
+  data: void
+  status: 404
+}
+
+export type deleteComplaintTopicResponse409 = {
+  data: void
+  status: 409
+}
+
+export type deleteComplaintTopicResponseSuccess = (deleteComplaintTopicResponse204) & {
+  headers: Headers;
+};
+export type deleteComplaintTopicResponseError = (deleteComplaintTopicResponse401 | deleteComplaintTopicResponse403 | deleteComplaintTopicResponse404 | deleteComplaintTopicResponse409) & {
+  headers: Headers;
+};
+
+export type deleteComplaintTopicResponse = (deleteComplaintTopicResponseSuccess | deleteComplaintTopicResponseError)
+
+export const getDeleteComplaintTopicUrl = (id: string,) => {
+
+
+
+
+  return `/complaints/topics/${id}`
+}
+
+/**
+ * # Errors
+ * `401` without a live session, `403` without `complaint.handle`, `404` for an unknown Topic,
+ * `409` while a Complaint is filed under it or when no active Topic would be left.
+ * @summary Deletes a Complaint Topic no Complaint is filed under; a used one can only be deactivated.
+ */
+export const deleteComplaintTopic = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<deleteComplaintTopicResponse> => {
+
+  return apiFetch<deleteComplaintTopicResponse>(getDeleteComplaintTopicUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
 
 
   }
