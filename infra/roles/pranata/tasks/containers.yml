@@ -6,6 +6,36 @@
     shell: /usr/sbin/nologin
   register: pranata_user
 
+# The home is the data volume's mount point, which useradd leaves owned by root.
+- name: Give the pranata user its home
+  ansible.builtin.file:
+    path: "{{ pranata_home }}"
+    owner: pranata
+    group: pranata
+    mode: "0700"
+
+- name: Create the drop-in directory of the pranata user's service manager
+  ansible.builtin.file:
+    path: /etc/systemd/system/user@{{ pranata_user.uid }}.service.d
+    state: directory
+    mode: "0755"
+
+# Without it, a boot where Tang is unreachable would start the containers on an empty home.
+- name: Start the pranata user's services only once the data volume is mounted
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/user@{{ pranata_user.uid }}.service.d/pranata.conf
+    content: |
+      [Unit]
+      RequiresMountsFor={{ pranata_home }}
+    mode: "0644"
+
+# Also after a boot where Tang was unreachable, once the volume is unlocked by hand.
+- name: Start the pranata user's service manager
+  ansible.builtin.systemd_service:
+    name: user@{{ pranata_user.uid }}.service
+    state: started
+    daemon_reload: true
+
 - name: Give the pranata user subordinate IDs for rootless Podman
   ansible.builtin.lineinfile:
     path: /etc/{{ item }}

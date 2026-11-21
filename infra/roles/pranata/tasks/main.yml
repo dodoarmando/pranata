@@ -2,5 +2,8 @@
 - name: Harden the host
   ansible.builtin.import_tasks: host.yml
 
+- name: Encrypt the data volume
+  ansible.builtin.import_tasks: encryption.yml
+
 - name: Set up the containers
   ansible.builtin.import_tasks: containers.yml
