@@ -89,7 +89,9 @@ function ComplaintPage() {
   }
 
   const id = complaint.id;
-  const open = complaint.state === 'new' || complaint.state === 'in_progress';
+  // Only a User who may handle it answers, closes or rejects an open Complaint.
+  const actionable =
+    complaint.canHandle && (complaint.state === 'new' || complaint.state === 'in_progress');
   const date = new Intl.DateTimeFormat('id-ID', {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -181,7 +183,7 @@ function ComplaintPage() {
             ))}
           </ol>
         )}
-        {open && (
+        {actionable && (
           <form onSubmit={onRespond} className="grid gap-3">
             <div className="grid gap-2">
               <Label htmlFor="response-text">Tanggapan baru</Label>
