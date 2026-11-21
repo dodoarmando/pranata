@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "test": "rstest run --passWithNoTests",
     "e2e": "playwright test",
-    "gen": "orval"
+    "gen": "orval",
+    "size": "size-limit"
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",
@@ -33,12 +34,14 @@
     "@rsbuild/core": "2.3.3",
     "@rsbuild/plugin-react": "2.1.1",
     "@rstest/core": "0.12.6",
+    "@size-limit/file": "14.3.0",
     "@tailwindcss/postcss": "4.3.5",
     "@types/node": "26.6.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "orval": "8.48.0",
     "shadcn": "4.23.0",
+    "size-limit": "14.3.0",
     "tailwindcss": "4.3.5",
     "tw-animate-css": "1.4.0",
     "typescript": "7.0.2"
