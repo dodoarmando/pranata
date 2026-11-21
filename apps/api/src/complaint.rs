@@ -692,6 +692,15 @@ pub struct ComplaintTopicFields {
     active: bool,
 }
 
+/// Locks the active Topics, so concurrent deactivations and deletes wait on each other and
+/// cannot both pass [`ensure_active_topic`].
+async fn lock_active_topics(tx: &mut PgConnection) -> Result<(), ApiError> {
+    sqlx::query!("SELECT id FROM complaint_topics WHERE active FOR UPDATE")
+        .fetch_all(&mut *tx)
+        .await?;
+    Ok(())
+}
+
 /// Refuses with `409` when no active Topic is left, which would leave the public form empty.
 async fn ensure_active_topic(tx: &mut PgConnection) -> Result<(), ApiError> {
     let any = sqlx::query_scalar!(
@@ -823,6 +832,7 @@ pub(crate) async fn update_topic(
     ensure(&session, Permission::ComplaintHandle)?;
     let name = label(&body.name)?;
     let mut tx = pool.begin().await?;
+    lock_active_topics(&mut tx).await?;
     let old = sqlx::query!(
         "SELECT name, active FROM complaint_topics WHERE id = $1 FOR UPDATE",
         id
@@ -885,6 +895,7 @@ pub(crate) async fn delete_topic(
 ) -> Result<StatusCode, ApiError> {
     ensure(&session, Permission::ComplaintHandle)?;
     let mut tx = pool.begin().await?;
+    lock_active_topics(&mut tx).await?;
     // Complaints reference their Topic, so the delete itself refuses a used one.
     let name = match sqlx::query_scalar!(
         "DELETE FROM complaint_topics WHERE id = $1 RETURNING name",
