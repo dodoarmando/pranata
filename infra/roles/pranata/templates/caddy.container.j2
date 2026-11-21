@@ -1,0 +1,22 @@
+# {{ ansible_managed }}
+[Unit]
+# The only way in: caddy.socket listens on the host and hands Caddy its sockets.
+Requires=caddy.socket
+After=caddy.socket
+Wants=web.service
+
+[Container]
+ContainerName=caddy
+Image={{ pranata_caddy_image }}
+Network=pranata.network
+Volume={{ pranata_home }}/.config/pranata/Caddyfile:/etc/caddy/Caddyfile:ro
+Volume=pranata-caddy-data:/data
+Volume=pranata-caddy-config:/config
+Notify=true
+
+[Service]
+Restart=always
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target

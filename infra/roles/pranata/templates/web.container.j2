@@ -1,0 +1,17 @@
+# {{ ansible_managed }}
+[Unit]
+Wants=api.service
+After=api.service
+
+[Container]
+ContainerName=web
+Image={{ pranata_web_image }}
+Network=pranata.network
+Environment=PRANATA_API_URL=http://api:8080 PRANATA_PUBLIC_ORIGIN={{ pranata_public_origin }}
+
+[Service]
+Restart=always
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target

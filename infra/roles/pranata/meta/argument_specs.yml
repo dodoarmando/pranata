@@ -1,0 +1,57 @@
+---
+argument_specs:
+  main:
+    short_description: Provision one Pranata Installation on Debian 13
+    options:
+      pranata_version:
+        type: str
+        required: true
+        description: The release whose pranata-api and pranata-web images run, such as 1.0.0.
+      pranata_fallback_domain:
+        type: str
+        required: true
+        description: >-
+          The Vendor's subdomain for this Installation. It is the public origin until
+          pranata_domain is set, then redirects there.
+      pranata_domain:
+        type: str
+        description: >-
+          The Village's .desa.id domain, which becomes the public origin; www redirects to it.
+          Its DNS, and that of its www, must point at the host before Caddy can get certificates.
+      pranata_village_code:
+        type: str
+        required: true
+        description: The Village's 10-digit desa or desa adat code, set at first provisioning only.
+      pranata_administrator_username:
+        type: str
+        required: true
+        description: The first Administrator, created at first provisioning only.
+      pranata_postgres_password:
+        type: str
+        required: true
+        no_log: true
+        description: >-
+          From Ansible Vault, such as `openssl rand -hex 32`. Read only when the database is
+          first created; changing it later needs ALTER ROLE and new Podman secrets.
+      pranata_vendor_ssh_keys:
+        type: list
+        elements: str
+        required: true
+        description: >-
+          Public keys of the Vendor's login user. Root login and passwords are turned off,
+          so later runs connect as pranata_vendor_user.
+      pranata_vendor_user:
+        type: str
+        description: The Vendor's login user, with passwordless sudo.
+      pranata_seed_demo:
+        type: bool
+        description: Fill the Installation with the synthetic demo content, for the demo only.
+      pranata_acme_email:
+        type: str
+        description: Where the certificate authority sends expiry warnings.
+      pranata_caddy_image:
+        type: str
+        description: The Caddy image.
+      pranata_postgres_image:
+        type: str
+        description: The PostgreSQL image; major version 18.

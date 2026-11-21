@@ -1,0 +1,19 @@
+---
+# One origin, so passkeys, canonical links and the API's CSRF check agree.
+pranata_host: "{{ pranata_domain or pranata_fallback_domain }}"
+pranata_public_origin: https://{{ pranata_host }}
+pranata_home: /home/pranata
+pranata_api_image: ghcr.io/dodoarmando/pranata-api:{{ pranata_version }}
+pranata_web_image: ghcr.io/dodoarmando/pranata-web:{{ pranata_version }}
+# Where the one-time bootstrap records that it ran, since usernames are never reused.
+pranata_bootstrapped: "{{ pranata_home }}/.local/state/pranata/bootstrapped"
+# A one-off API container, as the quadlet runs it, for the CLI's subcommands.
+pranata_cli:
+  - podman
+  - run
+  - --rm
+  - --network=pranata
+  - --secret=pranata-database-url,type=env,target=DATABASE_URL
+  - --env=PRANATA_PUBLIC_ORIGIN={{ pranata_public_origin }}
+  - --volume=pranata-files:/var/lib/pranata/files
+  - "{{ pranata_api_image }}"

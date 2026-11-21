@@ -1,0 +1,8 @@
+---
+# Run from the private ops repo, which holds the inventory and the Vault secrets:
+#   ansible-playbook -i <inventory> --ask-vault-pass infra/provision.yml
+- name: Provision a Pranata Installation
+  hosts: all
+  become: true
+  roles:
+    - pranata

@@ -1,0 +1,48 @@
+# {{ ansible_managed }}
+{
+{% if pranata_acme_email %}
+	email {{ pranata_acme_email }}
+{% endif %}
+	# The sockets of caddy.socket, in its order: fd/3 is port 80.
+	default_bind fd/4 {
+		protocols h1 h2
+	}
+	default_bind fdgram/5 {
+		protocols h3
+	}
+	auto_https disable_redirects
+}
+
+http:// {
+	bind fd/3 {
+		protocols h1
+	}
+	redir https://{host}{uri} 301
+}
+
+{% if pranata_domain %}
+www.{{ pranata_domain }}, {{ pranata_fallback_domain }} {
+	redir https://{{ pranata_domain }}{uri} 301
+}
+
+{% endif %}
+{{ pranata_host }} {
+	encode zstd gzip
+
+	# Routes have no trailing slash. The second character keeps `//host/` and `/\host/` from
+	# redirecting off-site.
+	@trailing_slash path_regexp trailing_slash ^(/[^/\\].*)/$
+	redir @trailing_slash {re.trailing_slash.1}{?query} 301
+
+	# Caddy owns the cache headers: hashed assets never change, and form, status and admin
+	# pages and server functions hold one visitor's data. Media keeps the API's own.
+	map {path} {cache_control} {
+		~^/assets/ "public, max-age=31536000, immutable"
+		~^/(admin|masuk|akses|pengaduan|_serverFn)(/|$) no-store
+		default no-cache
+	}
+	@not_media not path /media/*
+	header @not_media >Cache-Control {cache_control}
+
+	reverse_proxy web:3000
+}

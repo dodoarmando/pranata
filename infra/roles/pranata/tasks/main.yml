@@ -1,0 +1,6 @@
+---
+- name: Harden the host
+  ansible.builtin.import_tasks: host.yml
+
+- name: Set up the containers
+  ansible.builtin.import_tasks: containers.yml

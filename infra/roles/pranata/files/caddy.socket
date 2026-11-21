@@ -1,0 +1,11 @@
+# Installed by the pranata Ansible role. Sockets created here keep each client's own address,
+# which a port published from a rootless Podman network would replace with the gateway's.
+# Caddy binds them by position (fd/3, fd/4, fdgram/5), so keep this order and the Caddyfile in step.
+[Socket]
+BindIPv6Only=both
+ListenStream=[::]:80
+ListenStream=[::]:443
+ListenDatagram=[::]:443
+
+[Install]
+WantedBy=sockets.target

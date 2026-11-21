@@ -1,0 +1,9 @@
+---
+# Required variables, set per host in the private ops repo, are listed in meta/argument_specs.yml.
+pranata_domain: ""
+pranata_acme_email: ""
+pranata_seed_demo: false
+pranata_vendor_user: vendor
+# Not 2.11.0 or 2.11.1, which break ACME under socket activation.
+pranata_caddy_image: docker.io/library/caddy:2.11.9
+pranata_postgres_image: docker.io/library/postgres:18
