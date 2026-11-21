@@ -422,6 +422,8 @@ export const ComplaintState = {
  * A Complaint as staff see it, with what the sender left to be reached by.
  */
 export interface ComplaintDetail {
+  /** Whether the reading User holds `complaint.handle`, to answer, close or reject it. */
+  canHandle: boolean;
   code: string;
   /**
      * The name of the sender's Hamlet.

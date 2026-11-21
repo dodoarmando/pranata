@@ -7362,9 +7362,14 @@
           "text",
           "submittedAt",
           "state",
-          "responses"
+          "responses",
+          "canHandle"
         ],
         "properties": {
+          "canHandle": {
+            "type": "boolean",
+            "description": "Whether the reading User holds `complaint.handle`, to answer, close or reject it."
+          },
           "code": {
             "type": "string"
           },
