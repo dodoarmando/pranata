@@ -44,6 +44,16 @@ enum Command {
     /// Maintain uploaded images.
     #[command(subcommand)]
     Media(MediaCommand),
+    /// Fill an empty Installation with the synthetic demo content and print the seeded
+    /// Complaint's code; writes as the User `redaksi`, whose password is thrown away.
+    Seed {
+        #[arg(long, env = "DATABASE_URL", hide_env_values = true)]
+        database_url: String,
+        #[arg(long, env = "PRANATA_PUBLIC_ORIGIN")]
+        public_origin: String,
+        #[arg(long, env = "PRANATA_FILES_DIR")]
+        files_dir: PathBuf,
+    },
 }
 
 #[derive(Subcommand)]
@@ -150,6 +160,20 @@ async fn main() -> anyhow::Result<()> {
         Command::Media(MediaCommand::Regenerate { files_dir }) => {
             let rebuilt = pranata::storage::regenerate(&files_dir)?;
             tracing::info!(rebuilt, "image variants rebuilt");
+        }
+        Command::Seed {
+            database_url,
+            public_origin,
+            files_dir,
+        } => {
+            let pool = PgPool::connect(&database_url).await?;
+            pranata::db::ensure_schema(&pool).await?;
+            std::fs::create_dir_all(&files_dir)
+                .with_context(|| format!("cannot create {}", files_dir.display()))?;
+            let code =
+                pranata::seed::run(&pool, public_origin.trim_end_matches('/'), &files_dir).await?;
+            tracing::info!("demo content seeded");
+            println!("{code}");
         }
         Command::Openapi => println!("{}", pranata::openapi().to_pretty_json()?),
         Command::Village(VillageCommand::SetCode { code, database_url }) => {
