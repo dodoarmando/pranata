@@ -56,6 +56,8 @@ import { Route as AdminGaleriIndexRouteImport } from './routes/admin/galeri/inde
 import { Route as AdminGaleriIdRouteImport } from './routes/admin/galeri/$id'
 import { Route as AdminHalamanIndexRouteImport } from './routes/admin/halaman/index'
 import { Route as AdminHalamanIdRouteImport } from './routes/admin/halaman/$id'
+import { Route as AdminPengaduanIndexRouteImport } from './routes/admin/pengaduan/index'
+import { Route as AdminPengaduanIdRouteImport } from './routes/admin/pengaduan/$id'
 import { Route as AdminPengumumanIndexRouteImport } from './routes/admin/pengumuman/index'
 import { Route as AdminPengumumanIdRouteImport } from './routes/admin/pengumuman/$id'
 import { Route as MediaIdVariantRouteImport } from './routes/media.$id.$variant'
@@ -295,6 +297,16 @@ const AdminHalamanIdRoute = AdminHalamanIdRouteImport.update({
   path: '/halaman/$id',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminPengaduanIndexRoute = AdminPengaduanIndexRouteImport.update({
+  id: '/pengaduan/',
+  path: '/pengaduan/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminPengaduanIdRoute = AdminPengaduanIdRouteImport.update({
+  id: '/pengaduan/$id',
+  path: '/pengaduan/$id',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminPengumumanIndexRoute = AdminPengumumanIndexRouteImport.update({
   id: '/pengumuman/',
   path: '/pengumuman/',
@@ -356,6 +368,7 @@ export interface FileRoutesByFullPath {
   '/admin/berita/$id': typeof AdminBeritaIdRoute
   '/admin/galeri/$id': typeof AdminGaleriIdRoute
   '/admin/halaman/$id': typeof AdminHalamanIdRoute
+  '/admin/pengaduan/$id': typeof AdminPengaduanIdRoute
   '/admin/pengumuman/$id': typeof AdminPengumumanIdRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
   '/berita/': typeof PublicBeritaIndexRoute
@@ -366,6 +379,7 @@ export interface FileRoutesByFullPath {
   '/admin/berita/': typeof AdminBeritaIndexRoute
   '/admin/galeri/': typeof AdminGaleriIndexRoute
   '/admin/halaman/': typeof AdminHalamanIndexRoute
+  '/admin/pengaduan/': typeof AdminPengaduanIndexRoute
   '/admin/pengumuman/': typeof AdminPengumumanIndexRoute
   '/pengaduan/status/$code': typeof PublicPengaduanStatusCodeRoute
 }
@@ -407,6 +421,7 @@ export interface FileRoutesByTo {
   '/admin/berita/$id': typeof AdminBeritaIdRoute
   '/admin/galeri/$id': typeof AdminGaleriIdRoute
   '/admin/halaman/$id': typeof AdminHalamanIdRoute
+  '/admin/pengaduan/$id': typeof AdminPengaduanIdRoute
   '/admin/pengumuman/$id': typeof AdminPengumumanIdRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
   '/berita': typeof PublicBeritaIndexRoute
@@ -417,6 +432,7 @@ export interface FileRoutesByTo {
   '/admin/berita': typeof AdminBeritaIndexRoute
   '/admin/galeri': typeof AdminGaleriIndexRoute
   '/admin/halaman': typeof AdminHalamanIndexRoute
+  '/admin/pengaduan': typeof AdminPengaduanIndexRoute
   '/admin/pengumuman': typeof AdminPengumumanIndexRoute
   '/pengaduan/status/$code': typeof PublicPengaduanStatusCodeRoute
 }
@@ -461,6 +477,7 @@ export interface FileRoutesById {
   '/admin/berita/$id': typeof AdminBeritaIdRoute
   '/admin/galeri/$id': typeof AdminGaleriIdRoute
   '/admin/halaman/$id': typeof AdminHalamanIdRoute
+  '/admin/pengaduan/$id': typeof AdminPengaduanIdRoute
   '/admin/pengumuman/$id': typeof AdminPengumumanIdRoute
   '/media/$id/$variant': typeof MediaIdVariantRoute
   '/_public/berita/': typeof PublicBeritaIndexRoute
@@ -471,6 +488,7 @@ export interface FileRoutesById {
   '/admin/berita/': typeof AdminBeritaIndexRoute
   '/admin/galeri/': typeof AdminGaleriIndexRoute
   '/admin/halaman/': typeof AdminHalamanIndexRoute
+  '/admin/pengaduan/': typeof AdminPengaduanIndexRoute
   '/admin/pengumuman/': typeof AdminPengumumanIndexRoute
   '/_public/pengaduan/status/$code': typeof PublicPengaduanStatusCodeRoute
 }
@@ -515,6 +533,7 @@ export interface FileRouteTypes {
     | '/admin/berita/$id'
     | '/admin/galeri/$id'
     | '/admin/halaman/$id'
+    | '/admin/pengaduan/$id'
     | '/admin/pengumuman/$id'
     | '/media/$id/$variant'
     | '/berita/'
@@ -525,6 +544,7 @@ export interface FileRouteTypes {
     | '/admin/berita/'
     | '/admin/galeri/'
     | '/admin/halaman/'
+    | '/admin/pengaduan/'
     | '/admin/pengumuman/'
     | '/pengaduan/status/$code'
   fileRoutesByTo: FileRoutesByTo
@@ -566,6 +586,7 @@ export interface FileRouteTypes {
     | '/admin/berita/$id'
     | '/admin/galeri/$id'
     | '/admin/halaman/$id'
+    | '/admin/pengaduan/$id'
     | '/admin/pengumuman/$id'
     | '/media/$id/$variant'
     | '/berita'
@@ -576,6 +597,7 @@ export interface FileRouteTypes {
     | '/admin/berita'
     | '/admin/galeri'
     | '/admin/halaman'
+    | '/admin/pengaduan'
     | '/admin/pengumuman'
     | '/pengaduan/status/$code'
   id:
@@ -619,6 +641,7 @@ export interface FileRouteTypes {
     | '/admin/berita/$id'
     | '/admin/galeri/$id'
     | '/admin/halaman/$id'
+    | '/admin/pengaduan/$id'
     | '/admin/pengumuman/$id'
     | '/media/$id/$variant'
     | '/_public/berita/'
@@ -629,6 +652,7 @@ export interface FileRouteTypes {
     | '/admin/berita/'
     | '/admin/galeri/'
     | '/admin/halaman/'
+    | '/admin/pengaduan/'
     | '/admin/pengumuman/'
     | '/_public/pengaduan/status/$code'
   fileRoutesById: FileRoutesById
@@ -975,6 +999,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminHalamanIdRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/pengaduan/': {
+      id: '/admin/pengaduan/'
+      path: '/pengaduan'
+      fullPath: '/admin/pengaduan/'
+      preLoaderRoute: typeof AdminPengaduanIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/pengaduan/$id': {
+      id: '/admin/pengaduan/$id'
+      path: '/pengaduan/$id'
+      fullPath: '/admin/pengaduan/$id'
+      preLoaderRoute: typeof AdminPengaduanIdRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/pengumuman/': {
       id: '/admin/pengumuman/'
       path: '/pengumuman'
@@ -1026,11 +1064,13 @@ interface AdminRouteRouteChildren {
   AdminBeritaIdRoute: typeof AdminBeritaIdRoute
   AdminGaleriIdRoute: typeof AdminGaleriIdRoute
   AdminHalamanIdRoute: typeof AdminHalamanIdRoute
+  AdminPengaduanIdRoute: typeof AdminPengaduanIdRoute
   AdminPengumumanIdRoute: typeof AdminPengumumanIdRoute
   AdminAgendaIndexRoute: typeof AdminAgendaIndexRoute
   AdminBeritaIndexRoute: typeof AdminBeritaIndexRoute
   AdminGaleriIndexRoute: typeof AdminGaleriIndexRoute
   AdminHalamanIndexRoute: typeof AdminHalamanIndexRoute
+  AdminPengaduanIndexRoute: typeof AdminPengaduanIndexRoute
   AdminPengumumanIndexRoute: typeof AdminPengumumanIndexRoute
 }
 
@@ -1054,11 +1094,13 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminBeritaIdRoute: AdminBeritaIdRoute,
   AdminGaleriIdRoute: AdminGaleriIdRoute,
   AdminHalamanIdRoute: AdminHalamanIdRoute,
+  AdminPengaduanIdRoute: AdminPengaduanIdRoute,
   AdminPengumumanIdRoute: AdminPengumumanIdRoute,
   AdminAgendaIndexRoute: AdminAgendaIndexRoute,
   AdminBeritaIndexRoute: AdminBeritaIndexRoute,
   AdminGaleriIndexRoute: AdminGaleriIndexRoute,
   AdminHalamanIndexRoute: AdminHalamanIndexRoute,
+  AdminPengaduanIndexRoute: AdminPengaduanIndexRoute,
   AdminPengumumanIndexRoute: AdminPengumumanIndexRoute,
 }
 
