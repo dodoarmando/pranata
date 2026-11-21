@@ -154,11 +154,17 @@ impl PublicForm {
     }
 }
 
-fn hex(bytes: &[u8]) -> String {
+pub(crate) fn hex(bytes: &[u8]) -> String {
     bytes.iter().fold(String::new(), |mut hex, byte| {
         let _ = write!(hex, "{byte:02x}");
         hex
     })
+}
+
+/// The number in `0..=max_number` whose SHA-256 of `salt` and its digits, in hex, is
+/// `challenge`: what the browser finds, for the seed and tests that send forms.
+pub(crate) fn find_number(salt: &str, challenge: &str, max_number: u32) -> Option<u32> {
+    (0..=max_number).find(|n| hex(&Sha256::digest(format!("{salt}{n}"))) == challenge)
 }
 
 /// A fresh proof-of-work challenge for a public form, solved in the browser as the form opens.
@@ -181,8 +187,7 @@ mod tests {
     use super::*;
 
     fn solve(challenge: &Challenge) -> Proof {
-        let number = (0..=challenge.max_number)
-            .find(|n| hex(&Sha256::digest(format!("{}{n}", challenge.salt))) == challenge.challenge)
+        let number = find_number(&challenge.salt, &challenge.challenge, challenge.max_number)
             .expect("the challenge has a solution");
         Proof {
             salt: challenge.salt.clone(),
