@@ -138,4 +138,34 @@ case "$health" in *"\"version\":\"$version\""*) ;; *)
     exit 1
     ;;
 esac
+echo "infra-test: the api health command reports healthy"
+in_container su -s /bin/sh pranata -c 'XDG_RUNTIME_DIR=/run/user/65536 podman healthcheck run pranata-api'
+
+echo "infra-test: provision keeps the running release when the inventory names another"
+play infra/provision.yml --skip-tags firewall,ssh -e pranata_version=9.9.9 | tee "$work/provision-3.log"
+grep -q "WARNING: $name runs $version but the" "$work/provision-3.log" ||
+    { echo "infra-test: no warning about the differing inventory version" >&2; exit 1; }
+health="$(in_container curl -fsk https://localhost/api/healthz)"
+case "$health" in *"\"version\":\"$version\""*) ;; *)
+    echo "infra-test: provision moved the release away from $version" >&2
+    exit 1
+    ;;
+esac
+
+echo "infra-test: the ssh step refuses a root connection"
+if play infra/provision.yml --tags ssh | tee "$work/ssh.log"; then
+    echo "infra-test: the ssh step should refuse to lock out root" >&2
+    exit 1
+fi
+grep -q "Ansible connects as root" "$work/ssh.log" ||
+    { echo "infra-test: the ssh refusal message is missing" >&2; exit 1; }
+
+echo "infra-test: create-admin recovery"
+if PRANATA_ADMIN_USERNAME='Bad Name' PRANATA_ADMIN_NAME='Nobody' play infra/create-admin.yml; then
+    echo "infra-test: an invalid username should be refused" >&2
+    exit 1
+fi
+PRANATA_ADMIN_USERNAME=second.admin PRANATA_ADMIN_NAME='Second Admin' play infra/create-admin.yml | tee "$work/create-admin.log"
+grep -q 'Access Link for second.admin' "$work/create-admin.log" ||
+    { echo "infra-test: create-admin printed no Access Link" >&2; exit 1; }
 echo "infra-test: ok"
