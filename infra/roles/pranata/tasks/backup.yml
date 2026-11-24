@@ -32,15 +32,17 @@
     group: "{{ pranata_user }}"
     mode: "0750"
 
-# systemd parses EnvironmentFile= values: quotes, line breaks, a trailing
-# backslash and surrounding spaces would change them, so refuse such values.
+# systemd parses EnvironmentFile= values: quotes, backslashes, line breaks and
+# surrounding spaces would change them, so refuse a value with a quote or
+# backslash anywhere, a line break anywhere, or leading or trailing whitespace.
 - name: Check the restic values are safe in an env file
   ansible.builtin.assert:
     that:
       - item | string | length > 0
       - item | string is not search('[\\r\\n]')
-      - item | string is not search('^[\\s\\x22\\x27]|[\\s\\x5c]$')
-    fail_msg: A pranata_restic_* value is empty or starts or ends with a quote, space or backslash, or has a line break.
+      - item | string is not search('^\\s|\\s$')
+      - item | string is not search('[\\x22\\x27\\x5c]')
+    fail_msg: A pranata_restic_* value is empty, contains a quote, backslash or line break, or has leading or trailing whitespace.
     quiet: true
   loop: "{{ [pranata_restic_repository, pranata_restic_password] + pranata_restic_env.values() | list }}"
   no_log: true
