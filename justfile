@@ -38,7 +38,9 @@ db-up:
     done
     echo "db-up: postgres ready on 127.0.0.1:55432"
 
-# Apply database migrations with the owner role (sqlx-cli, so it works before the crate compiles).
+# Apply database migrations with the owner role. The default URL holds the
+# dev-only owner password from infra/dev/postgres-init.sql; real installations
+# set MIGRATION_DATABASE_URL. (sqlx-cli, so it works before the crate compiles).
 db-migrate:
     sqlx migrate run --source apps/api/migrations --database-url "${MIGRATION_DATABASE_URL:-postgres://pranata_owner:pranata_owner_dev@127.0.0.1:55432/pranata}"
 
