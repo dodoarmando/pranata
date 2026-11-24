@@ -38,10 +38,10 @@
   ansible.builtin.import_tasks: app.yml
   tags: [app]
 
+- name: Set up monitoring pings (before the backup timers start)
+  ansible.builtin.import_tasks: monitoring.yml
+  tags: [monitoring]
+
 - name: Set up encrypted backups and the restore check
   ansible.builtin.import_tasks: backup.yml
   tags: [backup]
-
-- name: Set up monitoring pings
-  ansible.builtin.import_tasks: monitoring.yml
-  tags: [monitoring]
