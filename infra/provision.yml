@@ -1,0 +1,6 @@
+---
+- name: Provision a Pranata Installation
+  hosts: all
+  become: true
+  roles:
+    - pranata

@@ -1,0 +1,305 @@
+---
+- name: Create the Pranata group
+  ansible.builtin.group:
+    name: "{{ pranata_user }}"
+    gid: "{{ pranata_user_uid | default(omit, true) }}"
+
+- name: Create the Pranata user
+  ansible.builtin.user:
+    name: "{{ pranata_user }}"
+    comment: Pranata installation
+    uid: "{{ pranata_user_uid | default(omit, true) }}"
+    group: "{{ pranata_user }}"
+    shell: /usr/sbin/nologin
+    create_home: true
+    home: "{{ pranata_home }}"
+    password_lock: true
+
+- name: Check the user has subordinate ids for rootless Podman
+  ansible.builtin.command: grep -q "^{{ pranata_user }}:" /etc/subuid /etc/subgid
+  register: pranata_subids
+  changed_when: false
+  failed_when: pranata_subids.rc != 0
+
+- name: Keep the user's systemd manager running without a login
+  ansible.builtin.command: loginctl enable-linger {{ pranata_user }}
+  args:
+    creates: "/var/lib/systemd/linger/{{ pranata_user }}"
+
+- name: Learn the user's runtime directory
+  ansible.builtin.import_tasks: user_env.yml
+
+- name: Start the user's systemd manager
+  ansible.builtin.systemd:
+    name: "user@{{ pranata_uid }}.service"
+    state: started
+
+- name: Wait for the user's bus
+  ansible.builtin.wait_for:
+    path: "/run/user/{{ pranata_uid }}/bus"
+    timeout: 30
+
+- name: Create the configuration directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ pranata_user }}"
+    group: "{{ pranata_user }}"
+    mode: "0750"
+  loop:
+    - "{{ pranata_home }}/.config"
+    - "{{ pranata_home }}/.config/containers"
+    - "{{ pranata_home }}/.config/containers/systemd"
+    - "{{ pranata_home }}/.config/pranata"
+
+# The media directory belongs to the api's uid inside the user namespace, which
+# is a subordinate uid on the host, so chown from inside the namespace. Podman
+# would re-chown a named volume to each container's user; a bind mount avoids that.
+- name: Create the media directories
+  ansible.builtin.command:
+    argv: [podman, unshare, mkdir, -p, "{{ pranata_media_dir }}/public"]
+    creates: "{{ pranata_media_dir }}/public"
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+
+- name: Read who owns the media directories
+  ansible.builtin.command:
+    argv:
+      [
+        podman,
+        unshare,
+        stat,
+        -c,
+        "%u:%g:%a",
+        "{{ pranata_media_dir }}",
+        "{{ pranata_media_dir }}/public",
+      ]
+  register: pranata_media_owner
+  changed_when: false
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+
+- name: Give the media directories to the api user
+  ansible.builtin.command:
+    argv:
+      - podman
+      - unshare
+      - chown
+      - "{{ pranata_container_uid }}:{{ pranata_container_uid }}"
+      - "{{ pranata_media_dir }}"
+      - "{{ pranata_media_dir }}/public"
+  when: pranata_media_owner.stdout_lines != [pranata_media_expected] * 2
+  changed_when: true
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+  vars:
+    pranata_media_expected: "{{ pranata_container_uid }}:{{ pranata_container_uid }}:755"
+
+- name: Let Caddy read the public variants
+  ansible.builtin.command:
+    argv:
+      [
+        podman,
+        unshare,
+        chmod,
+        "0755",
+        "{{ pranata_media_dir }}",
+        "{{ pranata_media_dir }}/public",
+      ]
+  when: pranata_media_owner.stdout_lines | map('regex_replace', '^.*:', '') | unique | list != ['755']
+  changed_when: true
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+
+- name: Install the Quadlet units
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "{{ pranata_home }}/.config/containers/systemd/{{ item }}"
+    owner: "{{ pranata_user }}"
+    group: "{{ pranata_user }}"
+    mode: "0600"
+  loop:
+    - pranata.network
+    - pranata-postgres.container
+    - pranata-api.container
+    - pranata-web.container
+    - pranata-caddy.container
+  register: pranata_units
+  notify: Reload user systemd units
+
+- name: Install the environment files
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "{{ pranata_home }}/.config/pranata/{{ item }}"
+    owner: "{{ pranata_user }}"
+    group: "{{ pranata_user }}"
+    mode: "0600"
+  loop:
+    - api.env
+    - web.env
+  register: pranata_envs
+
+- name: Install the Caddyfile
+  ansible.builtin.template:
+    src: Caddyfile.j2
+    dest: "{{ pranata_home }}/.config/pranata/Caddyfile"
+    owner: "{{ pranata_user }}"
+    group: "{{ pranata_user }}"
+    mode: "0644"
+  register: pranata_caddyfile
+
+- name: Load the units
+  ansible.builtin.meta: flush_handlers
+
+- name: Copy the image archive to the host
+  ansible.builtin.copy:
+    src: "{{ pranata_images_archive }}"
+    dest: /var/tmp/pranata-images.tar
+    owner: "{{ pranata_user }}"
+    group: "{{ pranata_user }}"
+    mode: "0600"
+  when: pranata_images_archive | length > 0
+
+- name: Load the images from the archive
+  ansible.builtin.command:
+    argv: [podman, load, --quiet, --input, /var/tmp/pranata-images.tar]
+  when: pranata_images_archive | length > 0
+  changed_when: false
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+
+- name: Remove the image archive from the host
+  ansible.builtin.file:
+    path: /var/tmp/pranata-images.tar
+    state: absent
+  when: pranata_images_archive | length > 0
+
+- name: Pull the images
+  ansible.builtin.command:
+    argv: [podman, pull, --quiet, "{{ item }}"]
+  loop:
+    - "{{ pranata_postgres_image }}"
+    - "{{ pranata_caddy_image }}"
+    - "{{ pranata_image_registry }}/pranata-api:{{ pranata_release }}"
+    - "{{ pranata_image_registry }}/pranata-web:{{ pranata_release }}"
+  when: pranata_pull_images | bool
+  changed_when: false
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+
+- name: Start Postgres
+  ansible.builtin.systemd:
+    name: pranata-postgres.service
+    state: started
+    scope: user
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+
+- name: Wait for Postgres to accept connections
+  ansible.builtin.command:
+    argv:
+      [
+        podman,
+        exec,
+        pranata-postgres,
+        pg_isready,
+        --username,
+        postgres,
+        --dbname,
+        pranata,
+      ]
+  register: pranata_pg_ready
+  changed_when: false
+  retries: 30
+  delay: 2
+  until: pranata_pg_ready.rc == 0
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+
+- name: Create or update the database roles
+  ansible.builtin.command:
+    argv:
+      - podman
+      - exec
+      - --env
+      - OWNER_PASSWORD
+      - --env
+      - APP_PASSWORD
+      - --interactive
+      - pranata-postgres
+      - sh
+      - -c
+      - >-
+        psql --username postgres --dbname pranata --set ON_ERROR_STOP=1
+        --set "owner_password=$OWNER_PASSWORD" --set "app_password=$APP_PASSWORD"
+    stdin: |
+      SELECT format('CREATE ROLE %I LOGIN', 'pranata_owner')
+        WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'pranata_owner') \gexec
+      SELECT format('CREATE ROLE %I LOGIN', 'pranata_app')
+        WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'pranata_app') \gexec
+      SELECT format('ALTER ROLE pranata_owner PASSWORD %L', :'owner_password') \gexec
+      SELECT format('ALTER ROLE pranata_app PASSWORD %L', :'app_password') \gexec
+      ALTER DATABASE pranata OWNER TO pranata_owner;
+  environment: "{{ pranata_user_env | combine({'OWNER_PASSWORD': pranata_db_owner_password, 'APP_PASSWORD': pranata_db_app_password}) }}"
+  become: true
+  become_user: "{{ pranata_user }}"
+  changed_when: false
+  no_log: true
+
+- name: Start the web server
+  ansible.builtin.systemd:
+    name: pranata-web.service
+    state: started
+    scope: user
+  register: pranata_web_started
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+
+- name: Start the api
+  ansible.builtin.systemd:
+    name: pranata-api.service
+    state: started
+    scope: user
+  register: pranata_api_started
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+
+- name: Start Caddy
+  ansible.builtin.systemd:
+    name: pranata-caddy.service
+    state: started
+    scope: user
+  register: pranata_caddy_started
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+
+# A unit that was already running keeps its old configuration until restarted.
+- name: Restart what a changed configuration affects
+  ansible.builtin.systemd:
+    name: "{{ item.unit }}"
+    state: restarted
+    scope: user
+  loop:
+    - unit: pranata-web.service
+      when: "{{ pranata_web_started is not changed and (pranata_units.results[3].changed or pranata_envs.results[1].changed) }}"
+    - unit: pranata-api.service
+      when: "{{ pranata_api_started is not changed and (pranata_units.results[2].changed or pranata_envs.results[0].changed) }}"
+    - unit: pranata-caddy.service
+      when: "{{ pranata_caddy_started is not changed and (pranata_units.results[4].changed or pranata_caddyfile.changed) }}"
+  loop_control:
+    label: "{{ item.unit }}"
+  when: item.when | bool
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"

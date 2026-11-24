@@ -1,0 +1,22 @@
+# Managed by Ansible.
+[Unit]
+Description=Pranata Postgres
+
+[Container]
+Image={{ pranata_postgres_image }}
+ContainerName=pranata-postgres
+Network=pranata.network
+NetworkAlias=postgres
+Environment=POSTGRES_DB=pranata
+Environment=POSTGRES_PASSWORD={{ pranata_db_superuser_password }}
+Volume=pranata-pgdata:/var/lib/postgresql
+HealthCmd=pg_isready -U postgres -d pranata
+HealthInterval=5s
+HealthRetries=12
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

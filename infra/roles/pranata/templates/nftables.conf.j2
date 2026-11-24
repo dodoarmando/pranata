@@ -1,0 +1,21 @@
+#!/usr/sbin/nft -f
+# Managed by Ansible. Allows SSH, HTTP and HTTPS; everything else inbound is dropped.
+flush ruleset
+
+table inet filter {
+	chain input {
+		type filter hook input priority filter; policy drop;
+		iif lo accept
+		ct state established,related accept
+		ct state invalid drop
+		ip protocol icmp accept
+		ip6 nexthdr icmpv6 accept
+		tcp dport { 22, {{ pranata_http_port }}, {{ pranata_https_port }} } accept
+	}
+	chain forward {
+		type filter hook forward priority filter; policy drop;
+	}
+	chain output {
+		type filter hook output priority filter; policy accept;
+	}
+}

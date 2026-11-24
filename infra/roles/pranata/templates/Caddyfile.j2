@@ -1,0 +1,31 @@
+# Managed by Ansible. The routes match infra/dev/Caddyfile.
+{
+	admin off
+}
+
+{{ pranata_domain }} {
+{% if pranata_tls == 'internal' %}
+	tls internal
+{% endif %}
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	# Variants are content-addressed, so they never change under their URL.
+	handle_path /media/* {
+		root * /srv/media/public
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# The cache purge hook is for the API only, never for the internet.
+	handle /_internal/* {
+		respond 404
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

@@ -1,0 +1,34 @@
+---
+# Copy this file somewhere outside the repository, fill it in and point
+# PRANATA_INVENTORY at it. Encrypt the secrets with ansible-vault, for example:
+#   ansible-vault encrypt_string --stdin-name pranata_purge_token
+# and paste the output in place of the placeholders below.
+all:
+  children:
+    installations:
+      hosts:
+        village-example:
+          ansible_host: 203.0.113.10
+          # Connect as a user that can use sudo, not as root: SSH root login is turned off.
+          ansible_user: operator
+          pranata_domain: village.example
+          pranata_version: 0.1.0
+          pranata_tls: acme
+          # Used only while the Installation has no Village yet.
+          pranata_village_code: "00.00.00.0000"
+          pranata_admin_username: admin
+          pranata_admin_name: Example Administrator
+          # Secrets: use letters, digits, "-" and "_" in pranata_purge_token.
+          pranata_db_owner_password: CHANGE-ME-with-ansible-vault
+          pranata_db_app_password: CHANGE-ME-with-ansible-vault
+          pranata_purge_token: CHANGE-ME-with-ansible-vault
+          pranata_restic_password: CHANGE-ME-with-ansible-vault
+          pranata_restic_repository: s3:https://s3.example/example-bucket
+          pranata_restic_env:
+            AWS_ACCESS_KEY_ID: CHANGE-ME-with-ansible-vault
+            AWS_SECRET_ACCESS_KEY: CHANGE-ME-with-ansible-vault
+          # Optional monitoring pings.
+          pranata_monitor_ping_urls:
+            backup: https://monitor.example/ping/backup
+            restore: https://monitor.example/ping/restore
+            disk: https://monitor.example/ping/disk

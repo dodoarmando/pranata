@@ -1,0 +1,24 @@
+# Managed by Ansible.
+[Unit]
+Description=Pranata API
+Requires=pranata-postgres.service
+After=pranata-postgres.service
+
+[Container]
+Image={{ pranata_image_registry }}/pranata-api:{{ pranata_release }}
+ContainerName=pranata-api
+Network=pranata.network
+NetworkAlias=api
+EnvironmentFile=%h/.config/pranata/api.env
+Volume={{ pranata_media_dir }}:/media
+ReadOnly=true
+NoNewPrivileges=true
+DropCapability=ALL
+
+[Service]
+Restart=always
+RestartSec=3
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

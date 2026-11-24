@@ -128,9 +128,23 @@ check-contract:
 check-trace:
     bun tools/trace/trace.ts
 
-# Validate infrastructure files (Task 16).
-check-infra:
-    @echo "check-infra: not implemented yet (Task 16)"
+# Install the pinned Ansible toolchain and collections into target/infra.
+[private]
+infra-tools:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    venv=target/infra
+    stamp="$venv/.installed"
+    if [ ! -f "$stamp" ] || [ infra/requirements.txt -nt "$stamp" ] || [ infra/requirements.yml -nt "$stamp" ]; then
+        python3 -m venv "$venv"
+        "$venv/bin/pip" install --quiet -r infra/requirements.txt
+        ANSIBLE_CONFIG="{{ justfile_directory() }}/infra/ansible.cfg" "$venv/bin/ansible-galaxy" collection install --upgrade -r infra/requirements.yml -p "$venv/collections"
+        touch "$stamp"
+    fi
+
+# Lint the Ansible role and playbooks, check their syntax, and dry-run the rendered Quadlet units.
+check-infra: infra-tools
+    @infra/check.sh
 
 # Run decision traceability in strict mode (roadmap-only citations fail).
 check-trace-strict:
@@ -144,9 +158,10 @@ test-web:
 test-api:
     cargo test --workspace --locked
 
-# Provision one Installation (Task 16).
-provision:
-    @echo "provision: not implemented yet (Task 16)"
+# Provision one Installation (or `all`) from the inventory named by $PRANATA_INVENTORY.
+provision host: infra-tools
+    PATH="{{ justfile_directory() }}/target/infra/bin:$PATH" ANSIBLE_CONFIG="{{ justfile_directory() }}/infra/ansible.cfg" \
+        ansible-playbook -i "${PRANATA_INVENTORY:?set PRANATA_INVENTORY to your inventory file}" infra/provision.yml -l {{ host }}
 
 # Fail when real village data leaks outside allowed paths.
 check-village-data:
@@ -215,7 +230,3 @@ load: images
 # Load seed data (plan P6).
 seed:
     @echo "seed: not implemented yet (plan P6)"
-
-# Deploy the stack (Task 16).
-deploy:
-    @echo "deploy: not implemented yet (Task 16)"

@@ -1,0 +1,41 @@
+---
+- name: Upgrade the installed packages
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+    upgrade: dist
+
+- name: Install the base packages
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - nftables
+      - podman
+      - restic
+      - unattended-upgrades
+      - uidmap
+      - passt
+      - dbus-user-session
+    state: present
+
+- name: Enable automatic security updates
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+
+- name: Let rootless Podman bind the web ports
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_unprivileged_port_start
+    value: "{{ [pranata_http_port, pranata_https_port] | min }}"
+    sysctl_file: /etc/sysctl.d/90-pranata.conf
+    reload: true
+  register: pranata_sysctl
+  # A container without its own network namespace cannot set sysctls; the
+  # disposable test container inherits the value from its host.
+  failed_when: pranata_sysctl.failed and pranata_tls != 'internal'

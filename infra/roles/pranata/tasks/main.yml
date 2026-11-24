@@ -1,0 +1,36 @@
+---
+- name: Check the required variables
+  ansible.builtin.assert:
+    that:
+      - pranata_domain | length > 0
+      - pranata_version | length > 0
+      - pranata_tls in ['acme', 'internal']
+      - pranata_db_owner_password | length > 0
+      - pranata_db_app_password | length > 0
+      - pranata_purge_token | length > 0
+    fail_msg: >-
+      Set pranata_domain, pranata_version, pranata_db_owner_password,
+      pranata_db_app_password and pranata_purge_token in your inventory
+      (see infra/inventory.example.yml); pranata_tls is acme or internal.
+    quiet: true
+  tags: [always]
+
+- name: Prepare the base system
+  ansible.builtin.import_tasks: base.yml
+  tags: [base]
+
+- name: Harden SSH
+  ansible.builtin.import_tasks: ssh.yml
+  tags: [ssh]
+
+- name: Configure the firewall
+  ansible.builtin.import_tasks: firewall.yml
+  tags: [firewall]
+
+- name: Set up Podman and the Quadlet units
+  ansible.builtin.import_tasks: podman.yml
+  tags: [podman]
+
+- name: Initialise the first run
+  ansible.builtin.import_tasks: app.yml
+  tags: [app]

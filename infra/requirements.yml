@@ -1,0 +1,7 @@
+---
+collections:
+  - name: ansible.posix
+    version: 2.2.2
+  # Connection plugin for the infra test container.
+  - name: containers.podman
+    version: 1.21.2

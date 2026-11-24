@@ -1,0 +1,105 @@
+---
+- name: Wait for the api to answer through Caddy
+  ansible.builtin.command:
+    argv:
+      - curl
+      - --fail
+      - --silent
+      - --insecure
+      - --max-time
+      - "5"
+      - --resolve
+      - "{{ pranata_domain }}:{{ pranata_https_port }}:127.0.0.1"
+      - "https://{{ pranata_domain }}:{{ pranata_https_port }}/api/healthz"
+  register: pranata_ready
+  changed_when: false
+  retries: 60
+  delay: 2
+  until: pranata_ready.rc == 0
+
+# Reads state: the api answers 404 village_not_initialized until `village init` ran.
+- name: Ask whether a Village exists
+  ansible.builtin.command:
+    argv:
+      - curl
+      - --silent
+      - --insecure
+      - --max-time
+      - "5"
+      - --write-out
+      - "\n%{http_code}"
+      - --resolve
+      - "{{ pranata_domain }}:{{ pranata_https_port }}:127.0.0.1"
+      - "https://{{ pranata_domain }}:{{ pranata_https_port }}/api/public/village"
+  register: pranata_village
+  changed_when: false
+
+- name: Understand the answer
+  ansible.builtin.set_fact:
+    pranata_village_missing: "{{ pranata_village.stdout_lines[-1] == '404' and 'village_not_initialized' in pranata_village.stdout }}"
+    pranata_village_present: "{{ pranata_village.stdout_lines[-1] == '200' }}"
+
+- name: Refuse an answer that is neither a Village nor a missing one
+  ansible.builtin.fail:
+    msg: "GET /api/public/village returned an unexpected answer: {{ pranata_village.stdout_lines[-1] }}"
+  when: not (pranata_village_missing | bool or pranata_village_present | bool)
+
+- name: Bootstrap the first run
+  when: pranata_village_missing | bool
+  block:
+    - name: Check the first-run variables
+      ansible.builtin.assert:
+        that:
+          - pranata_village_code | length > 0
+          - pranata_admin_username | length > 0
+          - pranata_admin_name | length > 0
+        fail_msg: Set pranata_village_code, pranata_admin_username and pranata_admin_name in your inventory for the first run.
+        quiet: true
+
+    - name: Initialise the Village
+      ansible.builtin.command:
+        argv:
+          - podman
+          - run
+          - --rm
+          - --network
+          - pranata
+          - --env-file
+          - "{{ pranata_home }}/.config/pranata/api.env"
+          - "{{ pranata_image_registry }}/pranata-api:{{ pranata_release }}"
+          - village
+          - init
+          - --code
+          - "{{ pranata_village_code }}"
+      changed_when: true
+      become: true
+      become_user: "{{ pranata_user }}"
+      environment: "{{ pranata_user_env }}"
+
+    - name: Create the first Administrator
+      ansible.builtin.command:
+        argv:
+          - podman
+          - run
+          - --rm
+          - --network
+          - pranata
+          - --env-file
+          - "{{ pranata_home }}/.config/pranata/api.env"
+          - "{{ pranata_image_registry }}/pranata-api:{{ pranata_release }}"
+          - user
+          - create-admin
+          - "{{ pranata_admin_username }}"
+          - --name
+          - "{{ pranata_admin_name }}"
+      register: pranata_admin
+      changed_when: true
+      no_log: true
+      become: true
+      become_user: "{{ pranata_user }}"
+      environment: "{{ pranata_user_env }}"
+
+    # Shown once, here. It is not written to any file on the server.
+    - name: Show the Access Link
+      ansible.builtin.debug:
+        msg: "Access Link for {{ pranata_admin_username }} (shown once, keep it safe): {{ pranata_admin.stdout_lines | last }}"

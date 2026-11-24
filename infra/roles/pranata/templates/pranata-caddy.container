@@ -1,0 +1,23 @@
+# Managed by Ansible.
+[Unit]
+Description=Pranata Caddy
+After=pranata-api.service pranata-web.service
+
+[Container]
+Image={{ pranata_caddy_image }}
+ContainerName=pranata-caddy
+Network=pranata.network
+PublishPort={{ pranata_http_port }}:80
+PublishPort={{ pranata_https_port }}:443
+Volume=%h/.config/pranata/Caddyfile:/etc/caddy/Caddyfile:ro
+# Caddy reads only the public variants.
+Volume={{ pranata_media_dir }}/public:/srv/media/public:ro
+Volume=pranata-caddy-data:/data
+Volume=pranata-caddy-config:/config
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

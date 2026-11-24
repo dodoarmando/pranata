@@ -1,0 +1,11 @@
+---
+- name: Look up the Pranata user
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ pranata_user }}"
+
+- name: Remember how to reach the user's systemd manager
+  ansible.builtin.set_fact:
+    pranata_uid: "{{ getent_passwd[pranata_user][1] }}"
+    pranata_user_env:
+      XDG_RUNTIME_DIR: "/run/user/{{ getent_passwd[pranata_user][1] }}"

@@ -1,0 +1,57 @@
+---
+# Public name of the Installation, for example village.example. Required.
+pranata_domain: ""
+# Release to run, for example 0.1.0 (the image tag). Required.
+pranata_version: ""
+# acme: Let's Encrypt through Caddy. internal: Caddy's own CA (tests only).
+pranata_tls: acme
+
+# First Administrator and the Village, used only while no Village exists.
+pranata_admin_username: ""
+pranata_admin_name: ""
+pranata_village_code: ""
+
+# Secrets. Keep them in an ansible-vault file outside this repository.
+pranata_db_owner_password: ""
+pranata_db_app_password: ""
+pranata_purge_token: ""
+pranata_restic_password: ""
+pranata_restic_repository: ""
+# Environment for restic's S3 backend, for example AWS_ACCESS_KEY_ID.
+pranata_restic_env: {}
+# Optional monitoring pings, keys: backup, restore, disk.
+pranata_monitor_ping_urls: {}
+
+# Images. Tags are the release version.
+pranata_image_registry: ghcr.io/dodoarmando
+pranata_postgres_image: docker.io/library/postgres:19
+pranata_caddy_image: docker.io/library/caddy:2.11.9
+# Pull images on provision and deploy. Switch it off when the images are
+# loaded from an archive or already on the host.
+pranata_pull_images: true
+# Optional path, on the machine running Ansible, of a `podman save` archive of
+# the api and web images, loaded on the host before the units start.
+pranata_images_archive: ""
+
+# The release the Quadlet units point at. Deploys override it during a rollback.
+pranata_release: "{{ pranata_version }}"
+
+# The unprivileged account that runs everything, and where its files live.
+pranata_user: pranata
+pranata_home: "/home/{{ pranata_user }}"
+# Fixed uid, and gid, for the user; empty lets the system choose.
+pranata_user_uid: ""
+pranata_media_dir: "{{ pranata_home }}/media"
+# The api and web images run as this uid inside the container.
+pranata_container_uid: 65532
+
+# How long a deploy waits for the new version to answer, in seconds.
+pranata_health_timeout: 120
+
+# Postgres superuser password. The container's socket is not published; it
+# only protects the cluster inside the pranata network.
+pranata_db_superuser_password: "{{ (pranata_db_owner_password ~ pranata_purge_token) | hash('sha256') }}"
+
+# Ports published by Caddy on the host.
+pranata_http_port: 80
+pranata_https_port: 443
