@@ -504,6 +504,39 @@ async fn profile_save_only_completes_its_own_purge_job(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn profile_save_gives_up_on_a_silent_web_server_after_two_seconds(pool: PgPool) {
+    // Accepts the connection and never answers.
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let _held = tokio::spawn(async move {
+        let (socket, _) = listener.accept().await.unwrap();
+        tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+        drop(socket);
+    });
+    let h = Harness::with_state(pool.clone(), test_state_with_web(pool, &url)).await;
+    let updated_at = h.get_profile().await.body["updated_at"].clone();
+    let started = std::time::Instant::now();
+    let put = h
+        .put_profile(
+            &json!({"overview": doc("A"), "hero_asset_id": null, "updated_at": updated_at}),
+        )
+        .await;
+    let took = started.elapsed();
+    assert_eq!(put.status, StatusCode::OK, "{}", put.body);
+    assert!(
+        took >= std::time::Duration::from_secs(2) && took < std::time::Duration::from_secs(4),
+        "{took:?}"
+    );
+    let pending = sqlx::query_scalar!(
+        r#"SELECT count(*) AS "n!" FROM jobs WHERE kind = 'purge_public_cache' AND done_at IS NULL"#
+    )
+    .fetch_one(&h.pool)
+    .await
+    .unwrap();
+    assert_eq!(pending, 1);
+}
+
+#[sqlx::test]
 async fn profile_save_keeps_the_purge_job_when_the_inline_purge_fails(pool: PgPool) {
     let (url, _request) = fake_web("503 Service Unavailable").await;
     let h = Harness::with_state(pool.clone(), test_state_with_web(pool, &url)).await;
