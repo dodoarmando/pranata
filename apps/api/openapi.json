@@ -173,6 +173,124 @@
 				]
 			}
 		},
+		"/api/admin/village/profile": {
+			"get": {
+				"tags": ["village"],
+				"summary": "The editable part of the Village profile.",
+				"description": "# Errors\n404 `village_not_initialized` before `pranata village init` has run.",
+				"operationId": "getVillageProfile",
+				"responses": {
+					"200": {
+						"description": "The overview and hero photo",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Profile"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "The Village is not initialised yet (code village_not_initialized)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			},
+			"put": {
+				"tags": ["village"],
+				"summary": "Replace the overview and hero photo, then purge the public cache.",
+				"description": "# Errors\n409 `stale_write`; 422 `validation_failed` (field `overview`) or\n`hero_not_ready`; 404 `village_not_initialized`.",
+				"operationId": "putVillageProfile",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ProfileUpdate"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "The saved profile",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Profile"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "The Village is not initialised yet (code village_not_initialized)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "The profile changed since it was read (code stale_write)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Invalid overview (code validation_failed, with field errors) or a hero that is not a ready image (code hero_not_ready)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
 		"/api/auth/access-links/redeem": {
 			"post": {
 				"tags": ["auth"],
@@ -495,6 +613,26 @@
 					}
 				}
 			},
+			"MediaRef": {
+				"type": "object",
+				"description": "An image as public responses embed it.",
+				"required": ["id", "variants"],
+				"properties": {
+					"alt": {
+						"type": ["string", "null"]
+					},
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"variants": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/MediaVariant"
+						}
+					}
+				}
+			},
 			"MediaVariant": {
 				"type": "object",
 				"description": "One public WebP rendition of an image.",
@@ -535,6 +673,53 @@
 					},
 					"type": {
 						"type": "string"
+					}
+				}
+			},
+			"Profile": {
+				"type": "object",
+				"description": "What an Administrator edits.",
+				"required": ["updated_at"],
+				"properties": {
+					"hero": {
+						"oneOf": [
+							{
+								"$ref": "#/components/schemas/MediaRef"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"overview": {
+						"type": ["object", "null"],
+						"description": "`ProseMirror` document; `null` when there is no overview."
+					},
+					"updated_at": {
+						"type": "string",
+						"format": "date-time",
+						"description": "Send it back unchanged with the next edit (RFC 3339, full precision)."
+					}
+				}
+			},
+			"ProfileUpdate": {
+				"type": "object",
+				"description": "The edit an Administrator submits.",
+				"required": ["overview", "hero_asset_id", "updated_at"],
+				"properties": {
+					"hero_asset_id": {
+						"type": ["string", "null"],
+						"format": "uuid",
+						"description": "A ready image asset, or `null` for no hero photo."
+					},
+					"overview": {
+						"type": ["object", "null"],
+						"description": "New overview, or `null` to clear it."
+					},
+					"updated_at": {
+						"type": "string",
+						"format": "date-time",
+						"description": "The `updated_at` of the profile this edit is based on."
 					}
 				}
 			},
@@ -599,8 +784,23 @@
 					"district": {
 						"type": "string"
 					},
+					"hero": {
+						"oneOf": [
+							{
+								"$ref": "#/components/schemas/MediaRef",
+								"description": "Hero photo; `null` until an Administrator picks one."
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
 					"name": {
 						"type": "string"
+					},
+					"overview_html": {
+						"type": ["string", "null"],
+						"description": "The overview as sanitized HTML; `null` until an Administrator writes\none."
 					},
 					"province": {
 						"type": "string"
