@@ -17,7 +17,7 @@ describe("check", () => {
 			"**Decisions:** D-01",
 			"| Plan | Scope | Decisions |",
 			"| --- | --- | --- |",
-			"| P2 Access | Roles | D-02 |",
+			"| R1-A Access | Roles | D-02 |",
 		].join("\n");
 		const result = check([spec], [plan], false);
 		expect(result.missing).toEqual([]);
@@ -28,11 +28,31 @@ describe("check", () => {
 		const plan = [
 			"### Task 1: Foo",
 			"**Decisions:** D-01",
-			"| P2 Access | Roles | D-02 |",
+			"| R1-A Access | Roles | D-02 |",
 		].join("\n");
 		const result = check([spec], [plan], true);
 		expect(result.missing).toEqual(["D-02"]);
 		expect(result.ok).toBe(false);
+	});
+
+	test("ignores roadmap rows that use the retired Pnn names", () => {
+		const plan = [
+			"### Task 1: Foo",
+			"**Decisions:** D-01",
+			"| P2 Access | Roles | D-02 |",
+		].join("\n");
+		const result = check([spec], [plan], false);
+		expect(result.missing).toEqual(["D-02"]);
+		expect(result.ok).toBe(false);
+	});
+
+	test("does not read a release without a plan letter as a roadmap row", () => {
+		const plan = [
+			"### Task 1: Foo",
+			"**Decisions:** D-01",
+			"| R1 CMS | Content | D-02 |",
+		].join("\n");
+		expect(check([spec], [plan], false).missing).toEqual(["D-02"]);
 	});
 
 	test("accepts Not built citations in both modes", () => {
@@ -79,9 +99,9 @@ describe("check", () => {
 			expect(result.ok).toBe(false);
 		}
 		const roadmap =
-			"### Task 1: Foo\n**Decisions:** D-01, D-02\n| P2 Access | Roles | D-01…D-02 |\n";
+			"### Task 1: Foo\n**Decisions:** D-01, D-02\n| R1-E Operations | Release | D-01…D-02 |\n";
 		const result = check([spec], [roadmap], false);
-		expect(result.ranges).toEqual(["roadmap: P2 Access"]);
+		expect(result.ranges).toEqual(["roadmap: R1-E Operations"]);
 		expect(result.ok).toBe(false);
 	});
 

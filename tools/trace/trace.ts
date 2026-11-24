@@ -75,7 +75,7 @@ function cite(plans: string[]): Citations {
 					result.ranges.push(`Not built: ${line.slice(14).trim()}`);
 				}
 				for (const id of ids(line)) result.notBuilt.add(id);
-			} else if (/^\|\s*P\d+\b/.test(line)) {
+			} else if (/^\|\s*R\d+-[A-Z]\b/.test(line)) {
 				const cells = line.split("|").slice(1, -1);
 				const last = cells.at(-1) ?? "";
 				if (RANGE.test(last)) {
