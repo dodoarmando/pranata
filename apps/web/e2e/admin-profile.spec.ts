@@ -81,19 +81,15 @@ async function overviewEditor(page: Page) {
 	return editor;
 }
 
-// The save queues a cache purge job; the worker polls every 2 s, so "at once"
-// means within a few seconds, never after the cache TTL.
+// D-12: the very next anonymous request after a successful save is fresh. No
+// polling: the API purges before it answers the PUT. The web cache TTL is 300 s
+// and `/` was cached by earlier requests (stack.sh's readiness check, the
+// previous test), so without the purge this would read the stale page.
 async function expectHomeToContain(visitor: APIRequestContext, text: string) {
-	await expect
-		.poll(
-			async () => (await (await visitor.get(ORIGIN)).text()).includes(text),
-			{
-				timeout: 10_000,
-				intervals: [250],
-				message: `the home page should show "${text}" soon after saving`,
-			},
-		)
-		.toBe(true);
+	const html = await (await visitor.get(ORIGIN)).text();
+	expect(html, `the next request after saving should show "${text}"`).toContain(
+		text,
+	);
 }
 
 function largestVariant(variants: Variant[]): Variant {
