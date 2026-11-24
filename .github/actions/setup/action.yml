@@ -1,0 +1,40 @@
+name: Set up toolchains
+description: Install just and Bun, and optionally Rust and sqlx-cli, then the JavaScript dependencies.
+inputs:
+  rust:
+    description: Install the Rust toolchain from rust-toolchain.toml and restore the cargo cache.
+    default: "false"
+  sqlx-cli:
+    description: Install sqlx-cli (implies rust).
+    default: "false"
+  js:
+    description: Run bun install --frozen-lockfile.
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+      with:
+        just-version: "1.59.0"
+    - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      with:
+        bun-version: "1.4.4"
+    - if: inputs.js == 'true'
+      shell: bash
+      run: just install
+    - if: inputs.rust == 'true' || inputs.sqlx-cli == 'true'
+      shell: bash
+      run: rustup toolchain install
+    - if: inputs.rust == 'true' || inputs.sqlx-cli == 'true'
+      uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+    - if: inputs.sqlx-cli == 'true'
+      id: sqlx-cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.cargo/bin/sqlx
+          ~/.cargo/bin/cargo-sqlx
+        key: sqlx-cli-0.9.1-${{ runner.os }}
+    - if: inputs.sqlx-cli == 'true' && steps.sqlx-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: cargo install sqlx-cli --version 0.9.1 --locked --no-default-features --features rustls,postgres
