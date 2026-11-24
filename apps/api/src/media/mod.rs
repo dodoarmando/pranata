@@ -180,7 +180,8 @@ pub async fn mark_failed(conn: &mut sqlx::PgConnection, asset_id: Uuid) -> Resul
 
 /// The `ProcessImage` job: replace the raw upload with a metadata-free
 /// original, write the public variants and mark the asset ready. A file the
-/// pipeline rejects marks the asset `failed` without retrying; storage and
+/// pipeline rejects marks the asset `failed` without retrying and deletes the
+/// raw upload, which is not metadata-free; storage and
 /// database errors are returned so the job is retried.
 ///
 /// # Errors
@@ -213,6 +214,11 @@ pub async fn process_asset(state: &AppState, asset_id: Uuid) -> Result<()> {
         Err(ApiError::Internal(error)) => return Err(error),
         Err(rejected) => {
             tracing::warn!(%asset_id, error = %rejected, "image rejected by the pipeline");
+            // The raw upload may carry GPS and other metadata. A re-upload
+            // brings its bytes again, so nothing needs keeping. Deleting first
+            // means a crash here retries the job, which then fails to read the
+            // original and ends `failed` after its attempts.
+            state.storage.delete(&original_key).await?;
             sqlx::query!(
                 "UPDATE media_assets SET status = 'failed' WHERE id = $1",
                 asset_id

@@ -601,6 +601,32 @@ async fn reupload_of_failed_asset_retries(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn rejected_image_leaves_no_original_behind(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    // A raw upload that carries GPS must not stay on disk once it is rejected.
+    let mut file = jpeg(400, 300);
+    file.truncate(file.len() / 3);
+    let created = h.upload("cut.jpg", &file, None).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.body);
+    let sha = sqlx::query_scalar!("SELECT sha256 FROM media_assets")
+        .fetch_one(&h.pool)
+        .await
+        .unwrap();
+    let key = pranata::media::original_path(&hex_of(&sha), pranata::media::Format::Jpeg);
+    assert!(
+        h.state.storage.get(&key).await.is_ok(),
+        "stored before the job"
+    );
+    h.run_jobs().await;
+    let asset = h.get(created.body["id"].as_str().unwrap()).await;
+    assert_eq!(asset.body["status"], "failed");
+    assert!(
+        h.state.storage.get(&key).await.is_err(),
+        "the rejected original must be deleted"
+    );
+}
+
+#[sqlx::test]
 async fn truncated_jpeg_is_failed(pool: PgPool) {
     let h = Harness::new(pool).await;
     // A photo cut off by a dropped connection: the header and the first part

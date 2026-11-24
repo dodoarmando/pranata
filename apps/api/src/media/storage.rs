@@ -24,6 +24,13 @@ pub trait Storage: Send + Sync {
     /// # Errors
     /// Fails when `rel` is not a plain relative path or the file is missing.
     async fn get(&self, rel: &str) -> Result<Bytes>;
+
+    /// Remove the file stored under `rel`. A file that is already gone is not
+    /// an error, so a retried cleanup succeeds.
+    ///
+    /// # Errors
+    /// Fails when `rel` is not a plain relative path or the removal fails.
+    async fn delete(&self, rel: &str) -> Result<()>;
 }
 
 /// Files on a local directory. Caddy serves its `public/` subdirectory at
@@ -79,6 +86,15 @@ impl Storage for LocalStorage {
             .with_context(|| format!("reading {}", path.display()))?;
         Ok(Bytes::from(bytes))
     }
+
+    async fn delete(&self, rel: &str) -> Result<()> {
+        let path = self.resolve(rel)?;
+        match tokio::fs::remove_file(&path).await {
+            Ok(()) => Ok(()),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(error).with_context(|| format!("removing {}", path.display())),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -109,11 +125,24 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn delete_removes_the_file_and_tolerates_a_missing_one() {
+        let storage = storage();
+        storage
+            .put("a/b.bin", Bytes::from_static(b"x"))
+            .await
+            .unwrap();
+        storage.delete("a/b.bin").await.unwrap();
+        assert!(storage.get("a/b.bin").await.is_err());
+        storage.delete("a/b.bin").await.unwrap();
+    }
+
+    #[tokio::test]
     async fn paths_cannot_leave_the_root() {
         let storage = storage();
         for rel in ["../x", "/etc/passwd", "a/../../x", "", "."] {
             assert!(storage.put(rel, Bytes::new()).await.is_err(), "{rel:?}");
             assert!(storage.get(rel).await.is_err(), "{rel:?}");
+            assert!(storage.delete(rel).await.is_err(), "{rel:?}");
         }
     }
 
