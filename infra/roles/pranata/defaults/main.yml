@@ -21,6 +21,13 @@ pranata_restic_repository: ""
 pranata_restic_env: {}
 # Optional monitoring pings, keys: backup, restore, disk.
 pranata_monitor_ping_urls: {}
+# The restic release installed from upstream (Debian's package lags behind).
+# Renovate tracks the version but cannot update the checksum: when the version
+# changes, set the checksum to the line for restic_<version>_linux_amd64.bz2 in
+# https://github.com/restic/restic/releases/download/v<version>/SHA256SUMS.
+# renovate: datasource=github-releases depName=restic/restic extractVersion=^v(?<version>.+)$
+pranata_restic_version: "0.20.0"
+pranata_restic_sha256: "0ccd9fa7885074a24603b051e01bf9bd8b5e45d6a1791e9d9887e9e9372107f7"
 
 # Images. Tags are the release version.
 pranata_image_registry: ghcr.io/dodoarmando

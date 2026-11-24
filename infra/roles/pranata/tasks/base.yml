@@ -11,13 +11,64 @@
       - ca-certificates
       - curl
       - nftables
+      - bzip2
       - podman
-      - restic
       - unattended-upgrades
       - uidmap
       - passt
       - dbus-user-session
     state: present
+
+# The release binary replaces Debian's older restic package. It is built for
+# amd64, the only architecture the images target.
+- name: Check the host architecture suits the restic release
+  ansible.builtin.assert:
+    that: ansible_facts['architecture'] == 'x86_64'
+    fail_msg: The pinned restic release is the linux amd64 build; this host is {{ ansible_facts['architecture'] }}.
+    quiet: true
+
+- name: Read the installed restic version
+  ansible.builtin.command:
+    argv: [/usr/local/bin/restic, version]
+  register: pranata_restic_installed
+  changed_when: false
+  failed_when: false
+
+- name: Install the pinned restic release
+  when: pranata_restic_installed.rc != 0 or (pranata_restic_installed.stdout.split()[1:2] | first | default('')) != pranata_restic_version
+  block:
+    - name: Download restic, checked against the pinned checksum
+      ansible.builtin.get_url:
+        url: "https://github.com/restic/restic/releases/download/v{{ pranata_restic_version }}/restic_{{ pranata_restic_version }}_linux_amd64.bz2"
+        dest: /var/tmp/pranata-restic.bz2
+        checksum: "sha256:{{ pranata_restic_sha256 }}"
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Decompress restic
+      ansible.builtin.command:
+        argv:
+          [bzip2, --decompress, --force, --keep, /var/tmp/pranata-restic.bz2]
+      changed_when: true
+
+    - name: Put restic on the path
+      ansible.builtin.copy:
+        src: /var/tmp/pranata-restic
+        remote_src: true
+        dest: /usr/local/bin/restic
+        owner: root
+        group: root
+        mode: "0755"
+
+  always:
+    - name: Remove the download
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/tmp/pranata-restic.bz2
+        - /var/tmp/pranata-restic
 
 - name: Enable automatic security updates
   ansible.builtin.copy:
