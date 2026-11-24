@@ -85,6 +85,10 @@ lint:
 check-sqlx:
     cargo sqlx prepare --workspace --check -- --all-targets
 
+# Verify every release-managed version file agrees with .release-please-manifest.json.
+check-versions:
+    tools/ci/check-versions.sh
+
 # Typecheck the web app.
 typecheck:
     bun run --filter @pranata/web typecheck

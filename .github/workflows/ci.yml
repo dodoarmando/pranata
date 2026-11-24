@@ -53,6 +53,7 @@ jobs:
         with:
           rust: "true"
       - run: just lint
+      - run: just check-versions
       - uses: EmbarkStudios/cargo-deny-action@17aeb3c839e42274e2b8adf721c8c65edfdc74dd # v2.1.3
         with:
           command: check advisories licenses bans sources

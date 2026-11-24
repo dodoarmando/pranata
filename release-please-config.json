@@ -3,9 +3,28 @@
 	"release-type": "simple",
 	"include-component-in-tag": false,
 	"bump-minor-pre-major": true,
+	"pull-request-title-pattern": "chore(release): ${version}",
 	"packages": {
 		".": {
-			"changelog-path": "CHANGELOG.md"
+			"changelog-path": "CHANGELOG.md",
+			"extra-files": [
+				{
+					"type": "toml",
+					"path": "apps/api/Cargo.toml",
+					"jsonpath": "$.package.version"
+				},
+				{
+					"type": "toml",
+					"path": "Cargo.lock",
+					"jsonpath": "$.package[?(@.name=='pranata')].version"
+				},
+				{ "type": "json", "path": "package.json", "jsonpath": "$.version" },
+				{
+					"type": "json",
+					"path": "apps/web/package.json",
+					"jsonpath": "$.version"
+				}
+			]
 		}
 	}
 }
