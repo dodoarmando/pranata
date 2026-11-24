@@ -3,8 +3,9 @@ use clap::{Parser, Subcommand};
 use pranata::auth::session::{SessionClock, SystemClock};
 use pranata::region_codes::VillageCode;
 use pranata::village::{self, InitError};
-use pranata::{AppState, Config, HashLimiter, auth, db, openapi};
+use pranata::{AppState, Config, HashLimiter, auth, db, jobs, openapi};
 use std::sync::Arc;
+use tokio_util::sync::CancellationToken;
 use tracing_subscriber::{EnvFilter, fmt};
 
 #[derive(Parser)]
@@ -139,10 +140,22 @@ async fn serve() -> Result<()> {
         clock: Arc::new(SystemClock),
         hasher: HashLimiter::for_host().context("preparing the password hasher")?,
     };
-    axum::serve(listener, pranata::app(state))
-        .with_graceful_shutdown(shutdown_signal())
+    // Exactly one worker; it stops with the server and finishes its current job.
+    let shutdown = CancellationToken::new();
+    let worker = tokio::spawn(jobs::run_worker(state.clone(), shutdown.clone()));
+    let served = axum::serve(listener, pranata::app(state))
+        .with_graceful_shutdown({
+            let shutdown = shutdown.clone();
+            async move {
+                shutdown_signal().await;
+                shutdown.cancel();
+            }
+        })
         .await
-        .context("serving")
+        .context("serving");
+    shutdown.cancel();
+    worker.await.context("waiting for the job worker")?;
+    served
 }
 
 async fn shutdown_signal() {

@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE jobs\n                 SET attempts = $2,\n                     last_error = $3,\n                     run_at = now() + make_interval(secs => $4),\n                     failed_at = CASE WHEN $5 THEN now() END\n                 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int4",
+        "Text",
+        "Float8",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "91543d5cb683737cfa729148917f36900b18d597647b90bbb68686d0ef40cc5a"
+}

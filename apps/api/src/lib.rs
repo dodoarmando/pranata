@@ -7,6 +7,7 @@ pub mod db;
 pub mod error;
 pub mod http;
 pub mod ids;
+pub mod jobs;
 pub mod openapi;
 pub mod region_codes;
 pub mod village;
