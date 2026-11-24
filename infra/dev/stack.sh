@@ -106,6 +106,31 @@ wait_for() {
     return 1
 }
 
+# D-07 is only meaningful when the 2 CPU / 2 GiB budget is really enforced.
+# A runner that silently ignores the limits must fail the gate, not pass it.
+assert_limits_enforced() {
+    local cgroup dir cpu mem pid
+    cgroup="$(podman pod inspect "$pod" --format '{{.CgroupPath}}')"
+    dir="/sys/fs/cgroup/$cgroup"
+    if [ ! -r "$dir/cpu.max" ] || [ ! -r "$dir/memory.max" ]; then
+        echo "stack: cannot read the pod cgroup limits at $dir; refusing to run an unbounded stack" >&2
+        return 1
+    fi
+    cpu="$(cat "$dir/cpu.max")"
+    mem="$(cat "$dir/memory.max")"
+    if [ "$cpu" != "200000 100000" ] || [ "$mem" != "2147483648" ]; then
+        echo "stack: limits not enforced: cpu.max='$cpu' (want '200000 100000'), memory.max='$mem' (want 2147483648)" >&2
+        return 1
+    fi
+    # The containers must actually live inside that cgroup.
+    pid="$(podman inspect "$pod-api" --format '{{.State.Pid}}')"
+    if ! grep -q "$(basename "$cgroup")" "/proc/$pid/cgroup"; then
+        echo "stack: the api container is not inside the limited pod cgroup" >&2
+        return 1
+    fi
+    echo "stack: limits enforced (cpu.max='$cpu', memory.max=$mem)"
+}
+
 up() {
     check_no_foreign
     down >/dev/null
@@ -147,6 +172,7 @@ up() {
         -v "$media_dir:/srv/media:ro,z" \
         "$caddy_image" >/dev/null
 
+    assert_limits_enforced
     wait_for "api health" 90 curl -fsk "$origin/api/healthz"
     if [ "$variant" = "main" ]; then
         wait_for "the public page" 60 curl -fsk "$origin/"
