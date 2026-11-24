@@ -134,9 +134,16 @@ images tag="local":
     podman build --platform linux/amd64 -f apps/api/Containerfile -t pranata-api:{{ tag }} .
     podman build --platform linux/amd64 -f apps/web/Containerfile -t pranata-web:{{ tag }} .
 
-# Run end-to-end tests (Task 14).
-e2e:
-    @echo "e2e: not implemented yet (Task 14)"
+# Run end-to-end tests against the production images in a resource-limited pod.
+e2e: images
+    #!/usr/bin/env bash
+    set -euo pipefail
+    root="{{ justfile_directory() }}"
+    trap '"$root/infra/dev/stack.sh" down --no-init; "$root/infra/dev/stack.sh" down' EXIT
+    "$root/infra/dev/stack.sh" up
+    cd "$root/apps/web"
+    bunx playwright install chromium
+    bunx playwright test
 
 # Run performance checks (Task 14).
 perf:

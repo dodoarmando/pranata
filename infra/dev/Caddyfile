@@ -1,0 +1,36 @@
+# Edge routing for the end-to-end stack. Task 16's Caddyfile.j2 must keep the
+# same routes. Inside the pod, `api` and `web` resolve to 127.0.0.1 (stack.sh
+# adds the hosts); on a real Installation they are the compose service names.
+{
+	admin off
+	auto_https disable_redirects
+	# Only 443/tcp is published, so do not advertise HTTP/3.
+	servers {
+		protocols h1 h2
+	}
+}
+
+https://localhost {
+	tls internal
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	# Variants are content-addressed, so they never change under their URL.
+	handle_path /media/* {
+		root * /srv/media/public
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# The cache purge hook is for the API only, never for the internet.
+	handle /_internal/* {
+		respond 404
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

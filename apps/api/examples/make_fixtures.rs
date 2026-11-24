@@ -15,6 +15,8 @@
 //! - `bomb.png`: a few dozen bytes whose header declares 30000x30000 pixels.
 //! - `fake.heic`: HEIC magic bytes only (an `ftyp` box with brand `heic`).
 //! - `doc.pdf`: a minimal one-page PDF.
+//! - `apps/web/e2e/fixtures/gps-photo.jpg`: 3264x2448 (8 MP) JPEG with the same
+//!   GPS EXIF block, standing in for a phone photo in the end-to-end tests.
 
 use std::{fs, io::Cursor, path::Path};
 
@@ -154,4 +156,10 @@ fn main() {
         fs::write(dir.join(name), &bytes).expect("write fixture");
         println!("{name}: {} bytes", bytes.len());
     }
+
+    let e2e = Path::new(env!("CARGO_MANIFEST_DIR")).join("../web/e2e/fixtures");
+    fs::create_dir_all(&e2e).expect("create e2e fixtures dir");
+    let photo = with_exif(&gradient_jpeg(3264, 2448), &gps_fields());
+    fs::write(e2e.join("gps-photo.jpg"), &photo).expect("write e2e photo");
+    println!("gps-photo.jpg: {} bytes", photo.len());
 }
