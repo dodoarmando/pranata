@@ -19,6 +19,12 @@ The units are systemd user units of the `pranata` user and their timers are
 persistent, so a VPS that was off at 02:00 catches up when it starts. A failed
 ping never fails the backup. A key without a URL is skipped.
 
+The backup needs `pranata_restic_password` and `pranata_restic_repository` in
+the inventory; provisioning refuses to run without them. While it runs, the
+database dump is a temporary file in `~pranata/.local/state/pranata/backup/`
+and counts toward the disk usage that the `disk` ping watches. It is removed
+when the backup ends.
+
 ### Point the pings at a service
 
 1. Create three checks in Healthchecks.io (hosted) or in a self-hosted
