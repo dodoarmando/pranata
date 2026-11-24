@@ -1,0 +1,9 @@
+# Managed by Ansible.
+[Unit]
+Description=Pranata encrypted backup
+After=pranata-postgres.service
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/pranata/backup.env
+EnvironmentFile=%h/.config/pranata/monitor.env
+ExecStart=/usr/local/libexec/pranata/backup.sh

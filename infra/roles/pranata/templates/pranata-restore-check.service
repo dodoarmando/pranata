@@ -1,0 +1,9 @@
+# Managed by Ansible.
+[Unit]
+Description=Pranata restore check
+After=pranata-postgres.service
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/pranata/backup.env
+EnvironmentFile=%h/.config/pranata/monitor.env
+ExecStart=/usr/local/libexec/pranata/restore-check.sh

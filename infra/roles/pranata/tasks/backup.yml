@@ -1,0 +1,106 @@
+---
+# Encrypted backups (D-51): a daily restic backup of the database dump and the
+# media originals, and a monthly restore check. Both run as systemd user units
+# of the Pranata user, because `podman exec` needs that user's rootless Podman.
+- name: Learn the user's runtime directory
+  ansible.builtin.import_tasks: user_env.yml
+
+- name: Create the directory for the backup scripts
+  ansible.builtin.file:
+    path: /usr/local/libexec/pranata
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the backup scripts
+  ansible.builtin.template:
+    src: "{{ item }}.sh.j2"
+    dest: "/usr/local/libexec/pranata/{{ item }}.sh"
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - backup
+    - restore-check
+
+- name: Create the directory for the user's systemd units
+  ansible.builtin.file:
+    path: "{{ pranata_home }}/.config/systemd/user"
+    state: directory
+    owner: "{{ pranata_user }}"
+    group: "{{ pranata_user }}"
+    mode: "0750"
+
+# The credentials stay in a file readable by the Pranata user only; the unit
+# loads it with EnvironmentFile=, so they never appear on a command line.
+- name: Install the restic credentials
+  ansible.builtin.template:
+    src: backup.env.j2
+    dest: "{{ pranata_home }}/.config/pranata/backup.env"
+    owner: "{{ pranata_user }}"
+    group: "{{ pranata_user }}"
+    mode: "0600"
+  diff: false
+  no_log: true
+
+- name: Install the backup and restore check units
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "{{ pranata_home }}/.config/systemd/user/{{ item }}"
+    owner: "{{ pranata_user }}"
+    group: "{{ pranata_user }}"
+    mode: "0644"
+  loop:
+    - pranata-backup.service
+    - pranata-backup.timer
+    - pranata-restore-check.service
+    - pranata-restore-check.timer
+  notify: Reload user systemd units
+
+# restic init is skipped when the repository answers; the credentials reach
+# restic through its environment, not its arguments.
+- name: Look for the restic repository
+  ansible.builtin.command:
+    argv: [restic, cat, config]
+  register: pranata_restic_repo
+  changed_when: false
+  failed_when: false
+  no_log: true
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env | combine(pranata_restic_login, pranata_restic_env) }}"
+  vars:
+    pranata_restic_login:
+      RESTIC_REPOSITORY: "{{ pranata_restic_repository }}"
+      RESTIC_PASSWORD: "{{ pranata_restic_password }}"
+
+- name: Initialise the restic repository
+  ansible.builtin.command:
+    argv: [restic, init]
+  when: pranata_restic_repo.rc != 0
+  changed_when: true
+  no_log: true
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env | combine(pranata_restic_login, pranata_restic_env) }}"
+  vars:
+    pranata_restic_login:
+      RESTIC_REPOSITORY: "{{ pranata_restic_repository }}"
+      RESTIC_PASSWORD: "{{ pranata_restic_password }}"
+
+- name: Load the units
+  ansible.builtin.meta: flush_handlers
+
+- name: Start the backup and restore check timers
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+    scope: user
+  loop:
+    - pranata-backup.timer
+    - pranata-restore-check.timer
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"

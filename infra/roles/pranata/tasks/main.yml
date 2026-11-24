@@ -8,9 +8,12 @@
       - pranata_db_owner_password | length > 0
       - pranata_db_app_password | length > 0
       - pranata_purge_token | length > 0
+      - pranata_restic_password | length > 0
+      - pranata_restic_repository | length > 0
     fail_msg: >-
       Set pranata_domain, pranata_version, pranata_db_owner_password,
-      pranata_db_app_password and pranata_purge_token in your inventory
+      pranata_db_app_password, pranata_purge_token, pranata_restic_password
+      and pranata_restic_repository in your inventory
       (see infra/inventory.example.yml); pranata_tls is acme or internal.
     quiet: true
   tags: [always]
@@ -34,3 +37,7 @@
 - name: Initialise the first run
   ansible.builtin.import_tasks: app.yml
   tags: [app]
+
+- name: Set up encrypted backups and the restore check
+  ansible.builtin.import_tasks: backup.yml
+  tags: [backup]

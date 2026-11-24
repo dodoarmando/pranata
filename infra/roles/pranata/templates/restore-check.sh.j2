@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Managed by Ansible. Restores the latest backed-up dump into the scratch
+# database pranata_restore_check, counts the Village rows, drops the scratch
+# database and pings `restore` (D-51). It never touches the live database.
+set -euo pipefail
+
+container=pranata-postgres
+scratch=pranata_restore_check
+dump="$HOME/.local/state/pranata/backup/pranata.dump"
+
+# Healthchecks.io-compatible: GET <url> on success, <url>/fail on failure.
+ping() {
+    [ -n "${1:-}" ] || return 0
+    curl --silent --fail --max-time 10 --retry 3 --retry-delay 2 --output /dev/null "$1${2:-}" ||
+        echo "pranata-restore-check: the monitoring ping failed (ignored)" >&2
+    return 0
+}
+
+psql_super() {
+    podman exec "$container" psql --username postgres --no-psqlrc --set ON_ERROR_STOP=1 "$@"
+}
+
+drop_scratch() {
+    psql_super --dbname postgres --command "DROP DATABASE IF EXISTS $scratch WITH (FORCE)" >/dev/null
+}
+
+finish() {
+    local status=$?
+    # Drop the scratch database even when a step failed.
+    drop_scratch || { echo "pranata-restore-check: could not drop $scratch" >&2; [ "$status" -ne 0 ] || status=1; }
+    if [ "$status" -eq 0 ]; then
+        ping "${PRANATA_PING_RESTORE_URL:-}"
+    else
+        echo "pranata-restore-check: failed with status $status" >&2
+        ping "${PRANATA_PING_RESTORE_URL:-}" /fail
+    fi
+    exit "$status"
+}
+trap finish EXIT
+trap 'exit 143' INT TERM
+
+drop_scratch
+psql_super --dbname postgres --command "CREATE DATABASE $scratch" >/dev/null
+
+restic dump --tag pranata latest "$dump" |
+    podman exec --interactive "$container" pg_restore --username postgres \
+        --dbname "$scratch" --no-owner --no-privileges --exit-on-error
+
+count="$(psql_super --dbname "$scratch" --tuples-only --no-align --command 'SELECT count(*) FROM village')"
+case "$count" in '' | *[!0-9]*) echo "pranata-restore-check: unexpected count '$count'" >&2; exit 1 ;; esac
+[ "$count" -ge 1 ] || { echo "pranata-restore-check: the restored database has no Village" >&2; exit 1; }
+echo "pranata-restore-check: restored $count Village row(s) into $scratch"

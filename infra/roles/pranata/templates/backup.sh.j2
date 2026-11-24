@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Managed by Ansible. Encrypted backup of the database and the private media
+# originals to the restic repository (D-51). Runs as the Pranata user from
+# pranata-backup.service, which loads the credentials with EnvironmentFile=.
+# Variants are not backed up: they can be regenerated from the originals.
+set -euo pipefail
+
+container=pranata-postgres
+originals="{{ pranata_media_dir }}/originals"
+dump_dir="$HOME/.local/state/pranata/backup"
+dump="$dump_dir/pranata.dump"
+
+# Healthchecks.io-compatible: GET <url> on success, <url>/fail on failure.
+# A failed ping never fails the backup.
+ping() {
+    [ -n "${1:-}" ] || return 0
+    curl --silent --fail --max-time 10 --retry 3 --retry-delay 2 --output /dev/null "$1${2:-}" ||
+        echo "pranata-backup: the monitoring ping failed (ignored)" >&2
+    return 0
+}
+
+finish() {
+    local status=$?
+    rm -f "$dump"
+    if [ "$status" -eq 0 ]; then
+        ping "${PRANATA_PING_BACKUP_URL:-}"
+    else
+        echo "pranata-backup: failed with status $status" >&2
+        ping "${PRANATA_PING_BACKUP_URL:-}" /fail
+    fi
+    exit "$status"
+}
+trap finish EXIT
+trap 'exit 143' INT TERM
+
+umask 077
+mkdir -p "$dump_dir"
+
+podman exec "$container" pg_dump --username postgres --dbname pranata --format=custom >"$dump"
+[ -s "$dump" ] || { echo "pranata-backup: the dump is empty" >&2; exit 1; }
+
+paths=("$dump")
+# The originals are owned by a subordinate uid, so read them from the user namespace.
+if podman unshare test -d "$originals"; then
+    paths+=("$originals")
+fi
+podman unshare restic backup --tag pranata "${paths[@]}"
+
+restic forget --tag pranata --group-by host,tags \
+    --keep-daily 7 --keep-weekly 4 --keep-monthly 12 --prune
