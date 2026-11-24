@@ -654,3 +654,53 @@ async fn redeeming_an_access_link_logs_no_token_or_password(pool: PgPool) {
     assert!(!output.contains(&token), "token leaked into the logs");
     assert!(!output.contains(secret), "password leaked into the logs");
 }
+
+async fn status_of(
+    app: Router,
+    method: Method,
+    uri: &str,
+    cookie: Option<&str>,
+) -> (StatusCode, Value) {
+    let mut builder = Request::builder().method(method).uri(uri);
+    if let Some(cookie) = cookie {
+        builder = builder.header(header::COOKIE, format!("pranata_session={cookie}"));
+    }
+    let response = app
+        .oneshot(builder.body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    let status = response.status();
+    let bytes = response.into_body().collect().await.unwrap().to_bytes();
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+    )
+}
+
+#[sqlx::test]
+async fn extractor_fails_closed_outside_the_guarded_router(pool: PgPool) {
+    use axum::routing::{get, post};
+    let h = Harness::new(pool);
+    h.seed_user("budi").await;
+    let token = token_of(&h.login("budi", PASSWORD, false).await);
+    let state = test_state_with_clock(h.pool.clone(), h.clock.clone());
+
+    // A route mounted by hand, without the `resolve` middleware: even with a
+    // valid cookie the extractor must not authenticate on its own.
+    let app = Router::new()
+        .route("/x", get(|_user: auth::CurrentUser| async { "ok" }))
+        .with_state(state.clone());
+    let (status, body) = status_of(app, Method::GET, "/x", Some(&token)).await;
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(body["code"], "internal_error");
+
+    // The CSRF guard without `resolve` rejects protected requests too, rather
+    // than letting them through unchecked.
+    let app = Router::new()
+        .route("/api/admin/x", post(|| async { "ok" }))
+        .layer(axum::middleware::from_fn(auth::csrf::guard))
+        .with_state(state);
+    let (status, body) = status_of(app, Method::POST, "/api/admin/x", Some(&token)).await;
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(body["code"], "internal_error");
+}

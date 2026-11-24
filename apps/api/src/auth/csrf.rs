@@ -18,7 +18,7 @@ use axum::{
 };
 use subtle::ConstantTimeEq;
 
-use super::session::AuthSession;
+use super::session::{AuthSession, Resolved, not_resolved};
 use crate::ApiError;
 
 /// Header that carries the CSRF token.
@@ -37,10 +37,14 @@ pub fn is_protected(method: &Method, path: &str) -> bool {
 }
 
 /// Middleware that rejects protected requests with a missing or wrong token.
-/// It needs [`super::session::resolve`] to run first; without a session the
-/// answer is 401 `unauthenticated`.
+/// It needs [`super::session::resolve`] to run first (otherwise 500, so a
+/// miswired router fails closed); without a session the answer is 401
+/// `unauthenticated`.
 pub async fn guard(request: Request, next: Next) -> Response {
     if is_protected(request.method(), request.uri().path()) {
+        if request.extensions().get::<Resolved>().is_none() {
+            return not_resolved().into_response();
+        }
         let Some(session) = request.extensions().get::<AuthSession>() else {
             return ApiError::Unauthorized("unauthenticated").into_response();
         };

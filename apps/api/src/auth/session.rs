@@ -39,6 +39,19 @@ impl SessionClock for SystemClock {
     }
 }
 
+/// Marker that [`resolve`] puts in every request it handled. Extractors and the
+/// CSRF guard require it, so a route mounted outside the guarded router fails
+/// closed instead of authenticating on its own.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Resolved;
+
+/// The error for code that needs a session but ran without [`resolve`].
+pub(crate) fn not_resolved() -> ApiError {
+    ApiError::Internal(anyhow::anyhow!(
+        "session lookup requested on a route outside the guarded router"
+    ))
+}
+
 /// A session found for a request, with the CSRF token that belongs to it.
 #[derive(Debug, Clone)]
 pub struct AuthSession {
@@ -106,7 +119,6 @@ async fn find(
     db: &PgPool,
     token: &str,
     now: OffsetDateTime,
-    renew: bool,
 ) -> anyhow::Result<Option<(AuthSession, bool)>> {
     let token_hash = hash_token(token);
     let Some(row) = sqlx::query!(
@@ -127,7 +139,7 @@ async fn find(
         delete(&mut *db.acquire().await?, &token_hash).await?;
         return Ok(None);
     }
-    let renewed = renew && row.remember && now - row.last_seen_at >= RENEW_INTERVAL;
+    let renewed = row.remember && now - row.last_seen_at >= RENEW_INTERVAL;
     if renewed {
         sqlx::query!(
             "UPDATE sessions SET last_seen_at = $2, expires_at = $3 WHERE token_hash = $1",
@@ -196,9 +208,10 @@ fn header_value(text: &str) -> HeaderValue {
 /// Requests without a valid session pass through untouched; the extractor
 /// decides whether that is an error.
 pub async fn resolve(State(state): State<AppState>, mut request: Request, next: Next) -> Response {
+    request.extensions_mut().insert(Resolved);
     let mut reissue = None;
     if let Some(token) = token_from_headers(request.headers()) {
-        match find(&state.db, &token, state.clock.now(), true).await {
+        match find(&state.db, &token, state.clock.now()).await {
             Ok(Some((session, renewed))) => {
                 request.extensions_mut().insert(session);
                 if renewed {
@@ -223,31 +236,34 @@ pub async fn resolve(State(state): State<AppState>, mut request: Request, next: 
 impl FromRequestParts<AppState> for AuthSession {
     type Rejection = ApiError;
 
-    async fn from_request_parts(
+    fn from_request_parts(
         parts: &mut Parts,
-        state: &AppState,
-    ) -> Result<Self, Self::Rejection> {
-        if let Some(session) = parts.extensions.get::<Self>() {
-            return Ok(session.clone());
-        }
-        // Reached without the `resolve` middleware (a router built by hand).
-        let token =
-            token_from_headers(&parts.headers).ok_or(ApiError::Unauthorized("unauthenticated"))?;
-        let (session, _) = find(&state.db, &token, state.clock.now(), false)
-            .await?
-            .ok_or(ApiError::Unauthorized("unauthenticated"))?;
-        parts.extensions.insert(session.clone());
-        Ok(session)
+        _state: &AppState,
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
+        std::future::ready(from_extensions(parts))
     }
 }
 
 impl FromRequestParts<AppState> for CurrentUser {
     type Rejection = ApiError;
 
-    async fn from_request_parts(
+    fn from_request_parts(
         parts: &mut Parts,
-        state: &AppState,
-    ) -> Result<Self, Self::Rejection> {
-        Ok(AuthSession::from_request_parts(parts, state).await?.user)
+        _state: &AppState,
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
+        std::future::ready(from_extensions(parts).map(|session| session.user))
     }
+}
+
+/// The session `resolve` stored for this request. Fails closed (500) when
+/// `resolve` did not run.
+fn from_extensions(parts: &Parts) -> Result<AuthSession, ApiError> {
+    if parts.extensions.get::<Resolved>().is_none() {
+        return Err(not_resolved());
+    }
+    parts
+        .extensions
+        .get::<AuthSession>()
+        .cloned()
+        .ok_or(ApiError::Unauthorized("unauthenticated"))
 }
