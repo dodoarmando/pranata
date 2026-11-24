@@ -37,6 +37,9 @@ jobs:
         run: |
           if [ "$EVENT" = "pull_request" ]; then
             from="origin/$BASE_REF"
+          elif [ "$PUSH_BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            # First push of a branch: check everything after the root commit.
+            from="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
           else
             from="$PUSH_BEFORE"
           fi
