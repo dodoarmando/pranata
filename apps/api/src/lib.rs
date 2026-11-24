@@ -7,6 +7,7 @@ pub mod error;
 pub mod http;
 pub mod ids;
 pub mod openapi;
+pub mod region_codes;
 
 use std::sync::Arc;
 
