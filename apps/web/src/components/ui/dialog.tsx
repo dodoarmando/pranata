@@ -107,7 +107,7 @@ function DialogFooter({
 			{children}
 			{showCloseButton && (
 				<DialogPrimitive.Close render={<Button variant="outline" />}>
-					Close
+					Tutup
 				</DialogPrimitive.Close>
 			)}
 		</div>

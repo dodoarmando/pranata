@@ -14,6 +14,7 @@ import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as AksesRouteImport } from './routes/akses'
 import { Route as MasukRouteImport } from './routes/masuk'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminDesaProfilRouteImport } from './routes/admin/desa/profil'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +41,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminDesaProfilRoute = AdminDesaProfilRouteImport.update({
+  id: '/desa/profil',
+  path: '/desa/profil',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,12 +53,14 @@ export interface FileRoutesByFullPath {
   '/akses': typeof AksesRoute
   '/masuk': typeof MasukRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/desa/profil': typeof AdminDesaProfilRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/akses': typeof AksesRoute
   '/masuk': typeof MasukRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/desa/profil': typeof AdminDesaProfilRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,13 +69,22 @@ export interface FileRoutesById {
   '/akses': typeof AksesRoute
   '/masuk': typeof MasukRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/desa/profil': typeof AdminDesaProfilRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/akses' | '/masuk' | '/admin/'
+  fullPaths:
+    '/' | '/admin' | '/akses' | '/masuk' | '/admin/' | '/admin/desa/profil'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/akses' | '/masuk' | '/admin'
-  id: '__root__' | '/' | '/admin' | '/akses' | '/masuk' | '/admin/'
+  to: '/' | '/akses' | '/masuk' | '/admin' | '/admin/desa/profil'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/akses'
+    | '/masuk'
+    | '/admin/'
+    | '/admin/desa/profil'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -114,15 +131,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/desa/profil': {
+      id: '/admin/desa/profil'
+      path: '/desa/profil'
+      fullPath: '/admin/desa/profil'
+      preLoaderRoute: typeof AdminDesaProfilRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
   }
 }
 
 interface AdminRouteRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminDesaProfilRoute: typeof AdminDesaProfilRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
+  AdminDesaProfilRoute: AdminDesaProfilRoute,
 }
 
 const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(

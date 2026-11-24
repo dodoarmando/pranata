@@ -9,7 +9,7 @@ import {
 
 // Routes that exist today. An item with `to: null` is planned (R1+) and is not
 // rendered, so the menu never links to a dead page.
-export type AdminPath = "/admin";
+export type AdminPath = "/admin/desa/profil";
 
 export interface NavItem {
 	label: string;
@@ -28,7 +28,7 @@ export const NAV: NavGroup[] = [
 		label: "Desa",
 		icon: LandmarkIcon,
 		items: [
-			{ label: "Profil desa", to: null },
+			{ label: "Profil desa", to: "/admin/desa/profil" },
 			{ label: "Wilayah", to: null },
 			{ label: "Perangkat desa", to: null },
 			{ label: "Lembaga desa", to: null },

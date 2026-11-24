@@ -6,6 +6,7 @@ import { visibleNav } from "@/admin/nav";
 import { initials } from "@/admin/session";
 import { useLogout } from "@/api/generated/client";
 import type { CurrentUser } from "@/api/generated/model";
+import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -195,6 +196,15 @@ export function AdminHome({ name }: Readonly<{ name: string }>) {
 	return (
 		<div className="mx-auto flex max-w-2xl flex-col gap-4">
 			<h2 className="text-2xl font-semibold">Selamat datang, {name}.</h2>
+			<p className="text-muted-foreground">
+				Mulai dari profil desa untuk memperbarui gambaran umum dan foto hero
+				yang tampil di beranda situs.
+			</p>
+			<div>
+				<Button render={<Link to="/admin/desa/profil" />}>
+					Buka profil desa
+				</Button>
+			</div>
 		</div>
 	);
 }
