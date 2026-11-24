@@ -58,11 +58,11 @@ db-up:
 db-migrate:
     sqlx migrate run --source apps/api/migrations --database-url "${MIGRATION_DATABASE_URL:-postgres://pranata_owner:pranata_owner_dev@127.0.0.1:55432/pranata}"
 
-# Generate the OpenAPI contract (the web client codegen arrives in Task 10).
+# Generate the OpenAPI contract, then the web API client from it (Orval).
 gen:
     cargo run -q -- openapi | bunx biome format --stdin-file-path=apps/api/openapi.json > apps/api/openapi.json.tmp
     mv apps/api/openapi.json.tmp apps/api/openapi.json
-    @echo "gen: web client codegen (Orval) is not wired yet, it arrives in Task 10"
+    bun run --filter @pranata/web gen
 
 # Run all tests.
 test: test-api test-web
@@ -88,9 +88,18 @@ check-web:
     bun run --filter @pranata/web test
     bun run --filter @pranata/web build
 
-# Verify the OpenAPI contract is up to date (Task 10).
+# Verify the committed OpenAPI contract and generated web client are up to date.
 check-contract:
-    @echo "check-contract: not implemented yet (Task 10)"
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just gen
+    paths=(apps/api/openapi.json apps/web/src/api/generated)
+    if [ -n "$(git status --porcelain -- "${paths[@]}")" ]; then
+        echo "check-contract: generated output differs from what is committed; run 'just gen' and commit the result" >&2
+        git status --short -- "${paths[@]}" >&2
+        exit 1
+    fi
+    echo "check-contract: up to date"
 
 # Verify every design decision is cited by a plan task, the roadmap or Not built.
 check-trace:
