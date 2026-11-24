@@ -620,3 +620,190 @@ async fn truncated_jpeg_is_failed(pool: PgPool) {
         "{error:?}"
     );
 }
+
+#[sqlx::test]
+async fn concurrent_duplicate_uploads_create_one_asset(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let file = jpeg(300, 200);
+    let (a, b) = tokio::join!(
+        h.upload("a.jpg", &file, None),
+        h.upload("b.jpg", &file, None)
+    );
+    let mut statuses = [a.status, b.status];
+    statuses.sort();
+    assert_eq!(statuses, [StatusCode::OK, StatusCode::CREATED]);
+    assert_eq!(a.body["id"], b.body["id"]);
+    let assets = sqlx::query_scalar!(r#"SELECT count(*) AS "n!" FROM media_assets"#)
+        .fetch_one(&h.pool)
+        .await
+        .unwrap();
+    let queued = sqlx::query_scalar!(r#"SELECT count(*) AS "n!" FROM jobs"#)
+        .fetch_one(&h.pool)
+        .await
+        .unwrap();
+    assert_eq!((assets, queued), (1, 1));
+}
+
+const SECRET: &[u8] = b"SECRET-META-7731";
+
+/// Every marker that would show metadata survived.
+fn assert_no_metadata(label: &str, bytes: &[u8]) {
+    for marker in [
+        &b"tEXt"[..],
+        b"zTXt",
+        b"iTXt",
+        b"eXIf",
+        b"EXIF",
+        b"XMP ",
+        b"ICCP",
+        b"Exif\0\0",
+        b"http://ns.adobe.com/xap",
+        SECRET,
+    ] {
+        assert!(
+            !bytes.windows(marker.len()).any(|w| w == marker),
+            "{label} still contains {}",
+            String::from_utf8_lossy(marker)
+        );
+    }
+    assert!(!has_exif(bytes), "{label} still parses as having EXIF");
+}
+
+fn png_chunk(kind: [u8; 4], data: &[u8]) -> Vec<u8> {
+    let mut crc = flate2::Crc::new();
+    crc.update(&kind);
+    crc.update(data);
+    let mut out = u32::try_from(data.len()).unwrap().to_be_bytes().to_vec();
+    out.extend(kind);
+    out.extend(data);
+    out.extend(crc.sum().to_be_bytes());
+    out
+}
+
+fn riff_chunk(kind: [u8; 4], data: &[u8]) -> Vec<u8> {
+    let mut out = kind.to_vec();
+    out.extend(u32::try_from(data.len()).unwrap().to_le_bytes());
+    out.extend(data);
+    if data.len() % 2 == 1 {
+        out.push(0);
+    }
+    out
+}
+
+/// A PNG carrying text and EXIF chunks.
+fn png_with_metadata() -> Vec<u8> {
+    let image = ImageBuffer::from_fn(120, 80, |x, y| {
+        Rgb([(x * 2 % 251) as u8, (y * 3 % 241) as u8, 50])
+    });
+    let mut plain = Vec::new();
+    image
+        .write_to(&mut Cursor::new(&mut plain), image::ImageFormat::Png)
+        .unwrap();
+    let split = 8 + 25; // signature and the IHDR chunk
+    let mut out = plain[..split].to_vec();
+    out.extend(png_chunk(
+        *b"tEXt",
+        &[b"Comment\0".as_slice(), SECRET].concat(),
+    ));
+    out.extend(png_chunk(
+        *b"eXIf",
+        &[b"MM\0*\0\0\0\x08".as_slice(), SECRET].concat(),
+    ));
+    out.extend(&plain[split..]);
+    out
+}
+
+/// A lossy WebP in the extended format with EXIF and XMP chunks.
+fn webp_with_metadata() -> Vec<u8> {
+    let (w, h) = (96_u32, 64_u32);
+    let pixels: Vec<u8> = (0..w * h * 3).map(|i| (i % 255) as u8).collect();
+    let plain = webp::Encoder::from_rgb(&pixels, w, h)
+        .encode_simple(false, 80.0)
+        .unwrap()
+        .to_vec();
+    let mut vp8x = vec![0x08 | 0x04, 0, 0, 0]; // EXIF and XMP flags
+    vp8x.extend(&(w - 1).to_le_bytes()[..3]);
+    vp8x.extend(&(h - 1).to_le_bytes()[..3]);
+    let mut body = b"WEBP".to_vec();
+    body.extend(riff_chunk(*b"VP8X", &vp8x));
+    body.extend(&plain[12..]); // the image chunk
+    body.extend(riff_chunk(
+        *b"EXIF",
+        &[b"MM\0*\0\0\0\x08".as_slice(), SECRET].concat(),
+    ));
+    body.extend(riff_chunk(
+        *b"XMP ",
+        &[b"http://ns.adobe.com/xap/1.0/\0".as_slice(), SECRET].concat(),
+    ));
+    let mut out = b"RIFF".to_vec();
+    out.extend(u32::try_from(body.len()).unwrap().to_le_bytes());
+    out.extend(body);
+    out
+}
+
+/// A JPEG with an XMP packet that names a secret.
+fn jpeg_with_xmp() -> Vec<u8> {
+    let plain = jpeg(120, 80);
+    let mut payload = b"http://ns.adobe.com/xap/1.0/\0<x:xmpmeta>".to_vec();
+    payload.extend(SECRET);
+    payload.extend(b"</x:xmpmeta>");
+    let mut out = plain[..2].to_vec();
+    out.extend([0xFF, 0xE1]);
+    out.extend(u16::try_from(payload.len() + 2).unwrap().to_be_bytes());
+    out.extend(payload);
+    out.extend(&plain[2..]);
+    out
+}
+
+#[sqlx::test]
+async fn no_metadata_survives_in_any_format(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let cases = [
+        ("tagged.png", png_with_metadata(), "png"),
+        ("tagged.webp", webp_with_metadata(), "webp"),
+        ("tagged.jpg", jpeg_with_xmp(), "jpg"),
+        ("gps.jpg", fixture("gps.jpg"), "jpg"),
+    ];
+    for (name, raw, ext) in cases {
+        assert!(
+            raw.windows(SECRET.len()).any(|w| w == SECRET) || name == "gps.jpg",
+            "{name}: the input must carry the marker"
+        );
+        let created = h.upload(name, &raw, None).await;
+        assert_eq!(
+            created.status,
+            StatusCode::CREATED,
+            "{name}: {}",
+            created.body
+        );
+        h.run_jobs().await;
+        let asset = h.get(created.body["id"].as_str().unwrap()).await;
+        assert_eq!(asset.body["status"], "ready", "{name}");
+
+        let row = sqlx::query!(
+            "SELECT sha256 FROM media_assets WHERE id = $1",
+            created.body["id"]
+                .as_str()
+                .unwrap()
+                .parse::<uuid::Uuid>()
+                .unwrap()
+        )
+        .fetch_one(&h.pool)
+        .await
+        .unwrap();
+        let hex = hex_of(&row.sha256);
+        let original = h
+            .stored(&format!("originals/{}/{hex}.{ext}", &hex[..2]))
+            .await;
+        assert_no_metadata(&format!("{name} original"), &original);
+        let variants = asset.body["variants"].as_array().unwrap();
+        assert!(!variants.is_empty(), "{name}");
+        for variant in variants {
+            let url = variant["url"].as_str().unwrap();
+            let bytes = h
+                .stored(&format!("public/{}", url.strip_prefix("/media/").unwrap()))
+                .await;
+            assert_no_metadata(&format!("{name} {url}"), &bytes);
+        }
+    }
+}
