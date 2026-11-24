@@ -227,6 +227,21 @@ function Divider() {
 	);
 }
 
+const IDLE_TOOLBAR = {
+	h2: false,
+	h3: false,
+	h4: false,
+	bold: false,
+	italic: false,
+	bullet: false,
+	ordered: false,
+	quote: false,
+	link: false,
+	table: false,
+	canUndo: false,
+	canRedo: false,
+};
+
 export function RichTextEditor({
 	value,
 	onChange,
@@ -257,7 +272,7 @@ export function RichTextEditor({
 		onUpdate: ({ editor: current }) => onChange(sanitizeDoc(current.getJSON())),
 	});
 
-	const state = useEditorState({
+	const liveState = useEditorState({
 		editor,
 		selector: ({ editor: e }) =>
 			e
@@ -278,7 +293,11 @@ export function RichTextEditor({
 				: null,
 	});
 
-	if (!editor || !state) {
+	// useEditorState keeps its first snapshot (null, before the editor exists)
+	// until the first transaction, so fall back to an idle toolbar instead of
+	// hiding the editor behind it.
+	const state = liveState ?? IDLE_TOOLBAR;
+	if (!editor) {
 		return (
 			<div className="h-72 rounded-lg border bg-muted/30" aria-hidden="true" />
 		);
