@@ -22,10 +22,19 @@
 			"managerFilePatterns": [
 				"/^justfile$/",
 				"/^infra/dev/stack\\.sh$/",
-				"/^infra/roles/pranata/defaults/main\\.yml$/"
+				"/^infra/roles/pranata/defaults/main\\.yml$/",
+				"/^infra/test/run\\.sh$/"
 			],
 			"matchStrings": [
-				"(?<depName>docker\\.io/[a-z0-9._/-]+):(?<currentValue>[0-9][A-Za-z0-9._-]*)"
+				"(?<depName>docker\\.io/[a-z0-9._/-]+):(?<currentValue>[0-9v][A-Za-z0-9._-]*)(?:@(?<currentDigest>sha256:[a-f0-9]{64}))?"
+			]
+		},
+		{
+			"description": "Release versions annotated with `# renovate: datasource=… depName=…` in the Ansible role defaults (checksums are updated by hand)",
+			"customType": "regex",
+			"managerFilePatterns": ["/^infra/roles/pranata/defaults/main\\.yml$/"],
+			"matchStrings": [
+				"# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>\\S+)(?: extractVersion=(?<extractVersion>\\S+))?\\n\\w+: \"(?<currentValue>[^\"]+)\""
 			]
 		}
 	],
