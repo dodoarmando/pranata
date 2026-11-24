@@ -1,5 +1,7 @@
 name: Set up toolchains
-description: Install just and Bun, and optionally Rust and sqlx-cli, then the JavaScript dependencies.
+description: Install just and Bun, and optionally Rust, sqlx-cli and cargo-deny, then the JavaScript dependencies.
+# The tool versions below are the single place each one is pinned in CI;
+# Renovate tracks them through the annotations (see renovate.json).
 inputs:
   rust:
     description: Install the Rust toolchain from rust-toolchain.toml and restore the cargo cache.
@@ -7,26 +9,49 @@ inputs:
   sqlx-cli:
     description: Install sqlx-cli (implies rust).
     default: "false"
+  deny:
+    description: Install cargo-deny.
+    default: "false"
   js:
     description: Run bun install --frozen-lockfile.
     default: "true"
+  # renovate: datasource=github-releases depName=casey/just
+  just-version:
+    description: just version.
+    default: "1.59.0"
+  # renovate: datasource=github-releases depName=oven-sh/bun extractVersion=^bun-v(?<version>.+)$
+  bun-version:
+    description: Bun version.
+    default: "1.4.5"
+  # renovate: datasource=crate depName=sqlx-cli
+  sqlx-cli-version:
+    description: sqlx-cli version.
+    default: "0.9.1"
+  # renovate: datasource=crate depName=cargo-deny
+  cargo-deny-version:
+    description: cargo-deny version.
+    default: "0.22.0"
 runs:
   using: composite
   steps:
     - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
       with:
-        just-version: "1.59.0"
+        just-version: ${{ inputs.just-version }}
     - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       with:
-        bun-version: "1.4.4"
+        bun-version: ${{ inputs.bun-version }}
     - if: inputs.js == 'true'
       shell: bash
       run: just install
-    - if: inputs.rust == 'true' || inputs.sqlx-cli == 'true'
+    - if: inputs.rust == 'true' || inputs.sqlx-cli == 'true' || inputs.deny == 'true'
       shell: bash
       run: rustup toolchain install
     - if: inputs.rust == 'true' || inputs.sqlx-cli == 'true'
       uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+    - if: inputs.deny == 'true'
+      uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
+      with:
+        tool: cargo-deny@${{ inputs.cargo-deny-version }}
     - if: inputs.sqlx-cli == 'true'
       id: sqlx-cache
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -34,7 +59,9 @@ runs:
         path: |
           ~/.cargo/bin/sqlx
           ~/.cargo/bin/cargo-sqlx
-        key: sqlx-cli-0.9.1-${{ runner.os }}
+        key: sqlx-cli-${{ inputs.sqlx-cli-version }}-${{ runner.os }}
     - if: inputs.sqlx-cli == 'true' && steps.sqlx-cache.outputs.cache-hit != 'true'
       shell: bash
-      run: cargo install sqlx-cli --version 0.9.1 --locked --no-default-features --features rustls,postgres
+      env:
+        SQLX_CLI_VERSION: ${{ inputs.sqlx-cli-version }}
+      run: cargo install sqlx-cli --version "$SQLX_CLI_VERSION" --locked --no-default-features --features rustls,postgres

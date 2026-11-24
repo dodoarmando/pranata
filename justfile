@@ -85,6 +85,10 @@ lint:
 check-sqlx:
     cargo sqlx prepare --workspace --check -- --all-targets
 
+# Check dependency advisories, licences, bans and sources (deny.toml).
+deny:
+    cargo deny check advisories licenses bans sources
+
 # Verify every release-managed version file agrees with .release-please-manifest.json.
 check-versions:
     tools/ci/check-versions.sh
