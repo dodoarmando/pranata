@@ -176,6 +176,26 @@ case "$health" in *"\"version\":\"$version\""*) ;; *)
     ;;
 esac
 
+ready="$(in_container curl -fsk https://localhost/api/readyz)"
+echo "  readyz: $ready"
+case "$ready" in *'"status":"ok"'*) ;; *)
+    echo "infra-test: readyz is not ok" >&2
+    exit 1
+    ;;
+esac
+
+# D-36: Caddy sends the security headers on web pages and the API sends them on
+# /api; each must arrive exactly once.
+for path in / /api/healthz; do
+    headers="$(in_container curl -sk -o /dev/null -D - "https://localhost$path")"
+    for expected in 'strict-transport-security: max-age=31536000' 'x-content-type-options: nosniff' 'referrer-policy: strict-origin-when-cross-origin'; do
+        count="$(echo "$headers" | tr -d '\r' | grep -ci "^$expected$" || true)"
+        [ "$count" = "1" ] ||
+            { echo "infra-test: $path has $count copies of '$expected', want 1" >&2; echo "$headers" >&2; exit 1; }
+    done
+done
+echo "  security headers once on / and /api/healthz"
+
 purge="$(in_container curl -sk -o /dev/null -w '%{http_code}' -X POST https://localhost/_internal/cache/purge)"
 echo "  /_internal/cache/purge: $purge"
 [ "$purge" = "404" ] || { echo "infra-test: the purge hook is reachable through Caddy" >&2; exit 1; }

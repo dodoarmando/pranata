@@ -89,6 +89,24 @@ test("sends csp with a fresh nonce per response", async ({ request }) => {
 	expect(await second.text()).toContain(`nonce="${b}"`);
 });
 
+// D-36: Caddy adds these to web pages, the API adds them to /api, and neither
+// may double the other (Playwright joins repeated headers with a comma).
+const SECURITY_HEADERS = {
+	"strict-transport-security": "max-age=31536000",
+	"x-content-type-options": "nosniff",
+	"referrer-policy": "strict-origin-when-cross-origin",
+};
+
+for (const path of ["/", "/api/healthz"]) {
+	test(`sends each security header once on ${path}`, async ({ request }) => {
+		const res = await request.get(path);
+		const headers = res.headers();
+		for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+			expect(headers[name], name).toBe(value);
+		}
+	});
+}
+
 test("public js budget", async ({ page }) => {
 	const scripts = new Set<string>();
 	page.on("response", (res) => {

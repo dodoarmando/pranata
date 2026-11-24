@@ -13,6 +13,14 @@
 {% endif %}
 	encode zstd gzip
 
+	# D-36 on every response. `?` sets a header only when the upstream has not,
+	# so /api responses keep the single value the API sends.
+	header {
+		?Strict-Transport-Security "max-age=31536000"
+		?X-Content-Type-Options "nosniff"
+		?Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
 	handle /api/* {
 		reverse_proxy api:8080
 	}
