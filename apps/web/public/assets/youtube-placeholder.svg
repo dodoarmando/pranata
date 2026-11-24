@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="Putar video">
+  <rect width="640" height="360" fill="#1f2a24"/>
+  <circle cx="320" cy="180" r="48" fill="#ffffff" fill-opacity=".92"/>
+  <path d="M306 154v52l44-26z" fill="#00513a"/>
+</svg>
