@@ -37,6 +37,16 @@
     group: "{{ pranata_user }}"
     mode: "0750"
 
+- name: Check the ping URLs are safe in an env file
+  ansible.builtin.assert:
+    that:
+      - item | string is not search('[\\r\\n]')
+      - item | string is not search('^[\\s\\x22\\x27]|[\\s\\x5c]$')
+    fail_msg: A pranata_monitor_ping_urls value starts or ends with a quote, space or backslash, or has a line break.
+    quiet: true
+  loop: "{{ pranata_monitor_ping_urls.values() | list }}"
+  no_log: true
+
 # A ping URL is a capability: anyone holding it can report for the Installation.
 - name: Install the ping URLs
   ansible.builtin.template:

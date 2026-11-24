@@ -32,6 +32,19 @@
     group: "{{ pranata_user }}"
     mode: "0750"
 
+# systemd parses EnvironmentFile= values: quotes, line breaks, a trailing
+# backslash and surrounding spaces would change them, so refuse such values.
+- name: Check the restic values are safe in an env file
+  ansible.builtin.assert:
+    that:
+      - item | string | length > 0
+      - item | string is not search('[\\r\\n]')
+      - item | string is not search('^[\\s\\x22\\x27]|[\\s\\x5c]$')
+    fail_msg: A pranata_restic_* value is empty or starts or ends with a quote, space or backslash, or has a line break.
+    quiet: true
+  loop: "{{ [pranata_restic_repository, pranata_restic_password] + pranata_restic_env.values() | list }}"
+  no_log: true
+
 # The credentials stay in a file readable by the Pranata user only; the unit
 # loads it with EnvironmentFile=, so they never appear on a command line.
 - name: Install the restic credentials
