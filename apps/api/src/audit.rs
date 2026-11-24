@@ -6,7 +6,7 @@ use std::collections::BTreeSet;
 use anyhow::{Context, Result};
 use serde::Serialize;
 use serde_json::{Map, Value};
-use sqlx::{PgConnection, types::Json};
+use sqlx::PgConnection;
 
 use crate::ids::{AuditEntryId, UserId};
 
@@ -67,16 +67,17 @@ pub struct NewAuditEntry<'a> {
 /// # Errors
 /// Fails when the insert fails.
 pub async fn record(conn: &mut PgConnection, entry: NewAuditEntry<'_>) -> Result<AuditEntryId> {
-    sqlx::query_scalar::<_, AuditEntryId>(
-        "INSERT INTO audit_entries (actor, action, object_type, object_id, summary, changes) \
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+    let changes = serde_json::to_value(&entry.changes).context("serializing audit changes")?;
+    sqlx::query_scalar!(
+        r#"INSERT INTO audit_entries (actor, action, object_type, object_id, summary, changes)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING id AS "id: AuditEntryId""#,
+        entry.actor.map(|user| user.0),
+        entry.action.as_str(),
+        entry.object_type,
+        entry.object_id,
+        entry.summary,
+        changes,
     )
-    .bind(entry.actor)
-    .bind(entry.action.as_str())
-    .bind(entry.object_type)
-    .bind(entry.object_id)
-    .bind(entry.summary)
-    .bind(Json(entry.changes))
     .fetch_one(conn)
     .await
     .context("inserting audit entry")
