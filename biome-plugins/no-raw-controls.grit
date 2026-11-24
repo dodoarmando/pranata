@@ -1,0 +1,17 @@
+language js(jsx)
+
+// ADR 0008 / D-38: feature code renders form controls through src/components/ui.
+// The plugin scope (apps/web/src, minus components/ui) is set in biome.json.
+or {
+	`<$tag $props>$children</$tag>`,
+	`<$tag $props />`
+} where {
+	$tag <: or {
+		"button",
+		"input",
+		"select",
+		"textarea",
+		"dialog"
+	},
+	register_diagnostic(span=$tag, message="Use components from @/components/ui (ADR 0008)", severity="error")
+}

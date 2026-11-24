@@ -39,7 +39,33 @@
 			}
 		}
 	},
+	"plugins": [
+		{
+			"path": "./biome-plugins/no-raw-controls.grit",
+			"includes": ["apps/web/src/**", "!apps/web/src/components/ui/**"]
+		}
+	],
 	"overrides": [
+		{
+			"includes": ["apps/web/src/routes/**", "!apps/web/src/routes/admin/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": ["@/admin/*", "@/routes/admin/*", "**/admin/*"],
+										"message": "Public routes must not import admin modules (D-08)"
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
 		{
 			"includes": ["apps/web/src/components/ui/**"],
 			"linter": {
