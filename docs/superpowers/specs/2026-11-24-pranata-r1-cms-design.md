@@ -225,7 +225,7 @@ Every decision has an ID. The implementation plan must reference each ID from at
 
 **D-38 UI components only through `components/ui`.** shadcn components (Base UI variant) are installed in `apps/web/src/components/ui`. Feature code may not use raw `<button>`, `<input>`, `<select>`, `<textarea>` or `<dialog>`; a Biome GritQL rule enforces this. The visual language follows the prototype (admin: shadcn neutral; public: the prototype's green theme, driven by the village's primary colour). *Check:* CI lint; ADR 0008. This is the direct answer to archive issue #77.
 
-**D-39 TDD for domain rules.** D-21 to D-29, D-31 and D-33 are written test-first. Rust integration tests run against a real PostgreSQL (`sqlx::test`). *Check:* CI `test` job; review.
+**D-39 TDD for domain rules.** D-21 to D-29, D-31 and D-33 are written test-first. Rust integration tests run against a real PostgreSQL (`sqlx::test`). SQL is written with SQLx's compile-time checked macros (`query!`, `query_as!`, `query_scalar!`), with the offline data in `.sqlx/` committed and verified by `cargo sqlx prepare --check`; runtime-built queries are allowed only where SQL must be assembled dynamically, with a comment saying why. *Check:* CI `test` job; review.
 
 **D-40 End-to-end tests.** Playwright runs against the built container images, with axe, Lighthouse CI and size-limit. *Check:* CI jobs `e2e`, `perf`.
 

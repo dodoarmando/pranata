@@ -18,6 +18,7 @@
 - Never commit `.prototype/`. It is a local-only visual reference, excluded through `.git/info/exclude`.
 - No village-specific data in code (D-02). The words `Sidomukti` and `Sukamaju` may appear only under `apps/api/seed/`, test fixtures and `docs/`.
 - `unsafe_code = "forbid"`. Clippy pedantic warnings are errors.
+- SQL uses SQLx compile-time checked macros (`query!`, `query_as!`, `query_scalar!`) with committed `.sqlx/` offline data; runtime queries only where SQL must be built dynamically, with a comment (D-39).
 - Money is integer rupiah. No floats for money anywhere (D-27; first used in R1).
 - Public pages make no third-party requests (D-20).
 - Feature code never renders raw `<button>`, `<input>`, `<select>`, `<textarea>` or `<dialog>` (D-38).
