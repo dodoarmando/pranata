@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT overview, hero_asset_id FROM village WHERE id = 1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "overview",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "overview"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "hero_asset_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "hero_asset_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "60130aec85c0113171e3b27980e5c89084380e69723af25fe672a665079035e4"
+}

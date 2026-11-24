@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT a.id, v.width, v.path\n         FROM media_assets a\n         JOIN media_variants v ON v.asset_id = a.id\n         WHERE a.id = ANY($1) AND a.kind = 'image' AND a.status = 'ready'\n         ORDER BY a.id, v.width",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "media_assets",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "width",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "media_variants",
+            "name": "width"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "path",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "media_variants",
+            "name": "path"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4486fcb798286a311cd5df0fc195bc7e25a8809454664e1ebf97d2df46e532f7"
+}

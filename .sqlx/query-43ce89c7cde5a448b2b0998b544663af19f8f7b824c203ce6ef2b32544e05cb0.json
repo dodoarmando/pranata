@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT done_at IS NOT NULL AS \"done!\" FROM jobs WHERE kind = 'purge_public_cache'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "done!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "43ce89c7cde5a448b2b0998b544663af19f8f7b824c203ce6ef2b32544e05cb0"
+}

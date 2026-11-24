@@ -1,0 +1,45 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT attempts, done_at, run_at > now() AS \"later!\" FROM jobs WHERE kind = 'purge_public_cache'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "attempts",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "attempts"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "done_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "done_at"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "later!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "22410fe68b314dd0147ae24a795a13287771895aecd802d9806030841558088b"
+}

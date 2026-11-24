@@ -130,6 +130,8 @@ mod api {
                 "regency": "Kabupaten Pelalawan",
                 "province": "Riau",
                 "time_zone": "Asia/Jakarta",
+                "overview_html": null,
+                "hero": null,
             })
         );
     }

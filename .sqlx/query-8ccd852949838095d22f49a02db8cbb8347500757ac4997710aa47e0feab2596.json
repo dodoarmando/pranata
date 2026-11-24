@@ -1,0 +1,69 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT attempts, done_at, failed_at, run_at > now() AS \"later!\", last_error\n           FROM jobs WHERE kind = 'purge_public_cache'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "attempts",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "attempts"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "done_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "done_at"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "failed_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "failed_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "later!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "last_error",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "last_error"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      null,
+      true
+    ]
+  },
+  "hash": "8ccd852949838095d22f49a02db8cbb8347500757ac4997710aa47e0feab2596"
+}

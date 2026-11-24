@@ -12,7 +12,7 @@ pub mod pipeline;
 pub mod storage;
 pub mod upload;
 
-use std::fmt::Write;
+use std::{collections::HashMap, fmt::Write};
 
 use anyhow::{Context, Result, anyhow};
 use bytes::Bytes;
@@ -57,7 +57,7 @@ pub struct MediaAsset {
 }
 
 /// An image as public responses embed it.
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
 pub struct MediaRef {
     pub id: Uuid,
     pub alt: Option<String>,
@@ -127,6 +127,40 @@ pub async fn load(db: &PgPool, id: Uuid) -> Result<Option<MediaAsset>> {
         height: row.height,
         variants,
     }))
+}
+
+/// Public references to the ready images among `ids`, in one query. Ids that
+/// are unknown, not images, not ready or without variants are left out.
+///
+/// # Errors
+/// Fails when the query fails.
+pub async fn refs(db: &PgPool, ids: &[Uuid]) -> Result<HashMap<Uuid, MediaRef>> {
+    let rows = sqlx::query!(
+        "SELECT a.id, v.width, v.path
+         FROM media_assets a
+         JOIN media_variants v ON v.asset_id = a.id
+         WHERE a.id = ANY($1) AND a.kind = 'image' AND a.status = 'ready'
+         ORDER BY a.id, v.width",
+        ids
+    )
+    .fetch_all(db)
+    .await
+    .context("loading media references")?;
+    let mut refs: HashMap<Uuid, MediaRef> = HashMap::new();
+    for row in rows {
+        refs.entry(row.id)
+            .or_insert_with(|| MediaRef {
+                id: row.id,
+                alt: None,
+                variants: Vec::new(),
+            })
+            .variants
+            .push(MediaVariant {
+                width: row.width,
+                url: variant_url(&row.path),
+            });
+    }
+    Ok(refs)
 }
 
 /// Mark a pending asset `failed`, in the caller's transaction.

@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS (\n                   SELECT 1 FROM media_assets\n                   WHERE id = $1 AND kind = 'image' AND status = 'ready'\n               ) AS \"ready!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ready!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "353ce185e8b3366134505230490a71002258babc052bff9c2970b1fda4bea77e"
+}

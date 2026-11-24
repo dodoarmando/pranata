@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO media_variants (asset_id, width, path, bytes) VALUES ($1, 480, $2, 10)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "477d07e98ae59c7131efa6907e175477f3715ab89a391d3f174e9649680343bb"
+}

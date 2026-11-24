@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT code, name, district, regency, province, time_zone FROM village WHERE id = 1",
+  "query": "SELECT code, name, district, regency, province, time_zone, overview, hero_asset_id\n         FROM village WHERE id = 1",
   "describe": {
     "columns": [
       {
@@ -68,6 +68,28 @@
             "name": "time_zone"
           }
         }
+      },
+      {
+        "ordinal": 6,
+        "name": "overview",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "overview"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "hero_asset_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "hero_asset_id"
+          }
+        }
       }
     ],
     "parameters": {
@@ -79,8 +101,10 @@
       false,
       false,
       false,
-      false
+      false,
+      true,
+      true
     ]
   },
-  "hash": "a3c500fd29887f901a0add4bf6d635885d05dac058bdcbaaeb462a12e835f67f"
+  "hash": "84df0fde2f1f5b8fe6c84896d293dbe3ddb4d34645e935d2baac791acda9defa"
 }

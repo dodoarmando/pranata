@@ -1,13 +1,21 @@
 //! The Installation's single Village: identity taken from the bundled region
 //! dataset (D-02).
 
+pub mod profile;
+
+use std::collections::{HashMap, HashSet};
+
 use anyhow::Context;
 use serde::Serialize;
+use serde_json::Value;
 use sqlx::PgPool;
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 use crate::audit::{self, AuditAction, NewAuditEntry};
+use crate::media::{self, MediaRef};
 use crate::region_codes::{self, TimeZone, VillageCode};
+use crate::rich_text;
 
 /// What the public site shows about the Village.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
@@ -20,6 +28,11 @@ pub struct VillageProfile {
     pub province: String,
     /// IANA time zone name.
     pub time_zone: String,
+    /// The overview as sanitized HTML; `null` until an Administrator writes
+    /// one.
+    pub overview_html: Option<String>,
+    /// Hero photo; `null` until an Administrator picks one.
+    pub hero: Option<MediaRef>,
 }
 
 /// Why `init` failed.
@@ -80,7 +93,49 @@ pub async fn init(pool: &PgPool, code: &VillageCode) -> Result<VillageProfile, I
         regency: record.regency,
         province: record.province,
         time_zone: record.time_zone.iana_name().to_owned(),
+        overview_html: None,
+        hero: None,
     })
+}
+
+/// Ids of the images a rich text document embeds.
+fn image_ids(node: &Value, ids: &mut HashSet<Uuid>) {
+    if node.get("type").and_then(Value::as_str) == Some("image")
+        && let Some(id) = node
+            .get("attrs")
+            .and_then(|attrs| attrs.get("assetId"))
+            .and_then(Value::as_str)
+            .and_then(|id| Uuid::parse_str(id).ok())
+    {
+        ids.insert(id);
+    }
+    for child in node
+        .get("content")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        image_ids(child, ids);
+    }
+}
+
+/// Load every image the profile shows (the hero and the ones in `overview`)
+/// with a single query.
+async fn load_images(
+    pool: &PgPool,
+    overview: Option<&Value>,
+    hero: Option<Uuid>,
+) -> anyhow::Result<HashMap<Uuid, MediaRef>> {
+    let mut ids = HashSet::new();
+    ids.extend(hero);
+    if let Some(overview) = overview {
+        image_ids(overview, &mut ids);
+    }
+    if ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let ids: Vec<Uuid> = ids.into_iter().collect();
+    media::refs(pool, &ids).await
 }
 
 /// The Village profile, or `None` before `init`.
@@ -89,22 +144,36 @@ pub async fn init(pool: &PgPool, code: &VillageCode) -> Result<VillageProfile, I
 /// Fails when the query fails or the stored time zone is unknown.
 pub async fn get(pool: &PgPool) -> anyhow::Result<Option<VillageProfile>> {
     let row = sqlx::query!(
-        "SELECT code, name, district, regency, province, time_zone FROM village WHERE id = 1"
+        "SELECT code, name, district, regency, province, time_zone, overview, hero_asset_id
+         FROM village WHERE id = 1"
     )
     .fetch_optional(pool)
     .await
     .context("reading village")?;
-    row.map(|row| {
-        let zone = TimeZone::from_iana_name(&row.time_zone)
-            .with_context(|| format!("unknown stored time zone {}", row.time_zone))?;
-        Ok(VillageProfile {
-            code: row.code,
-            name: row.name,
-            district: row.district,
-            regency: row.regency,
-            province: row.province,
-            time_zone: zone.iana_name().to_owned(),
+    let Some(row) = row else {
+        return Ok(None);
+    };
+    let zone = TimeZone::from_iana_name(&row.time_zone)
+        .with_context(|| format!("unknown stored time zone {}", row.time_zone))?;
+    let images = load_images(pool, row.overview.as_ref(), row.hero_asset_id).await?;
+    // Stored documents were sanitized on write; validating again is cheap
+    // and keeps `to_html` fed with a `RichTextDoc` only.
+    let overview_html = row
+        .overview
+        .as_ref()
+        .map(|value| {
+            let doc = rich_text::validate(value).context("stored overview is invalid")?;
+            Ok::<_, anyhow::Error>(rich_text::to_html(&doc, &|id| images.get(&id).cloned()))
         })
-    })
-    .transpose()
+        .transpose()?;
+    Ok(Some(VillageProfile {
+        code: row.code,
+        name: row.name,
+        district: row.district,
+        regency: row.regency,
+        province: row.province,
+        time_zone: zone.iana_name().to_owned(),
+        overview_html,
+        hero: row.hero_asset_id.and_then(|id| images.get(&id).cloned()),
+    }))
 }

@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT overview, hero_asset_id, updated_at FROM village WHERE id = 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "overview",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "overview"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "hero_asset_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "hero_asset_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "village",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "0820edafc480b9775dab2a318b0ed9bb24e943009cab399076ae4305c936acd6"
+}
