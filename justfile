@@ -24,6 +24,14 @@ dev:
     bun run --filter @pranata/web dev &
     wait -n
 
+# Dev only: create the Village from a code in the bundled dataset, e.g. 14.05.03.2002.
+dev-village-init code:
+    @source infra/dev/env.sh && cargo run -q -- village init --code {{ quote(code) }}
+
+# Dev only: create a User and print their Access Link (open it within 24 hours).
+dev-create-admin username name:
+    @source infra/dev/env.sh && cargo run -q -- user create-admin {{ quote(username) }} --name {{ quote(name) }}
+
 # Start the local database container (no-op in CI, where a service container is used).
 db-up:
     #!/usr/bin/env bash
