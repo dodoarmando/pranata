@@ -1,5 +1,5 @@
 # Dev-only defaults for running the API on this machine, sourced by the
-# `just dev` recipe. The
+# `just dev`, `just dev-village-init` and `just dev-create-admin` recipes. The
 # passwords match infra/dev/postgres-init.sql. A variable already set wins.
 root="$(git rev-parse --show-toplevel)"
 export PRANATA_DATABASE_URL="${PRANATA_DATABASE_URL:-postgres://pranata_app:pranata_app_dev@127.0.0.1:55432/pranata}"
