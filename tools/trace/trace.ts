@@ -9,7 +9,11 @@ export type TraceResult = {
 	missing: string[];
 	tasksWithoutDecisions: string[];
 	unknown: string[];
+	ranges: string[];
+	errors: string[];
 };
+
+const RANGE = /…|\.{3}|D-\d+\s*[–—-]\s*D-\d+/;
 
 function ids(text: string): string[] {
 	return text.match(ID) ?? [];
@@ -31,6 +35,8 @@ type Citations = {
 	notBuilt: Set<string>;
 	roadmap: Set<string>;
 	tasksWithoutDecisions: string[];
+	taskCount: number;
+	ranges: string[];
 };
 
 function cite(plans: string[]): Citations {
@@ -39,9 +45,12 @@ function cite(plans: string[]): Citations {
 		notBuilt: new Set(),
 		roadmap: new Set(),
 		tasksWithoutDecisions: [],
+		taskCount: 0,
+		ranges: [],
 	};
 	for (const plan of plans) {
 		let pending: string | undefined;
+		let current = "no task";
 		const closeTask = () => {
 			if (pending !== undefined) result.tasksWithoutDecisions.push(pending);
 			pending = undefined;
@@ -50,15 +59,28 @@ function cite(plans: string[]): Citations {
 			if (line.startsWith("### ")) {
 				closeTask();
 				const heading = /^### (Task \d+:.*)$/.exec(line);
-				if (heading?.[1]) pending = heading[1].trim();
+				if (heading?.[1]) {
+					pending = heading[1].trim();
+					current = pending;
+					result.taskCount++;
+				}
 			} else if (line.startsWith("**Decisions:**")) {
+				if (RANGE.test(line)) {
+					result.ranges.push(`${current}: ${line.slice(14).trim()}`);
+				}
 				for (const id of ids(line)) result.task.add(id);
 				pending = undefined;
 			} else if (line.startsWith("**Not built:**")) {
+				if (RANGE.test(line)) {
+					result.ranges.push(`Not built: ${line.slice(14).trim()}`);
+				}
 				for (const id of ids(line)) result.notBuilt.add(id);
 			} else if (/^\|\s*P\d+\b/.test(line)) {
 				const cells = line.split("|").slice(1, -1);
 				const last = cells.at(-1) ?? "";
+				if (RANGE.test(last)) {
+					result.ranges.push(`roadmap: ${(cells[0] ?? "").trim()}`);
+				}
 				for (const id of ids(last)) result.roadmap.add(id);
 			}
 		}
@@ -81,14 +103,21 @@ export function check(
 	const missing = [...known].filter((id) => !accepted.has(id)).sort();
 	const unknown = [...all].filter((id) => !known.has(id)).sort();
 	const tasksWithoutDecisions = cited.tasksWithoutDecisions;
+	const errors: string[] = [];
+	if (known.size === 0) errors.push("no decisions found in specs");
+	if (cited.taskCount === 0) errors.push("no tasks found in plans");
 	return {
 		ok:
 			missing.length === 0 &&
 			unknown.length === 0 &&
-			tasksWithoutDecisions.length === 0,
+			tasksWithoutDecisions.length === 0 &&
+			cited.ranges.length === 0 &&
+			errors.length === 0,
 		missing,
 		tasksWithoutDecisions,
 		unknown,
+		ranges: cited.ranges,
+		errors,
 	};
 }
 
@@ -103,6 +132,11 @@ export function report(result: TraceResult, strict: boolean): string {
 	const mode = strict ? "strict" : "default";
 	if (result.ok) return `trace (${mode}): ok`;
 	const lines = [`trace (${mode}): FAILED`];
+	for (const error of result.errors) lines.push(`Error: ${error}`);
+	if (result.ranges.length > 0) {
+		lines.push("Ranges are not allowed, list each ID individually:");
+		for (const range of result.ranges) lines.push(`  - ${range}`);
+	}
 	if (result.missing.length > 0) {
 		lines.push(
 			`Decisions not cited by any plan task: ${result.missing.join(", ")}`,
@@ -123,11 +157,18 @@ export function report(result: TraceResult, strict: boolean): string {
 if (import.meta.main) {
 	const strict = process.argv.includes("--strict");
 	const root = resolve(import.meta.dir, "../..");
-	const result = check(
-		readMarkdown(join(root, "docs/superpowers/specs")),
-		readMarkdown(join(root, "docs/superpowers/plans")),
-		strict,
-	);
+	let result: TraceResult;
+	try {
+		result = check(
+			readMarkdown(join(root, "docs/superpowers/specs")),
+			readMarkdown(join(root, "docs/superpowers/plans")),
+			strict,
+		);
+	} catch (error) {
+		const reason = error instanceof Error ? error.message : String(error);
+		console.error(`trace: cannot read docs directories: ${reason}`);
+		process.exit(1);
+	}
 	console.log(report(result, strict));
 	process.exit(result.ok ? 0 : 1);
 }

@@ -65,4 +65,36 @@ describe("check", () => {
 		expect(result.unknown).toEqual(["D-99"]);
 		expect(result.ok).toBe(false);
 	});
+
+	test("rejects decision ranges", () => {
+		for (const range of [
+			"D-01…D-02",
+			"D-01...D-02",
+			"D-01 - D-02",
+			"D-01–D-02",
+		]) {
+			const plan = `### Task 1: Foo\n**Decisions:** ${range}\n`;
+			const result = check([spec], [plan], false);
+			expect(result.ranges).toEqual([`Task 1: Foo: ${range}`]);
+			expect(result.ok).toBe(false);
+		}
+		const roadmap =
+			"### Task 1: Foo\n**Decisions:** D-01, D-02\n| P2 Access | Roles | D-01…D-02 |\n";
+		const result = check([spec], [roadmap], false);
+		expect(result.ranges).toEqual(["roadmap: P2 Access"]);
+		expect(result.ok).toBe(false);
+	});
+
+	test("fails when specs define no decisions", () => {
+		const plan = "### Task 1: Foo\n**Decisions:** D-01\n";
+		const result = check(["no headings here"], [plan], false);
+		expect(result.errors).toEqual(["no decisions found in specs"]);
+		expect(result.ok).toBe(false);
+	});
+
+	test("fails when plans contain no tasks", () => {
+		const result = check([spec], ["nothing"], false);
+		expect(result.errors).toContain("no tasks found in plans");
+		expect(result.ok).toBe(false);
+	});
 });
