@@ -212,3 +212,117 @@ fn rejects_deep_and_huge_documents() {
         RichTextError::TooLarge
     );
 }
+
+fn image_with(urls: &[(i32, &str)]) -> String {
+    let id = Uuid::new_v4();
+    let d = doc(json!([{ "type": "image", "attrs": { "assetId": id.to_string() } }]));
+    let variants: Vec<MediaVariant> = urls
+        .iter()
+        .map(|&(width, url)| MediaVariant {
+            width,
+            url: url.to_owned(),
+        })
+        .collect();
+    render_with(&d, &move |_| {
+        Some(MediaRef {
+            id,
+            alt: None,
+            variants: variants.clone(),
+        })
+    })
+}
+
+#[test]
+fn foreign_or_malformed_variant_urls_are_dropped() {
+    for bad in [
+        "https://evil.example/x.webp",
+        "//evil/x.webp",
+        "/media/a b.webp",
+        "/media/a,b.webp",
+    ] {
+        assert_eq!(image_with(&[(960, bad)]), "", "url {bad:?}");
+    }
+    let html = image_with(&[
+        (960, "https://evil.example/x.webp"),
+        (480, "/media/ab/abc-480.webp"),
+    ]);
+    assert!(html.contains("src=\"/media/ab/abc-480.webp\""));
+    assert!(!html.contains("evil"));
+}
+
+#[test]
+fn non_positive_widths_are_skipped() {
+    let html = image_with(&[
+        (0, "/media/ab/a-0.webp"),
+        (-5, "/media/ab/a-5.webp"),
+        (480, "/media/ab/a-480.webp"),
+    ]);
+    assert!(
+        html.contains("srcset=\"/media/ab/a-480.webp 480w\""),
+        "{html}"
+    );
+    assert_eq!(image_with(&[(0, "/media/ab/a-0.webp")]), "");
+}
+
+#[test]
+fn typeless_node_keeps_its_children() {
+    let d = doc(json!([{ "content": [para(json!([text("kept")]))] }, { "text": "loose" }]));
+    assert_eq!(render(&d), "<p>kept</p>");
+}
+
+#[test]
+fn heading_level_clamps_floats_and_out_of_range() {
+    let h = |level: Value| {
+        doc(json!([{ "type": "heading", "attrs": { "level": level }, "content": [text("T")] }]))
+    };
+    assert_eq!(render(&h(json!(5.0))), "<h4>T</h4>");
+    assert_eq!(render(&h(json!(3.0))), "<h3>T</h3>");
+    assert_eq!(render(&h(json!(0))), "<h2>T</h2>");
+    assert_eq!(render(&h(json!(u64::MAX))), "<h4>T</h4>");
+    assert_eq!(render(&h(json!(-7))), "<h2>T</h2>");
+}
+
+#[test]
+fn validate_returns_sanitized_json() {
+    let d = doc(json!([{
+        "type": "paragraph",
+        "attrs": { "textAlign": "center" },
+        "content": [{
+            "type": "text", "text": "hi",
+            "marks": [
+                { "type": "italic" },
+                { "type": "color", "attrs": { "color": "red" } },
+                { "type": "link", "attrs": { "href": "https://example.com", "target": "_self", "class": "x" } },
+                { "type": "bold", "attrs": { "x": 1 } }
+            ]
+        }]
+    }]));
+    assert_eq!(
+        validate(&d).unwrap().as_value(),
+        &json!({ "type": "doc", "content": [{
+            "type": "paragraph",
+            "content": [{
+                "type": "text", "text": "hi",
+                "marks": [
+                    { "type": "link", "attrs": { "href": "https://example.com" } },
+                    { "type": "bold" },
+                    { "type": "italic" }
+                ]
+            }]
+        }] })
+    );
+}
+
+#[test]
+fn depth_boundary_is_32() {
+    let nested = |quotes: usize| {
+        let mut node = para(json!([text("x")]));
+        for _ in 0..quotes {
+            node = json!({ "type": "blockquote", "content": [node] });
+        }
+        doc(json!([node]))
+    };
+    // doc (1) + n blockquotes + paragraph + text = n + 3 levels.
+    assert!(validate(&nested(29)).is_ok());
+    assert_eq!(validate(&nested(30)).unwrap_err(), RichTextError::TooLarge);
+}

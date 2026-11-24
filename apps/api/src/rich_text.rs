@@ -92,8 +92,9 @@ fn sanitize_children(node: &Value, out: &mut Vec<Value>) {
 /// Push the sanitized form of `node`, or, when the node itself is not
 /// allowed, the sanitized forms of its children.
 fn sanitize_node(node: &Value, out: &mut Vec<Value>) {
+    // A node without a type is as unknown as any other: keep its children.
     let Some(kind) = node.get("type").and_then(Value::as_str) else {
-        return;
+        return sanitize_children(node, out);
     };
     match kind {
         "text" => {
@@ -155,9 +156,12 @@ fn heading_level(node: &Value) -> u8 {
     let level = node
         .get("attrs")
         .and_then(|a| a.get("level"))
-        .and_then(Value::as_i64)
-        .unwrap_or(2);
-    u8::try_from(level.clamp(2, 4)).unwrap_or(2)
+        .and_then(Value::as_f64)
+        .unwrap_or(2.0);
+    // Clamped into 2..=4, so the cast is exact. NaN cannot occur in JSON.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let level = level.clamp(2.0, 4.0).round() as u8;
+    level
 }
 
 fn is_video_id(id: &str) -> bool {
@@ -336,12 +340,16 @@ fn render_image(node: &Value, media: &dyn Fn(Uuid) -> Option<MediaRef>, out: &mu
     let Some(asset) = media(id) else {
         return;
     };
-    let mut variants: Vec<&MediaVariant> = asset.variants.iter().collect();
+    let mut variants: Vec<&MediaVariant> = asset
+        .variants
+        .iter()
+        .filter(|v| v.width > 0 && is_media_url(&v.url))
+        .collect();
     variants.sort_by(|a, b| a.width.cmp(&b.width).then_with(|| a.url.cmp(&b.url)));
     // Closest to the target; on a tie the larger one wins.
     let Some(src) = variants
         .iter()
-        .min_by_key(|v| ((v.width - TARGET_WIDTH).abs(), std::cmp::Reverse(v.width)))
+        .min_by_key(|v| (v.width.abs_diff(TARGET_WIDTH), std::cmp::Reverse(v.width)))
     else {
         return;
     };
@@ -382,6 +390,15 @@ fn render_youtube(node: &Value, out: &mut String) {
         "<a class=\"yt-facade\" href=\"https://www.youtube.com/watch?v={id}\" data-video-id=\"{id}\">\
          <img src=\"{YOUTUBE_PLACEHOLDER}\" alt=\"Play video\" loading=\"lazy\" decoding=\"async\"></a>"
     );
+}
+
+/// Only site-relative `/media/` paths of safe characters may reach `src` and
+/// `srcset`: no foreign hosts (D-20), and no space or comma to break `srcset`.
+fn is_media_url(url: &str) -> bool {
+    url.starts_with("/media/")
+        && url
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'/' | b'.' | b'_' | b'-'))
 }
 
 fn escape_into(s: &str, out: &mut String) {
