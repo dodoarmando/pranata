@@ -21,12 +21,12 @@ export type ErrorType<_E> = ApiError;
 export type BodyType<T> = T;
 
 // On the server there is no page origin to resolve /api against.
-const SERVER_API_ORIGIN =
-	(typeof process !== "undefined" && process.env.PRANATA_API_INTERNAL_URL) ||
-	"http://127.0.0.1:8080";
+function serverApiOrigin(): string {
+	return process.env.PRANATA_API_INTERNAL_URL || "http://127.0.0.1:8080";
+}
 
 function resolveUrl(url: string): string {
-	return typeof window === "undefined" ? `${SERVER_API_ORIGIN}${url}` : url;
+	return typeof window === "undefined" ? `${serverApiOrigin()}${url}` : url;
 }
 
 async function readProblem(response: Response): Promise<Problem | null> {

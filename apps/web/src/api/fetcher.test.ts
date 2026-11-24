@@ -1,18 +1,26 @@
 import { afterEach, describe, expect, it, rs } from "@rstest/core";
-import { setCsrfToken } from "@/lib/csrf";
+import { getCsrfToken, setCsrfToken } from "@/lib/csrf";
 import { ApiError, apiFetch } from "./fetcher";
 
 function mockFetch(response: Response) {
 	return rs.spyOn(globalThis, "fetch").mockResolvedValue(response);
 }
 
+// Tests run in Node: stub a browser-like `window` for the client cases.
+function asBrowser() {
+	Object.assign(globalThis, { window: {} });
+}
+
 afterEach(() => {
 	rs.restoreAllMocks();
 	setCsrfToken(null);
+	delete (globalThis as { window?: unknown }).window;
+	delete process.env.PRANATA_API_INTERNAL_URL;
 });
 
 describe("apiFetch", () => {
 	it("sends credentials and the csrf token on unsafe requests", async () => {
+		asBrowser();
 		setCsrfToken("tok");
 		const spy = mockFetch(Response.json({ ok: true }));
 		await apiFetch("/api/admin/village/profile", { method: "PUT" });
@@ -22,6 +30,7 @@ describe("apiFetch", () => {
 	});
 
 	it("omits the csrf token on GET", async () => {
+		asBrowser();
 		setCsrfToken("tok");
 		const spy = mockFetch(Response.json({}));
 		await apiFetch("/api/auth/me", { method: "GET" });
@@ -60,5 +69,31 @@ describe("apiFetch", () => {
 		mockFetch(new Response("boom", { status: 502 }));
 		const err = (await apiFetch("/api/x").catch((e: unknown) => e)) as ApiError;
 		expect(err.code).toBe("internal_error");
+	});
+
+	it("returns undefined for 204 responses", async () => {
+		mockFetch(new Response(null, { status: 204 }));
+		expect(
+			await apiFetch("/api/auth/logout", { method: "POST" }),
+		).toBeUndefined();
+	});
+
+	it("keeps the url relative in the browser", async () => {
+		asBrowser();
+		const spy = mockFetch(Response.json({}));
+		await apiFetch("/api/healthz");
+		expect(spy.mock.calls[0]?.[0]).toBe("/api/healthz");
+	});
+
+	it("prefixes the internal api origin on the server", async () => {
+		process.env.PRANATA_API_INTERNAL_URL = "http://api.internal:9000";
+		const spy = mockFetch(Response.json({}));
+		await apiFetch("/api/healthz");
+		expect(spy.mock.calls[0]?.[0]).toBe("http://api.internal:9000/api/healthz");
+	});
+
+	it("never stores a csrf token during SSR", () => {
+		setCsrfToken("tok");
+		expect(getCsrfToken()).toBeNull();
 	});
 });
