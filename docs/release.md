@@ -18,6 +18,15 @@ release only publishes images.
 `just check-versions` (run by the `lint` job) fails when those files disagree
 with the manifest, so `--version`, `/api/healthz` and the image tag always match.
 
+## The first release is pinned to 0.1.0
+
+`release-please-config.json` carries `"release-as": "0.1.0"` on the package
+entry. The manifest already says `0.1.0` while no tag exists yet, so without the
+pin release-please would compute the next version from the commits and publish
+0.2.0 or 0.1.1 as the first release. **Remove `release-as` in the pull request
+that follows the 0.1.0 release.** If it stays, every later release pull request
+is stuck at 0.1.0.
+
 ## Maintainer setup (one time)
 
 Pull requests opened with the default `GITHUB_TOKEN` do not trigger other
