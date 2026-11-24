@@ -1,0 +1,17 @@
+{
+	"name": "pranata",
+	"private": true,
+	"workspaces": [
+		"apps/*",
+		"tools/*"
+	],
+	"scripts": {
+		"prepare": "lefthook install"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.6.8",
+		"@commitlint/cli": "^21.2.4",
+		"@commitlint/config-conventional": "^21.2.4",
+		"lefthook": "^2.2.2"
+	}
+}

@@ -1,0 +1,22 @@
+# Dependencies and build output
+node_modules/
+target/
+dist/
+.output/
+.vinxi/
+.tanstack/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+
+# Test and coverage output
+coverage/
+playwright-report/
+test-results/
