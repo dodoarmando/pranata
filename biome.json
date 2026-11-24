@@ -12,7 +12,8 @@
 			"!bun.lock",
 			"!**/*.md",
 			"!**/routeTree.gen.ts",
-			"!**/generated"
+			"!**/generated",
+			"!.sqlx"
 		]
 	},
 	"formatter": {
