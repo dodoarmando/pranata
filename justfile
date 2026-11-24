@@ -11,18 +11,13 @@ default:
 install:
     bun install --frozen-lockfile
 
+# The web dev server proxies /api to the API and serves /media from the media
+# directory. Values come from infra/dev/env.sh and are dev-only.
 # Run the API and the web dev server together (needs `just db-up db-migrate`).
-# The web dev server proxies /api to the API. Values here are dev-only.
 dev:
     #!/usr/bin/env bash
     set -euo pipefail
-    export PRANATA_DATABASE_URL="${PRANATA_DATABASE_URL:-postgres://pranata_app:pranata_app_dev@127.0.0.1:55432/pranata}"
-    export PRANATA_MIGRATION_DATABASE_URL="${PRANATA_MIGRATION_DATABASE_URL:-postgres://pranata_owner:pranata_owner_dev@127.0.0.1:55432/pranata}"
-    export PRANATA_PUBLIC_ORIGIN="${PRANATA_PUBLIC_ORIGIN:-http://localhost:3000}"
-    export PRANATA_WEB_INTERNAL_URL="${PRANATA_WEB_INTERNAL_URL:-http://127.0.0.1:3000}"
-    export PRANATA_PURGE_TOKEN="${PRANATA_PURGE_TOKEN:-dev-purge-token}"
-    export PRANATA_MEDIA_DIR="${PRANATA_MEDIA_DIR:-{{ justfile_directory() }}/target/dev-media}"
-    export PRANATA_LISTEN="${PRANATA_LISTEN:-127.0.0.1:8080}"
+    source infra/dev/env.sh
     mkdir -p "$PRANATA_MEDIA_DIR"
     trap 'kill 0' EXIT
     cargo run -q -- serve &
