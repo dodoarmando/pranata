@@ -32,10 +32,10 @@ pub struct Problem {
 pub enum ApiError {
     #[error("not found: {0}")]
     NotFound(&'static str),
-    #[error("unauthorized")]
-    Unauthorized,
-    #[error("forbidden")]
-    Forbidden,
+    #[error("unauthorized: {0}")]
+    Unauthorized(&'static str),
+    #[error("forbidden: {0}")]
+    Forbidden(&'static str),
     #[error("conflict: {0}")]
     Conflict(&'static str),
     #[error("gone: {0}")]
@@ -52,8 +52,8 @@ impl ApiError {
     fn parts(&self) -> (StatusCode, &'static str, &'static str) {
         match self {
             Self::NotFound(code) => (StatusCode::NOT_FOUND, "Not Found", code),
-            Self::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized", "unauthorized"),
-            Self::Forbidden => (StatusCode::FORBIDDEN, "Forbidden", "forbidden"),
+            Self::Unauthorized(code) => (StatusCode::UNAUTHORIZED, "Unauthorized", code),
+            Self::Forbidden(code) => (StatusCode::FORBIDDEN, "Forbidden", code),
             Self::Conflict(code) => (StatusCode::CONFLICT, "Conflict", code),
             Self::Gone(code) => (StatusCode::GONE, "Gone", code),
             Self::Unsupported(code) => (
@@ -148,8 +148,8 @@ mod tests {
     #[tokio::test]
     async fn statuses_follow_variants() {
         for (error, expected) in [
-            (ApiError::Unauthorized, 401),
-            (ApiError::Forbidden, 403),
+            (ApiError::Unauthorized("unauthenticated"), 401),
+            (ApiError::Forbidden("csrf_mismatch"), 403),
             (ApiError::Conflict("access_link_used"), 409),
             (ApiError::Gone("gone"), 410),
             (ApiError::Unsupported("unsupported_media_type"), 415),
