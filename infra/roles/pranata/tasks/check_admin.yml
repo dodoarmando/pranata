@@ -1,11 +1,11 @@
----
 - name: Check the Administrator variables
   ansible.builtin.assert:
     that:
       - pranata_admin_username | length > 0
-      - pranata_admin_name | length > 0
-      - pranata_admin_username is regex('^[a-z0-9._-]{3,64}$')
+      - pranata_admin_name | trim | length > 0
+      - pranata_admin_username is regex('^[a-z0-9][a-z0-9._-]{2,63}$')
     fail_msg: >-
       pranata_admin_username must be 3 to 64 characters of a-z, 0-9, dot,
-      underscore or hyphen, and pranata_admin_name must not be empty.
+      underscore or hyphen, starting with a letter or digit, and
+      pranata_admin_name must not be blank.
     quiet: true
