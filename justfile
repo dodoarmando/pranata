@@ -60,7 +60,7 @@ db-migrate:
 
 # Generate the OpenAPI contract, then the web API client from it (Orval).
 gen:
-    cargo run -q -- openapi | bunx biome format --stdin-file-path=apps/api/openapi.json > apps/api/openapi.json.tmp
+    SQLX_OFFLINE=true cargo run -q -- openapi | bunx biome format --stdin-file-path=apps/api/openapi.json > apps/api/openapi.json.tmp
     mv apps/api/openapi.json.tmp apps/api/openapi.json
     bun run --filter @pranata/web gen
 
