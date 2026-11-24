@@ -7,3 +7,10 @@ unsafe_code = "forbid"
 
 [workspace.lints.clippy]
 pedantic = { level = "deny", priority = -1 }
+
+# Argon2 is deliberately expensive; unoptimised it makes the sign-in tests slow.
+[profile.dev.package.argon2]
+opt-level = 3
+
+[profile.dev.package.blake2]
+opt-level = 3
