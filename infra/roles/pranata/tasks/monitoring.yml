@@ -1,0 +1,74 @@
+---
+# Monitoring pings (D-52): the backup and restore check ping from their own
+# scripts; this adds the hourly disk check. A ping URL is optional and a
+# missing one is skipped. The operator picks the service (see infra/README.md).
+- name: Learn the user's runtime directory
+  ansible.builtin.import_tasks: user_env.yml
+
+- name: Create the directory for the check scripts
+  ansible.builtin.file:
+    path: /usr/local/libexec/pranata
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the disk check script
+  ansible.builtin.template:
+    src: disk-check.sh.j2
+    dest: /usr/local/libexec/pranata/disk-check.sh
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create the directory for the user's systemd units
+  ansible.builtin.file:
+    path: "{{ pranata_home }}/.config/systemd/user"
+    state: directory
+    owner: "{{ pranata_user }}"
+    group: "{{ pranata_user }}"
+    mode: "0750"
+
+- name: Create the configuration directory
+  ansible.builtin.file:
+    path: "{{ pranata_home }}/.config/pranata"
+    state: directory
+    owner: "{{ pranata_user }}"
+    group: "{{ pranata_user }}"
+    mode: "0750"
+
+# A ping URL is a capability: anyone holding it can report for the Installation.
+- name: Install the ping URLs
+  ansible.builtin.template:
+    src: monitor.env.j2
+    dest: "{{ pranata_home }}/.config/pranata/monitor.env"
+    owner: "{{ pranata_user }}"
+    group: "{{ pranata_user }}"
+    mode: "0600"
+  diff: false
+  no_log: true
+
+- name: Install the disk check units
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "{{ pranata_home }}/.config/systemd/user/{{ item }}"
+    owner: "{{ pranata_user }}"
+    group: "{{ pranata_user }}"
+    mode: "0644"
+  loop:
+    - pranata-disk-check.service
+    - pranata-disk-check.timer
+  notify: Reload user systemd units
+
+- name: Load the units
+  ansible.builtin.meta: flush_handlers
+
+- name: Start the disk check timer
+  ansible.builtin.systemd:
+    name: pranata-disk-check.timer
+    enabled: true
+    state: started
+    scope: user
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"

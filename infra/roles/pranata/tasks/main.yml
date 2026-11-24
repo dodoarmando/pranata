@@ -41,3 +41,7 @@
 - name: Set up encrypted backups and the restore check
   ansible.builtin.import_tasks: backup.yml
   tags: [backup]
+
+- name: Set up monitoring pings
+  ansible.builtin.import_tasks: monitoring.yml
+  tags: [monitoring]

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Managed by Ansible. Pings `disk`, with /fail when / is more than 80 % full (D-52); PRANATA_DISK_LIMIT overrides the limit for tests.
+set -euo pipefail
+
+limit="${PRANATA_DISK_LIMIT:-80}"
+usage="$(df --output=pcent / | tail -n 1 | tr -dc '0-9')"
+
+# Healthchecks.io-compatible: GET <url> on success, <url>/fail on failure.
+ping() {
+    [ -n "${1:-}" ] || return 0
+    curl --silent --fail --max-time 10 --retry 3 --retry-delay 2 --output /dev/null "$1${2:-}" ||
+        echo "pranata-disk-check: the monitoring ping failed (ignored)" >&2
+    return 0
+}
+
+if [ "$usage" -gt "$limit" ]; then
+    echo "pranata-disk-check: / is $usage % full (limit $limit %)" >&2
+    ping "${PRANATA_PING_DISK_URL:-}" /fail
+    exit 1
+fi
+echo "pranata-disk-check: / is $usage % full"
+ping "${PRANATA_PING_DISK_URL:-}"

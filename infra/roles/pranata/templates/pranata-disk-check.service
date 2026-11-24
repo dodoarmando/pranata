@@ -1,0 +1,8 @@
+# Managed by Ansible.
+[Unit]
+Description=Pranata disk check
+
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/pranata/monitor.env
+ExecStart=/usr/local/libexec/pranata/disk-check.sh
