@@ -147,6 +147,7 @@
     - pranata-api.container
     - pranata-web.container
     - pranata-caddy.container
+  diff: false
   register: pranata_units
   notify: Reload user systemd units
 
@@ -160,6 +161,7 @@
   loop:
     - api.env
     - web.env
+  diff: false
   register: pranata_envs
 
 - name: Install the Caddyfile
