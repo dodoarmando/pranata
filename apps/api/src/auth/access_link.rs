@@ -5,7 +5,11 @@ use anyhow::Context;
 use sqlx::{PgConnection, PgPool};
 use time::{Duration, OffsetDateTime};
 
-use super::{hash_token, password, random_token};
+use super::{
+    hash_token,
+    password::{self, HashLimiter},
+    random_token,
+};
 use crate::{
     ApiError,
     audit::{self, AuditAction, NewAuditEntry},
@@ -67,6 +71,7 @@ fn check(link: Option<Link>, now: OffsetDateTime) -> Result<Link, ApiError> {
 /// `access_link_expired`, 422 `password_length`.
 pub async fn redeem(
     db: &PgPool,
+    hasher: &HashLimiter,
     token: &str,
     new_password: &str,
     now: OffsetDateTime,
@@ -85,10 +90,7 @@ pub async fn redeem(
     check(link, now)?;
     password::validate_length(new_password)?;
 
-    let owned = new_password.to_owned();
-    let hash = tokio::task::spawn_blocking(move || password::hash_password(&owned))
-        .await
-        .context("password hashing task")??;
+    let hash = hasher.hash(new_password.to_owned()).await?;
 
     let mut tx = db.begin().await?;
     // Lock the row and re-check: two requests with one link must not both win.

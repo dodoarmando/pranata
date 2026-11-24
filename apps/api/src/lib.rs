@@ -16,6 +16,7 @@ use std::sync::Arc;
 use axum::Router;
 use sqlx::PgPool;
 
+pub use crate::auth::password::HashLimiter;
 pub use crate::auth::session::SessionClock;
 pub use crate::config::Config;
 pub use crate::error::{ApiError, FieldError};
@@ -27,6 +28,8 @@ pub struct AppState {
     pub config: Arc<Config>,
     /// Clock for session expiry; tests inject a fixed one.
     pub clock: Arc<dyn SessionClock>,
+    /// Limits concurrent password hashing (memory-hard, so it must be bounded).
+    pub hasher: HashLimiter,
 }
 
 /// Build the full router, mounted under `/api`.

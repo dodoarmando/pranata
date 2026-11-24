@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use pranata::{AppState, Config, auth::session::SessionClock};
+use pranata::{AppState, Config, HashLimiter, auth::session::SessionClock};
 use secrecy::SecretString;
 use sqlx::PgPool;
 use time::{Duration, OffsetDateTime};
@@ -60,5 +60,6 @@ pub fn test_state_with_clock(pool: PgPool, clock: Arc<dyn SessionClock>) -> AppS
         db: pool,
         config: Arc::new(config),
         clock,
+        hasher: HashLimiter::new(2).expect("dummy hash"),
     }
 }

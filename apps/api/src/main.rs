@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 use pranata::auth::session::{SessionClock, SystemClock};
 use pranata::region_codes::VillageCode;
 use pranata::village::{self, InitError};
-use pranata::{AppState, Config, auth, db, openapi};
+use pranata::{AppState, Config, HashLimiter, auth, db, openapi};
 use std::sync::Arc;
 use tracing_subscriber::{EnvFilter, fmt};
 
@@ -137,6 +137,7 @@ async fn serve() -> Result<()> {
         db: pool,
         config: Arc::new(config),
         clock: Arc::new(SystemClock),
+        hasher: HashLimiter::for_host().context("preparing the password hasher")?,
     };
     axum::serve(listener, pranata::app(state))
         .with_graceful_shutdown(shutdown_signal())

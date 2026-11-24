@@ -1,10 +1,12 @@
 //! Password hashing (argon2id with the crate's default parameters) and the
 //! password length rule.
 
-use std::sync::OnceLock;
+use std::sync::Arc;
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use argon2::{Argon2, PasswordHasher, PasswordVerifier, password_hash::phc::PasswordHash};
+
+use tokio::sync::Semaphore;
 
 use crate::{ApiError, FieldError};
 
@@ -35,17 +37,87 @@ pub fn verify_password(password: &str, hash: &str) -> bool {
         .is_ok()
 }
 
-/// Spend the time of one verification without a real hash. Sign-in calls this
-/// for unknown, inactive and password-less accounts, so the response time does
-/// not reveal whether the username exists.
-pub fn verify_against_dummy(password: &str) {
-    static DUMMY: OnceLock<String> = OnceLock::new();
-    let hash = DUMMY.get_or_init(|| {
-        // Hashing cannot realistically fail; an empty string would only make
-        // the dummy check cheap, never wrongly succeed.
-        hash_password("dummy password for constant sign-in cost").unwrap_or_default()
-    });
-    let _ = verify_password(password, hash);
+/// Bounds how many argon2 runs happen at once. Each run needs about 19 MiB,
+/// and tokio's blocking pool would otherwise let unauthenticated requests
+/// start hundreds of them. It also owns the dummy hash that gives sign-in
+/// attempts for unknown users the same cost as real ones.
+#[derive(Clone)]
+pub struct HashLimiter(Arc<LimiterInner>);
+
+struct LimiterInner {
+    permits: Arc<Semaphore>,
+    dummy_hash: String,
+}
+
+impl HashLimiter {
+    /// Allow `permits` concurrent runs (at least one) and prepare the dummy
+    /// hash. Call it at startup: failing here is fatal, and there is no cheap
+    /// fallback path.
+    ///
+    /// # Errors
+    /// Fails when the dummy hash cannot be computed.
+    pub fn new(permits: usize) -> Result<Self> {
+        Ok(Self(Arc::new(LimiterInner {
+            permits: Arc::new(Semaphore::new(permits.max(1))),
+            dummy_hash: hash_password("dummy password for constant sign-in cost")
+                .context("preparing the dummy password hash")?,
+        })))
+    }
+
+    /// One permit per available CPU.
+    ///
+    /// # Errors
+    /// Fails when the dummy hash cannot be computed.
+    pub fn for_host() -> Result<Self> {
+        Self::new(std::thread::available_parallelism().map_or(1, usize::from))
+    }
+
+    /// Run CPU-heavy `work` on a blocking thread once a permit is free. The
+    /// permit is held until the work ends, even if the caller goes away.
+    ///
+    /// # Errors
+    /// Fails when the limiter is closed or the task panics.
+    pub async fn run<T: Send + 'static>(
+        &self,
+        work: impl FnOnce() -> T + Send + 'static,
+    ) -> Result<T> {
+        let permit = self
+            .0
+            .permits
+            .clone()
+            .acquire_owned()
+            .await
+            .context("hash limiter closed")?;
+        tokio::task::spawn_blocking(move || {
+            let result = work();
+            drop(permit);
+            result
+        })
+        .await
+        .context("password hashing task")
+    }
+
+    /// Hash a password.
+    ///
+    /// # Errors
+    /// Fails when hashing or the task fails.
+    pub async fn hash(&self, password: String) -> Result<String> {
+        self.run(move || hash_password(&password)).await?
+    }
+
+    /// Verify a password. With `None` (no usable stored hash) it verifies
+    /// against the dummy hash, so the cost is the same, and returns false.
+    ///
+    /// # Errors
+    /// Fails when the task fails.
+    pub async fn verify(&self, password: String, hash: Option<String>) -> Result<bool> {
+        let dummy = self.0.dummy_hash.clone();
+        self.run(move || {
+            let verified = verify_password(&password, hash.as_deref().unwrap_or(&dummy));
+            hash.is_some() && verified
+        })
+        .await
+    }
 }
 
 /// Enforce the length rule: 10 to 128 characters, no composition rules.
@@ -64,6 +136,8 @@ pub fn validate_length(password: &str) -> Result<(), ApiError> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
     use super::*;
 
     #[test]
@@ -80,6 +154,56 @@ mod tests {
     fn malformed_hash_never_verifies() {
         assert!(!verify_password("anything at all", "not-a-hash"));
         assert!(!verify_password("anything at all", ""));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn limiter_bounds_concurrent_runs() {
+        let limiter = HashLimiter::new(2).unwrap();
+        let running = Arc::new(AtomicUsize::new(0));
+        let peak = Arc::new(AtomicUsize::new(0));
+        let tasks: Vec<_> = (0..8)
+            .map(|_| {
+                let (limiter, running, peak) = (limiter.clone(), running.clone(), peak.clone());
+                tokio::spawn(async move {
+                    limiter
+                        .run(move || {
+                            let now = running.fetch_add(1, Ordering::SeqCst) + 1;
+                            peak.fetch_max(now, Ordering::SeqCst);
+                            std::thread::sleep(std::time::Duration::from_millis(30));
+                            running.fetch_sub(1, Ordering::SeqCst);
+                        })
+                        .await
+                        .unwrap();
+                })
+            })
+            .collect();
+        for task in tasks {
+            task.await.unwrap();
+        }
+        assert!(peak.load(Ordering::SeqCst) <= 2, "more than 2 ran at once");
+        assert_eq!(running.load(Ordering::SeqCst), 0);
+    }
+
+    #[tokio::test]
+    async fn limiter_always_has_a_permit_and_a_working_dummy() {
+        let limiter = HashLimiter::new(0).unwrap();
+        let hash = limiter
+            .hash("a long enough password".to_owned())
+            .await
+            .unwrap();
+        assert!(
+            limiter
+                .verify("a long enough password".to_owned(), Some(hash))
+                .await
+                .unwrap()
+        );
+        // No stored hash: spends a real verification and never succeeds.
+        assert!(
+            !limiter
+                .verify("a long enough password".to_owned(), None)
+                .await
+                .unwrap()
+        );
     }
 
     #[test]

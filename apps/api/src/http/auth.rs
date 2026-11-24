@@ -89,24 +89,15 @@ pub async fn login(
     .fetch_optional(&state.db)
     .await?;
 
-    // Verify on a blocking thread. Every failure path costs one argon2 run, so
-    // timing does not tell an unknown user from a wrong password.
-    let candidate = request.password;
+    // Every failure path costs one argon2 run (the dummy hash stands in for
+    // a missing or unusable one), so timing does not tell an unknown user
+    // from a wrong password. Runs are bounded by the hash limiter.
     let hash = account
         .as_ref()
         .filter(|account| account.is_active)
-        .and_then(|account| account.password_hash.clone());
-    let verified = tokio::task::spawn_blocking(move || match hash {
-        Some(hash) if candidate.chars().count() <= MAX_SIGN_IN_PASSWORD => {
-            password::verify_password(&candidate, &hash)
-        }
-        _ => {
-            password::verify_against_dummy(&candidate);
-            false
-        }
-    })
-    .await
-    .map_err(anyhow::Error::from)?;
+        .and_then(|account| account.password_hash.clone())
+        .filter(|_| request.password.chars().count() <= MAX_SIGN_IN_PASSWORD);
+    let verified = state.hasher.verify(request.password, hash).await?;
     let Some(account) = account.filter(|_| verified) else {
         return Err(invalid);
     };
@@ -237,6 +228,7 @@ pub async fn set_password_with_access_link(
 ) -> Result<StatusCode, ApiError> {
     access_link::redeem(
         &state.db,
+        &state.hasher,
         &request.token,
         &request.password,
         state.clock.now(),
