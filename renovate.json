@@ -1,6 +1,30 @@
 {
 	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
 	"extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+	"ignorePresets": [":semanticPrefixFixDepsChoreOthers"],
+	"semanticCommits": "enabled",
+	"semanticCommitType": "build",
+	"semanticCommitScope": "deps",
+	"commitBody": "Signed-off-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+	"customManagers": [
+		{
+			"description": "Tool versions annotated with `# renovate: datasource=… depName=…` in the setup action",
+			"customType": "regex",
+			"managerFilePatterns": ["/^\\.github/actions/setup/action\\.yml$/"],
+			"matchStrings": [
+				"# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>\\S+)(?: extractVersion=(?<extractVersion>\\S+))?\\n\\s+[a-z-]+:\\n\\s+description: [^\\n]*\\n\\s+default: \"(?<currentValue>[^\"]+)\""
+			]
+		},
+		{
+			"description": "Container images pinned in scripts and the justfile",
+			"customType": "regex",
+			"datasourceTemplate": "docker",
+			"managerFilePatterns": ["/^justfile$/", "/^infra/dev/stack\\.sh$/"],
+			"matchStrings": [
+				"(?<depName>docker\\.io/[a-z0-9._/-]+):(?<currentValue>[0-9][A-Za-z0-9._-]*)"
+			]
+		}
+	],
 	"packageRules": [
 		{
 			"groupName": "tanstack",
