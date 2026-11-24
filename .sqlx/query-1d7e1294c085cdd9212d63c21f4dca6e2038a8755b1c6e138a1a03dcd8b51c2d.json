@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE jobs SET locked_until = now() - interval '1 second'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "1d7e1294c085cdd9212d63c21f4dca6e2038a8755b1c6e138a1a03dcd8b51c2d"
+}

@@ -1,49 +1,49 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, kind, payload, attempts FROM jobs\n         WHERE done_at IS NULL AND failed_at IS NULL AND run_at <= now()\n         ORDER BY run_at, id\n         FOR UPDATE SKIP LOCKED\n         LIMIT 1",
+  "query": "SELECT attempts, last_error, done_at, locked_until FROM jobs",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "id",
-        "type_info": "Int8",
-        "origin": {
-          "Table": {
-            "table": "jobs",
-            "name": "id"
-          }
-        }
-      },
-      {
-        "ordinal": 1,
-        "name": "kind",
-        "type_info": "Text",
-        "origin": {
-          "Table": {
-            "table": "jobs",
-            "name": "kind"
-          }
-        }
-      },
-      {
-        "ordinal": 2,
-        "name": "payload",
-        "type_info": "Jsonb",
-        "origin": {
-          "Table": {
-            "table": "jobs",
-            "name": "payload"
-          }
-        }
-      },
-      {
-        "ordinal": 3,
         "name": "attempts",
         "type_info": "Int4",
         "origin": {
           "Table": {
             "table": "jobs",
             "name": "attempts"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "last_error",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "last_error"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "done_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "done_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "locked_until",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "locked_until"
           }
         }
       }
@@ -53,10 +53,10 @@
     },
     "nullable": [
       false,
-      false,
-      false,
-      false
+      true,
+      true,
+      true
     ]
   },
-  "hash": "dc75aa9efd51d89ae2a5f0481c9f69a82a7fa2f858bd6452370badeae538a6c7"
+  "hash": "e80e751e03a5e7a33ff4b351b4a4f442a6bdbd73e84d3ca1cee86bee258bfa75"
 }

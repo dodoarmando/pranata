@@ -172,3 +172,86 @@ async fn worker_runs_due_jobs_and_stops_on_cancel(pool: PgPool) {
         .expect("the worker stops after cancellation")
         .unwrap();
 }
+
+async fn attempts_of(pool: &PgPool) -> i32 {
+    sqlx::query_scalar!("SELECT attempts FROM jobs")
+        .fetch_one(pool)
+        .await
+        .unwrap()
+}
+
+#[sqlx::test]
+async fn attempts_increment_before_handler_runs(pool: PgPool) {
+    let state = test_state(pool.clone());
+    enqueue_now(&pool, Job::PurgePublicCache).await;
+    let seen = std::sync::Arc::new(std::sync::atomic::AtomicI32::new(-1));
+    let observer = seen.clone();
+    let observed_pool = pool.clone();
+    assert!(
+        jobs::claim_and_run_with(&state, move |_state, _job| async move {
+            // The claim is already committed, and no claim transaction is open.
+            observer.store(
+                attempts_of(&observed_pool).await,
+                std::sync::atomic::Ordering::SeqCst,
+            );
+            Ok(())
+        })
+        .await
+        .unwrap()
+    );
+    assert_eq!(seen.load(std::sync::atomic::Ordering::SeqCst), 1);
+}
+
+#[sqlx::test]
+async fn expired_lease_is_reclaimed(pool: PgPool) {
+    let state = test_state(pool.clone());
+    enqueue_now(&pool, Job::PurgePublicCache).await;
+
+    // A worker claims the job and then crashes: the claim commits, nothing
+    // else happens.
+    let mut tx = pool.begin().await.unwrap();
+    assert!(jobs::claim(&mut tx).await.unwrap().is_some());
+    tx.commit().await.unwrap();
+    assert_eq!(attempts_of(&pool).await, 1, "the crash is already counted");
+
+    // The lease is alive, so nobody else takes the job.
+    assert!(!jobs::claim_and_run(&state).await.unwrap());
+
+    sqlx::query!("UPDATE jobs SET locked_until = now() - interval '1 second'")
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert!(jobs::claim_and_run(&state).await.unwrap());
+    let row = sqlx::query!("SELECT attempts, done_at, locked_until FROM jobs")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(row.attempts, 2);
+    assert!(row.done_at.is_some());
+    assert!(row.locked_until.is_none());
+}
+
+#[sqlx::test]
+async fn panicking_handler_does_not_kill_worker(pool: PgPool) {
+    let state = test_state(pool.clone());
+    enqueue_now(&pool, Job::PurgePublicCache).await;
+    let ran = jobs::claim_and_run_with(&state, |_state, _job| async move {
+        panic!("poison job");
+        #[allow(unreachable_code)]
+        Ok(())
+    })
+    .await
+    .unwrap();
+    assert!(ran);
+    let row = sqlx::query!("SELECT attempts, last_error, done_at, locked_until FROM jobs")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(row.attempts, 1);
+    assert!(row.last_error.unwrap().contains("panicked"));
+    assert!(row.done_at.is_none() && row.locked_until.is_none());
+
+    // The worker is still usable: the next due job runs normally.
+    enqueue_now(&pool, Job::PurgePublicCache).await;
+    assert!(jobs::claim_and_run(&state).await.unwrap());
+}

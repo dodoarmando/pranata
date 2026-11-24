@@ -1,9 +1,10 @@
 //! Background jobs kept in PostgreSQL (D-14).
 //!
-//! A worker claims the oldest due job with `FOR UPDATE SKIP LOCKED` inside a
-//! transaction and runs it before committing, so the row lock is the claim:
-//! two workers never run the same job, and a worker that dies mid-job just
-//! releases it. A failing job is retried with exponential backoff and ends as
+//! A worker claims the oldest due job with `FOR UPDATE SKIP LOCKED` in a short
+//! transaction that counts the attempt and leases the job, commits, and only
+//! then runs the handler. Two workers never claim the same job, and a job that
+//! crashes its worker is already counted and is offered again once the lease
+//! ends. A failing job is retried with exponential backoff and ends as
 //! `failed` after [`MAX_ATTEMPTS`] attempts.
 
 use std::time::Duration;
@@ -89,28 +90,40 @@ pub fn backoff_secs(attempts: i32) -> i64 {
     (1_i64 << exponent).min(MAX_BACKOFF_SECS)
 }
 
-/// A job whose row this transaction holds locked.
+/// How long a claimed job stays reserved for its worker. A job that runs
+/// longer may be started a second time, so handlers must be idempotent.
+pub const LEASE_SECS: f64 = 300.0;
+
+/// A job this worker has claimed and counted.
 #[derive(Debug)]
 pub struct Claimed {
     pub id: i64,
-    /// Failed attempts so far.
+    /// Attempts including this one.
     pub attempts: i32,
     /// The decoded job, or why the stored row could not be read.
     pub job: Result<Job>,
 }
 
-/// Lock the oldest due job, skipping jobs other workers hold. The lock lasts
-/// until the transaction ends.
+/// Pick the oldest due job that is not under a live lease, count the attempt
+/// and lease it. The row stays locked only until the transaction ends, so
+/// call it in a short transaction and commit before running anything.
 ///
 /// # Errors
-/// Fails when the query fails.
+/// Fails when a query fails.
 pub async fn claim(conn: &mut PgConnection) -> Result<Option<Claimed>> {
     let row = sqlx::query!(
-        "SELECT id, kind, payload, attempts FROM jobs
-         WHERE done_at IS NULL AND failed_at IS NULL AND run_at <= now()
-         ORDER BY run_at, id
-         FOR UPDATE SKIP LOCKED
-         LIMIT 1"
+        "UPDATE jobs
+         SET attempts = attempts + 1,
+             locked_until = now() + make_interval(secs => $1)
+         WHERE id = (
+             SELECT id FROM jobs
+             WHERE done_at IS NULL AND failed_at IS NULL AND run_at <= now()
+               AND (locked_until IS NULL OR locked_until <= now())
+             ORDER BY run_at, id
+             FOR UPDATE SKIP LOCKED
+             LIMIT 1)
+         RETURNING id, kind, payload, attempts",
+        LEASE_SECS,
     )
     .fetch_optional(conn)
     .await
@@ -123,9 +136,9 @@ pub async fn claim(conn: &mut PgConnection) -> Result<Option<Claimed>> {
 }
 
 /// Run one job; the dispatch point for new job kinds.
-async fn handle(state: &AppState, job: Job) -> Result<()> {
+async fn handle(state: AppState, job: Job) -> Result<()> {
     match job {
-        Job::ProcessImage { asset_id } => media::process_asset(state, asset_id).await,
+        Job::ProcessImage { asset_id } => media::process_asset(&state, asset_id).await,
         Job::PurgePublicCache => {
             tracing::info!("public cache purge requested; no purger is wired in yet");
             Ok(())
@@ -139,36 +152,63 @@ async fn handle(state: &AppState, job: Job) -> Result<()> {
 /// Fails on database errors. A failing job is not an error here: it is
 /// rescheduled or marked failed.
 pub async fn claim_and_run(state: &AppState) -> Result<bool> {
+    claim_and_run_with(state, handle).await
+}
+
+/// [`claim_and_run`] with a chosen handler (tests inject failing ones).
+///
+/// The claim commits before the handler starts, so no transaction is held
+/// while it runs. The handler runs in its own task: a panic becomes a failed
+/// attempt instead of ending the worker.
+///
+/// # Errors
+/// Fails on database errors.
+pub async fn claim_and_run_with<F, Fut>(state: &AppState, handler: F) -> Result<bool>
+where
+    F: FnOnce(AppState, Job) -> Fut,
+    Fut: Future<Output = Result<()>> + Send + 'static,
+{
     let mut tx = state.db.begin().await.context("starting a transaction")?;
-    let Some(claimed) = claim(&mut tx).await? else {
+    let claimed = claim(&mut tx).await?;
+    tx.commit().await.context("committing the claim")?;
+    let Some(claimed) = claimed else {
         return Ok(false);
     };
-    let outcome = match claimed.job {
-        Ok(job) => handle(state, job).await,
-        Err(error) => Err(error),
+
+    let outcome = match &claimed.job {
+        Ok(job) => match tokio::spawn(handler(state.clone(), job.clone())).await {
+            Ok(result) => result,
+            Err(join) if join.is_panic() => Err(anyhow!("the job handler panicked")),
+            Err(join) => Err(anyhow!("the job handler was cancelled: {join}")),
+        },
+        Err(error) => Err(anyhow!("{error:#}")),
     };
+
+    let mut tx = state.db.begin().await.context("starting a transaction")?;
     match outcome {
         Ok(()) => {
-            sqlx::query!("UPDATE jobs SET done_at = now() WHERE id = $1", claimed.id)
-                .execute(&mut *tx)
-                .await
-                .context("marking a job done")?;
+            sqlx::query!(
+                "UPDATE jobs SET done_at = now(), locked_until = NULL WHERE id = $1",
+                claimed.id
+            )
+            .execute(&mut *tx)
+            .await
+            .context("marking a job done")?;
         }
         Err(error) => {
-            let attempts = claimed.attempts + 1;
+            let attempts = claimed.attempts;
             tracing::warn!(job_id = claimed.id, attempts, error = ?error, "job failed");
             let exhausted = attempts >= MAX_ATTEMPTS;
             #[allow(clippy::cast_precision_loss)] // at most 300
             let delay = backoff_secs(attempts) as f64;
             sqlx::query!(
                 "UPDATE jobs
-                 SET attempts = $2,
-                     last_error = $3,
-                     run_at = now() + make_interval(secs => $4),
-                     failed_at = CASE WHEN $5 THEN now() END
+                 SET last_error = $2,
+                     locked_until = NULL,
+                     run_at = now() + make_interval(secs => $3),
+                     failed_at = CASE WHEN $4 THEN now() END
                  WHERE id = $1",
                 claimed.id,
-                attempts,
                 format!("{error:#}"),
                 delay,
                 exhausted,
