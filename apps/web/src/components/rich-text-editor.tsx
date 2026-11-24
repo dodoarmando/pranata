@@ -85,6 +85,9 @@ function AssetImageView({
 				<Input
 					value={alt}
 					onChange={(event) => updateAttributes({ alt: event.target.value })}
+					onKeyDown={(event) => {
+						if (event.key === "Enter") event.preventDefault();
+					}}
 					placeholder="Deskripsi foto (untuk pembaca layar)"
 					aria-label="Deskripsi foto"
 				/>
@@ -495,6 +498,8 @@ function LinkDialog({
 
 	function submit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
+		// Portaled forms still bubble through the React tree.
+		event.stopPropagation();
 		const href = String(
 			new FormData(event.currentTarget).get("href") ?? "",
 		).trim();
@@ -555,6 +560,8 @@ function VideoDialog({
 
 	function submit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
+		// Portaled forms still bubble through the React tree.
+		event.stopPropagation();
 		const id = parseYoutubeId(
 			String(new FormData(event.currentTarget).get("url") ?? ""),
 		);
