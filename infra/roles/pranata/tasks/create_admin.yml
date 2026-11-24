@@ -1,0 +1,45 @@
+---
+# Creates an Administrator and shows the Access Link once. The link is never
+# written to a file on the server. Used by the first run and by
+# `just create-admin` to recover when the first run stopped half way.
+- name: Check the Administrator
+  ansible.builtin.import_tasks: check_admin.yml
+
+- name: Look up the release that runs now
+  ansible.builtin.import_tasks: current_release.yml
+
+- name: Create the Administrator
+  ansible.builtin.command:
+    argv:
+      - podman
+      - run
+      - --rm
+      - --network
+      - pranata
+      - --env-file
+      - "{{ pranata_home }}/.config/pranata/api.env"
+      - "{{ pranata_image_registry }}/pranata-api:{{ pranata_running_release }}"
+      - user
+      - create-admin
+      - "{{ pranata_admin_username }}"
+      - --name
+      - "{{ pranata_admin_name }}"
+  register: pranata_admin
+  changed_when: pranata_admin.rc == 0
+  failed_when: false
+  no_log: true
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+
+# On failure stdout holds no link, so the error is safe to show.
+- name: Report why the Administrator was not created
+  ansible.builtin.fail:
+    msg: >-
+      Creating {{ pranata_admin_username }} failed: {{ pranata_admin.stderr | default('') | trim }}
+      Once fixed, run: just create-admin {{ inventory_hostname }} {{ pranata_admin_username }} "{{ pranata_admin_name }}"
+  when: pranata_admin.rc != 0
+
+- name: Show the Access Link
+  ansible.builtin.debug:
+    msg: "Access Link for {{ pranata_admin_username }} (shown once, keep it safe): {{ pranata_admin.stdout_lines | last }}"

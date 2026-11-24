@@ -1,0 +1,20 @@
+---
+# Recovery: creates an Administrator on an Installation whose first run stopped
+# before it did. Use `just create-admin host username "Display Name"`.
+- name: Create an Administrator
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    pranata_admin_username: "{{ lookup('env', 'PRANATA_ADMIN_USERNAME') }}"
+    pranata_admin_name: "{{ lookup('env', 'PRANATA_ADMIN_NAME') }}"
+  tasks:
+    - name: Learn the user's runtime directory
+      ansible.builtin.import_role:
+        name: pranata
+        tasks_from: user_env.yml
+
+    - name: Create the Administrator
+      ansible.builtin.import_role:
+        name: pranata
+        tasks_from: create_admin.yml

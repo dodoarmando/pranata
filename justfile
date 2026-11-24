@@ -158,6 +158,12 @@ test-web:
 test-api:
     cargo test --workspace --locked
 
+# Recovery: create an Administrator when the first run stopped before it did; prints the Access Link once.
+create-admin host username name: infra-tools
+    PRANATA_ADMIN_USERNAME={{ quote(username) }} PRANATA_ADMIN_NAME={{ quote(name) }} \
+    PATH="{{ justfile_directory() }}/target/infra/bin:$PATH" ANSIBLE_CONFIG="{{ justfile_directory() }}/infra/ansible.cfg" \
+        ansible-playbook -i "${PRANATA_INVENTORY:?set PRANATA_INVENTORY to your inventory file}" infra/create-admin.yml -l {{ host }}
+
 # Provision a disposable Debian 13 + systemd container with the role and check the Installation.
 infra-test: infra-tools images
     infra/test/run.sh
