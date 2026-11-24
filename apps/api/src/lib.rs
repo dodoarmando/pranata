@@ -6,6 +6,7 @@ pub mod cache_purge;
 pub mod config;
 pub mod db;
 pub mod error;
+pub mod healthcheck;
 pub mod http;
 pub mod ids;
 pub mod jobs;

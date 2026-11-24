@@ -22,6 +22,8 @@ enum Command {
     Serve,
     /// Apply migrations and exit.
     Migrate,
+    /// Exit 0 when the API on this host answers its health endpoint, 1 otherwise.
+    Healthcheck,
     /// Print the `OpenAPI` document as JSON.
     Openapi,
     /// Manage Users.
@@ -65,6 +67,9 @@ async fn main() -> Result<()> {
         Command::Openapi => {
             println!("{}", openapi::document().to_pretty_json()?);
             Ok(())
+        }
+        Command::Healthcheck => {
+            pranata::healthcheck::run(std::env::var("PRANATA_LISTEN").ok().as_deref()).await
         }
         Command::Migrate => {
             init_tracing();
