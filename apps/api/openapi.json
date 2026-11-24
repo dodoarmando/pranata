@@ -698,7 +698,7 @@
 					"updated_at": {
 						"type": "string",
 						"format": "date-time",
-						"description": "Send it back unchanged with the next edit (RFC 3339, full precision)."
+						"description": "Opaque value; send back exactly as received."
 					}
 				}
 			},
@@ -719,7 +719,7 @@
 					"updated_at": {
 						"type": "string",
 						"format": "date-time",
-						"description": "The `updated_at` of the profile this edit is based on."
+						"description": "Opaque value; send back exactly as received."
 					}
 				}
 			},

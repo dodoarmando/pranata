@@ -24,7 +24,7 @@ pub struct Profile {
     #[schema(value_type = Option<Object>)]
     pub overview: Option<Value>,
     pub hero: Option<MediaRef>,
-    /// Send it back unchanged with the next edit (RFC 3339, full precision).
+    /// Opaque value; send back exactly as received.
     #[serde(with = "time::serde::rfc3339")]
     #[schema(value_type = String, format = DateTime)]
     pub updated_at: OffsetDateTime,
@@ -50,7 +50,7 @@ pub struct ProfileUpdate {
     #[serde(deserialize_with = "present")]
     #[schema(required = true)]
     pub hero_asset_id: Option<Uuid>,
-    /// The `updated_at` of the profile this edit is based on.
+    /// Opaque value; send back exactly as received.
     #[serde(with = "time::serde::rfc3339")]
     #[schema(value_type = String, format = DateTime)]
     pub updated_at: OffsetDateTime,
