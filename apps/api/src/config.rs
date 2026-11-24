@@ -101,10 +101,10 @@ mod tests {
 
     fn env() -> HashMap<&'static str, &'static str> {
         HashMap::from([
-            ("PRANATA_DATABASE_URL", "postgres://app@db/pranata"),
+            ("PRANATA_DATABASE_URL", "postgres://app:apppw@db/pranata"),
             (
                 "PRANATA_MIGRATION_DATABASE_URL",
-                "postgres://owner@db/pranata",
+                "postgres://owner:ownerpw@db/pranata",
             ),
             ("PRANATA_PUBLIC_ORIGIN", "https://desa.example"),
             ("PRANATA_WEB_INTERNAL_URL", "http://web:3000"),
