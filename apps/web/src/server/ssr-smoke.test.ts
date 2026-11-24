@@ -11,7 +11,7 @@ const serverEntry = resolve(process.cwd(), "dist/server/index.js");
 
 const village = {
 	code: "14.01.01.2001",
-	name: "Sukamaju",
+	name: "Desa Contoh",
 	district: "X",
 	regency: "Kabupaten Pelalawan",
 	province: "Riau",
