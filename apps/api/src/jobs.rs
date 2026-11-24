@@ -63,23 +63,23 @@ impl Job {
     }
 }
 
-/// Queue a job. Call it with the transaction that carries the change the job
-/// belongs to, so the job exists exactly when the change does.
+/// Queue a job and return its id. Call it with the transaction that carries
+/// the change the job belongs to, so the job exists exactly when the change
+/// does.
 ///
 /// # Errors
 /// Fails when the insert fails.
-pub async fn enqueue(conn: &mut PgConnection, job: Job, run_at: OffsetDateTime) -> Result<()> {
+pub async fn enqueue(conn: &mut PgConnection, job: Job, run_at: OffsetDateTime) -> Result<i64> {
     let (kind, payload) = job.to_parts()?;
-    sqlx::query!(
-        "INSERT INTO jobs (kind, payload, run_at) VALUES ($1, $2, $3)",
+    sqlx::query_scalar!(
+        r#"INSERT INTO jobs (kind, payload, run_at) VALUES ($1, $2, $3) RETURNING id AS "id!""#,
         kind,
         payload,
         run_at,
     )
-    .execute(conn)
+    .fetch_one(conn)
     .await
-    .context("enqueueing a job")?;
-    Ok(())
+    .context("enqueueing a job")
 }
 
 /// Seconds to wait after the given number of failed attempts: 2, 4, 8, … up to

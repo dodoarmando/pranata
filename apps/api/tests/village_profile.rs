@@ -482,6 +482,28 @@ async fn profile_save_purges_before_responding(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn profile_save_only_completes_its_own_purge_job(pool: PgPool) {
+    let (url, _request) = fake_web("204 No Content").await;
+    let h = Harness::with_state(pool.clone(), test_state_with_web(pool, &url)).await;
+    // Another save's purge is still waiting for its retry.
+    enqueue_purge(&h).await;
+    let updated_at = h.get_profile().await.body["updated_at"].clone();
+    let put = h
+        .put_profile(
+            &json!({"overview": doc("A"), "hero_asset_id": null, "updated_at": updated_at}),
+        )
+        .await;
+    assert_eq!(put.status, StatusCode::OK, "{}", put.body);
+    let pending = sqlx::query_scalar!(
+        r#"SELECT count(*) AS "n!" FROM jobs WHERE kind = 'purge_public_cache' AND done_at IS NULL"#
+    )
+    .fetch_one(&h.pool)
+    .await
+    .unwrap();
+    assert_eq!(pending, 1, "the other job must stay pending");
+}
+
+#[sqlx::test]
 async fn profile_save_keeps_the_purge_job_when_the_inline_purge_fails(pool: PgPool) {
     let (url, _request) = fake_web("503 Service Unavailable").await;
     let h = Harness::with_state(pool.clone(), test_state_with_web(pool, &url)).await;

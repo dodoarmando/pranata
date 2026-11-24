@@ -99,13 +99,18 @@ fn overview_error(error: RichTextError) -> ApiError {
 }
 
 /// Replace the overview and hero photo. One transaction holds the update, its
-/// Audit Entry and the cache purge job.
+/// Audit Entry and the cache purge job; the job's id is returned with the
+/// profile.
 ///
 /// # Errors
 /// 422 for an invalid overview (`overview_invalid`, `overview_too_large`) or a
 /// hero that is not a ready image (`hero_not_ready`); 409 `stale_write` when
 /// `updated_at` is not the stored one; 404 `village_not_initialized`.
-pub async fn update(db: &PgPool, actor: UserId, input: ProfileUpdate) -> Result<Profile, ApiError> {
+pub async fn update(
+    db: &PgPool,
+    actor: UserId,
+    input: ProfileUpdate,
+) -> Result<(Profile, i64), ApiError> {
     let overview = input
         .overview
         .as_ref()
@@ -174,12 +179,14 @@ pub async fn update(db: &PgPool, actor: UserId, input: ProfileUpdate) -> Result<
         },
     )
     .await?;
-    jobs::enqueue(&mut tx, Job::PurgePublicCache, OffsetDateTime::now_utc()).await?;
+    let purge_job =
+        jobs::enqueue(&mut tx, Job::PurgePublicCache, OffsetDateTime::now_utc()).await?;
     tx.commit().await.context("committing the profile update")?;
 
-    Ok(Profile {
+    let profile = Profile {
         hero: hero_ref(db, input.hero_asset_id).await?,
         overview,
         updated_at,
-    })
+    };
+    Ok((profile, purge_job))
 }

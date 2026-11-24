@@ -84,8 +84,8 @@ pub async fn put_village_profile(
     user: CurrentUser,
     Json(input): Json<ProfileUpdate>,
 ) -> Result<Json<Profile>, ApiError> {
-    let saved = profile::update(&state.db, user.id, input).await?;
-    purge_now(&state).await;
+    let (saved, purge_job) = profile::update(&state.db, user.id, input).await?;
+    purge_now(&state, purge_job).await;
     Ok(Json(saved))
 }
 
@@ -94,15 +94,17 @@ const INLINE_PURGE_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// D-12: the next public request after a save must already be fresh, so the
 /// purge runs before the answer instead of waiting for the job worker. When it
-/// fails the queued job stays as the retry; when it works that job is redundant
-/// (a purge is idempotent) and is marked done.
-async fn purge_now(state: &AppState) {
+/// fails the queued job stays as the retry; when it works that job (and only that
+/// one: another save's job may still be waiting for its own purge) is redundant
+/// and is marked done.
+async fn purge_now(state: &AppState, job_id: i64) {
     match tokio::time::timeout(INLINE_PURGE_TIMEOUT, state.purger.purge_all()).await {
         Ok(Ok(())) => {
             let done = sqlx::query!(
                 "UPDATE jobs SET done_at = now()
-                 WHERE kind = 'purge_public_cache' AND done_at IS NULL
-                   AND failed_at IS NULL AND locked_until IS NULL",
+                 WHERE id = $1 AND done_at IS NULL AND failed_at IS NULL
+                   AND locked_until IS NULL",
+                job_id,
             )
             .execute(&state.db)
             .await;
