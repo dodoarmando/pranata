@@ -7,9 +7,9 @@ cd "$(git rev-parse --show-toplevel)"
 pattern='Sidomukti|Sukamaju'
 allowed='^(apps/api/seed/|docs/|CONTEXT\.md:)|(^|/)fixtures/|^tools/no-village-data\.sh:'
 
-# grep exits 1 when nothing matches (fine) and >=2 on a real error (fatal).
+# git grep searches tracked files only; exit 1 means no match (fine), >=2 is a real error (fatal).
 # The allow-list also exempts this script, which contains the pattern itself.
-raw=$(git ls-files -z | xargs -0 grep -IinE "$pattern" -- || { rc=$?; [ "$rc" -le 1 ] || exit "$rc"; })
+raw=$(git grep -IinE "$pattern" || { rc=$?; [ "$rc" -le 1 ] || exit "$rc"; })
 hits=$(printf '%s\n' "$raw" | grep -vE "$allowed" || true)
 
 if [ -n "$hits" ]; then
