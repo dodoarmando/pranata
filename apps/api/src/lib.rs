@@ -1,9 +1,11 @@
 //! Pranata API: the only component with database access (D-10).
 
+pub mod audit;
 pub mod config;
 pub mod db;
 pub mod error;
 pub mod http;
+pub mod ids;
 pub mod openapi;
 
 use std::sync::Arc;
