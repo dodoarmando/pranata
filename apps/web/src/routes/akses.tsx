@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useSetPasswordWithAccessLink } from "@/api/generated/auth/auth";
 import { AuthShell } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
@@ -45,8 +45,12 @@ function Access() {
 
 	// The token is in the fragment and must never reach a server, log or
 	// history entry. Read it once on the client, drop it from the URL, and keep
-	// it only in component state.
+	// it only in component state. The guard keeps the second effect run of
+	// React's StrictMode (development) from finding the cleared fragment.
+	const tokenRead = useRef(false);
 	useEffect(() => {
+		if (tokenRead.current) return;
+		tokenRead.current = true;
 		const token = parseAccessToken(window.location.hash);
 		window.history.replaceState(null, "", window.location.pathname);
 		setState(token ? { status: "ready", token } : { status: "missing" });
