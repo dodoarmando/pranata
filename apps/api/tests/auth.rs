@@ -32,6 +32,7 @@ struct Reply {
 
 impl Harness {
     fn new(pool: PgPool) -> Self {
+        capture_logs();
         let clock = FixedClock::new();
         let app = pranata::app(test_state_with_clock(pool.clone(), clock.clone()));
         Self { pool, clock, app }
@@ -604,17 +605,29 @@ impl std::io::Write for LogBuffer {
     }
 }
 
+/// Install (once per test binary) a process-wide subscriber that writes into a
+/// buffer. A per-thread subscriber is unreliable here: tracing caches callsite
+/// interest globally, so parallel tests without one can switch spans off.
+fn capture_logs() -> LogBuffer {
+    static LOGS: std::sync::OnceLock<LogBuffer> = std::sync::OnceLock::new();
+    LOGS.get_or_init(|| {
+        let logs = LogBuffer::default();
+        let writer = logs.clone();
+        let subscriber = tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::TRACE)
+            .with_ansi(false)
+            .with_writer(move || writer.clone())
+            .finish();
+        tracing::subscriber::set_global_default(subscriber).expect("one global subscriber");
+        logs
+    })
+    .clone()
+}
+
 #[sqlx::test]
 async fn redeeming_an_access_link_logs_no_token_or_password(pool: PgPool) {
-    let logs = LogBuffer::default();
-    let writer = logs.clone();
-    let subscriber = tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::TRACE)
-        .with_writer(move || writer.clone())
-        .finish();
-    let _guard = tracing::subscriber::set_default(subscriber);
-
     let h = Harness::new(pool);
+    let logs = capture_logs();
     let created =
         auth::create_user_with_access_link(&h.pool, "siti", "Siti", h.clock.now_for_test())
             .await
