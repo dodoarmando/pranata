@@ -99,7 +99,7 @@ const INLINE_PURGE_TIMEOUT: Duration = Duration::from_secs(2);
 async fn purge_now(state: &AppState) {
     match tokio::time::timeout(INLINE_PURGE_TIMEOUT, state.purger.purge_all()).await {
         Ok(Ok(())) => {
-            let done = sqlx::query(
+            let done = sqlx::query!(
                 "UPDATE jobs SET done_at = now()
                  WHERE kind = 'purge_public_cache' AND done_at IS NULL
                    AND failed_at IS NULL AND locked_until IS NULL",

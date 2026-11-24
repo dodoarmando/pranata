@@ -492,8 +492,8 @@ async fn profile_save_keeps_the_purge_job_when_the_inline_purge_fails(pool: PgPo
         )
         .await;
     assert_eq!(put.status, StatusCode::OK, "{}", put.body);
-    let pending: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM jobs WHERE kind = 'purge_public_cache' AND done_at IS NULL",
+    let pending = sqlx::query_scalar!(
+        r#"SELECT count(*) AS "n!" FROM jobs WHERE kind = 'purge_public_cache' AND done_at IS NULL"#
     )
     .fetch_one(&h.pool)
     .await
