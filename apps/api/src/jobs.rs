@@ -108,31 +108,71 @@ pub struct Claimed {
 /// and lease it. The row stays locked only until the transaction ends, so
 /// call it in a short transaction and commit before running anything.
 ///
+/// A job whose lease ran out after its final attempt crashed its worker every
+/// time (the completion write of an ordinary failure never got to run). It is
+/// not started again: it is marked failed here, with the give-up action of its
+/// kind, and the next due job is considered.
+///
 /// # Errors
 /// Fails when a query fails.
 pub async fn claim(conn: &mut PgConnection) -> Result<Option<Claimed>> {
-    let row = sqlx::query!(
-        "UPDATE jobs
-         SET attempts = attempts + 1,
-             locked_until = now() + make_interval(secs => $1)
-         WHERE id = (
-             SELECT id FROM jobs
+    loop {
+        let Some(row) = sqlx::query!(
+            "SELECT id, kind, payload, attempts FROM jobs
              WHERE done_at IS NULL AND failed_at IS NULL AND run_at <= now()
                AND (locked_until IS NULL OR locked_until <= now())
              ORDER BY run_at, id
              FOR UPDATE SKIP LOCKED
-             LIMIT 1)
-         RETURNING id, kind, payload, attempts",
-        LEASE_SECS,
-    )
-    .fetch_optional(conn)
-    .await
-    .context("claiming a job")?;
-    Ok(row.map(|row| Claimed {
-        id: row.id,
-        attempts: row.attempts,
-        job: Job::from_parts(&row.kind, row.payload),
-    }))
+             LIMIT 1"
+        )
+        .fetch_optional(&mut *conn)
+        .await
+        .context("looking for a due job")?
+        else {
+            return Ok(None);
+        };
+        let job = Job::from_parts(&row.kind, row.payload);
+
+        if row.attempts >= MAX_ATTEMPTS {
+            tracing::error!(
+                job_id = row.id,
+                attempts = row.attempts,
+                "job gave up: lease expired after the final attempt"
+            );
+            sqlx::query!(
+                "UPDATE jobs
+                 SET failed_at = now(), locked_until = NULL,
+                     last_error = 'lease expired after final attempt'
+                 WHERE id = $1",
+                row.id
+            )
+            .execute(&mut *conn)
+            .await
+            .context("giving up on a job")?;
+            if let Ok(Job::ProcessImage { asset_id }) = &job {
+                media::mark_failed(&mut *conn, *asset_id).await?;
+            }
+            continue;
+        }
+
+        let attempts = sqlx::query_scalar!(
+            "UPDATE jobs
+             SET attempts = attempts + 1,
+                 locked_until = now() + make_interval(secs => $2)
+             WHERE id = $1
+             RETURNING attempts",
+            row.id,
+            LEASE_SECS,
+        )
+        .fetch_one(&mut *conn)
+        .await
+        .context("leasing a job")?;
+        return Ok(Some(Claimed {
+            id: row.id,
+            attempts,
+            job,
+        }));
+    }
 }
 
 /// Run one job; the dispatch point for new job kinds.

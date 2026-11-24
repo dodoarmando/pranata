@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE jobs\n                 SET failed_at = now(), locked_until = NULL,\n                     last_error = 'lease expired after final attempt'\n                 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e9e872b3c7df88bf7f5c7d6b0e72684248de390a4378ea3607bf094ffb92879d"
+}

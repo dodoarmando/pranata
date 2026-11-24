@@ -807,3 +807,39 @@ async fn no_metadata_survives_in_any_format(pool: PgPool) {
         }
     }
 }
+
+#[sqlx::test]
+async fn crash_looping_job_fails_after_max_attempts(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let created = h.upload("kegiatan.jpg", &jpeg(300, 200), None).await;
+    assert_eq!(created.status, StatusCode::CREATED);
+
+    // Eight workers claim the job and die before completing anything.
+    for expected in 1..=jobs::MAX_ATTEMPTS {
+        let mut tx = h.pool.begin().await.unwrap();
+        let claimed = jobs::claim(&mut tx).await.unwrap().expect("a claim");
+        tx.commit().await.unwrap();
+        assert_eq!(claimed.attempts, expected);
+        sqlx::query!("UPDATE jobs SET locked_until = now() - interval '1 second'")
+            .execute(&h.pool)
+            .await
+            .unwrap();
+    }
+
+    // The ninth claim must not run the job; it gives up instead.
+    let mut tx = h.pool.begin().await.unwrap();
+    assert!(jobs::claim(&mut tx).await.unwrap().is_none());
+    tx.commit().await.unwrap();
+
+    let job = sqlx::query!("SELECT attempts, failed_at, last_error, locked_until FROM jobs")
+        .fetch_one(&h.pool)
+        .await
+        .unwrap();
+    assert_eq!(job.attempts, jobs::MAX_ATTEMPTS, "no ninth run was counted");
+    assert!(job.failed_at.is_some());
+    assert!(job.last_error.unwrap().contains("lease expired"));
+    assert!(job.locked_until.is_none());
+    let asset = h.get(created.body["id"].as_str().unwrap()).await;
+    assert_eq!(asset.body["status"], "failed");
+    assert!(!jobs::claim_and_run(&h.state).await.unwrap());
+}

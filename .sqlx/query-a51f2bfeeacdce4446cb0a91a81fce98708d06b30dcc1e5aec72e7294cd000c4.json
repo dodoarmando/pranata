@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE jobs\n             SET attempts = attempts + 1,\n                 locked_until = now() + make_interval(secs => $2)\n             WHERE id = $1\n             RETURNING attempts",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "attempts",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "attempts"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a51f2bfeeacdce4446cb0a91a81fce98708d06b30dcc1e5aec72e7294cd000c4"
+}
