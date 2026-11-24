@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # Runs only when release-please has just created a release. Images are
+  # published here and nowhere is anything deployed (D-60).
+  images:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    env:
+      VERSION: ${{ needs.release-please.outputs.version }}
+      TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
+      REGISTRY: ghcr.io/dodoarmando
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          js: "false"
+      - name: Build the images
+        env:
+          PRANATA_IMAGE_SOURCE: https://github.com/${{ github.repository }}
+        run: just images "$VERSION"
+      - name: Log in to ghcr.io
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: podman login ghcr.io --username "$GHCR_USER" --password-stdin <<<"$GHCR_TOKEN"
+      - name: Push versioned and latest tags
+        run: |
+          for app in api web; do
+            for tag in "$VERSION" latest; do
+              podman push "localhost/pranata-$app:$VERSION" "docker://$REGISTRY/pranata-$app:$tag"
+            done
+          done
