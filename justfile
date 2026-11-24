@@ -198,6 +198,33 @@ images tag="local":
     podman build --platform linux/amd64 "${labels[@]}" -f apps/api/Containerfile -t pranata-api:{{ tag }} .
     podman build --platform linux/amd64 "${labels[@]}" -f apps/web/Containerfile -t pranata-web:{{ tag }} .
 
+# Scan the api and web images for HIGH and CRITICAL vulnerabilities that have a
+# fix available (D-48), with Trivy from its official image. Fails on any finding.
+# The images are exported to target/trivy and the vulnerability database is
+# cached in target/trivy/cache. An exception needs a per-CVE entry with a
+# justification in .trivyignore, and only when no fix exists.
+scan-images tag="local":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    root="{{ justfile_directory() }}"
+    dir="$root/target/trivy"
+    mkdir -p "$dir/cache" "$dir/images"
+    status=0
+    for name in api web; do
+        rm -f "$dir/images/$name.tar"
+        podman save --format docker-archive -o "$dir/images/$name.tar" "localhost/pranata-$name:{{ tag }}"
+        echo "scan-images: pranata-$name:{{ tag }}"
+        podman run --rm \
+            -v "$dir/cache:/root/.cache:z" \
+            -v "$dir/images:/images:ro,z" \
+            -v "$root/.trivyignore:/work/.trivyignore:ro,z" \
+            -w /work \
+            docker.io/aquasec/trivy:0.76.2 image --input "/images/$name.tar" \
+            --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress \
+            --ignorefile /work/.trivyignore || status=1
+    done
+    exit "$status"
+
 # Run end-to-end tests against the production images in a resource-limited pod.
 e2e: images
     #!/usr/bin/env bash

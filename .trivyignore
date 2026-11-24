@@ -1,0 +1,4 @@
+# Per-CVE exceptions for `just scan-images` (D-48). One CVE per line, each with
+# a comment saying why it is safe to ignore. Only a finding that has no fix
+# available belongs here: Trivy already skips unfixed ones with --ignore-unfixed,
+# so this file is normally empty.

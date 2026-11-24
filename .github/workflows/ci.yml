@@ -147,6 +147,7 @@ jobs:
         with:
           js: "false"
       - run: just images
+      - run: just scan-images
       - name: Save the images
         run: |
           podman save --multi-image-archive localhost/pranata-api:local localhost/pranata-web:local | gzip -1 > images.tar.gz
