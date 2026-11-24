@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT width, path FROM media_variants WHERE asset_id = $1 ORDER BY width",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "width",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "media_variants",
+            "name": "width"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "path",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "media_variants",
+            "name": "path"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "13c57aec9042e033aa6828e42ccd27756e5408a4aa6c2eca7e98df2b5159f3a3"
+}

@@ -10,6 +10,169 @@
 		"version": "0.1.0"
 	},
 	"paths": {
+		"/api/admin/media": {
+			"post": {
+				"tags": ["media"],
+				"summary": "Upload an image or a document.",
+				"description": "An image is accepted as `pending` and turns `ready` once its background job\nhas produced the metadata-free original and the WebP variants. The same\nfile (by SHA-256) answers 200 with the existing asset.\n\n# Errors\n413 `file_too_large`, 415 `unsupported_media_type`, 422 `image_too_large` or\n`image_unreadable`, 422 `validation_failed` for a bad form.",
+				"operationId": "uploadMedia",
+				"parameters": [
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"$ref": "#/components/schemas/UploadForm"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "The same file was uploaded before; the existing asset",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/MediaAsset"
+								}
+							}
+						}
+					},
+					"201": {
+						"description": "A new asset",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/MediaAsset"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Missing or wrong CSRF token (code csrf_mismatch)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"413": {
+						"description": "Over 10 MB for an image or 20 MB for a document (code file_too_large)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"415": {
+						"description": "Not JPEG, PNG or WebP for an image, or not PDF for a document (code unsupported_media_type)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Over 50 megapixels (code image_too_large), an unreadable image (code image_unreadable) or a bad form (code validation_failed)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
+		"/api/admin/media/{id}": {
+			"get": {
+				"tags": ["media"],
+				"summary": "Read one asset.",
+				"description": "# Errors\n404 `media_not_found`.",
+				"operationId": "getMedia",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"description": "Asset id",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"format": "uuid"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The asset",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/MediaAsset"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No such asset (code media_not_found)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
 		"/api/auth/access-links/redeem": {
 			"post": {
 				"tags": ["auth"],
@@ -297,6 +460,56 @@
 					}
 				}
 			},
+			"MediaAsset": {
+				"type": "object",
+				"description": "An uploaded file as the admin API reports it.",
+				"required": ["id", "kind", "status", "variants"],
+				"properties": {
+					"height": {
+						"type": ["integer", "null"],
+						"format": "int32"
+					},
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"kind": {
+						"type": "string",
+						"description": "`image` or `document`."
+					},
+					"status": {
+						"type": "string",
+						"description": "`pending` while the image job has not run, then `ready` or `failed`."
+					},
+					"variants": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/MediaVariant"
+						},
+						"description": "Public renditions, narrowest first; empty until `ready`, and always\nempty for documents."
+					},
+					"width": {
+						"type": ["integer", "null"],
+						"format": "int32",
+						"description": "Width after the EXIF orientation is applied; unknown while `pending`."
+					}
+				}
+			},
+			"MediaVariant": {
+				"type": "object",
+				"description": "One public WebP rendition of an image.",
+				"required": ["width", "url"],
+				"properties": {
+					"url": {
+						"type": "string",
+						"description": "Site-relative URL, `/media/{hex[0..2]}/{hex}-{width}.webp`."
+					},
+					"width": {
+						"type": "integer",
+						"format": "int32"
+					}
+				}
+			},
 			"Problem": {
 				"type": "object",
 				"description": "`RFC 9457` problem document returned for every error.",
@@ -348,6 +561,22 @@
 					},
 					"user": {
 						"$ref": "#/components/schemas/CurrentUser"
+					}
+				}
+			},
+			"UploadForm": {
+				"type": "object",
+				"description": "The multipart form of an upload.",
+				"required": ["file"],
+				"properties": {
+					"file": {
+						"type": "string",
+						"format": "binary",
+						"description": "The file. JPEG, PNG or WebP up to 10 MB for `image`; PDF up to 20 MB\nfor `document`. The type is recognised from the content."
+					},
+					"kind": {
+						"type": ["string", "null"],
+						"description": "`image` (default) or `document`."
 					}
 				}
 			},

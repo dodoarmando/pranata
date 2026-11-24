@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO media_variants (asset_id, width, path, bytes) VALUES ($1, $2, $3, $4)\n             ON CONFLICT (asset_id, width) DO UPDATE SET path = EXCLUDED.path, bytes = EXCLUDED.bytes",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "593981ceeea41aaa9905abddcaadf924c1a764ffff12867ec22ae05abfa89a34"
+}

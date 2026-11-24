@@ -16,7 +16,7 @@ use time::OffsetDateTime;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-use crate::AppState;
+use crate::{AppState, media};
 
 /// Attempts before a job is given up on.
 pub const MAX_ATTEMPTS: i32 = 8;
@@ -123,10 +123,9 @@ pub async fn claim(conn: &mut PgConnection) -> Result<Option<Claimed>> {
 }
 
 /// Run one job; the dispatch point for new job kinds.
-#[allow(clippy::unused_async)] // the image handler that awaits arrives with the media module
-async fn handle(_state: &AppState, job: Job) -> Result<()> {
+async fn handle(state: &AppState, job: Job) -> Result<()> {
     match job {
-        Job::ProcessImage { .. } => Err(anyhow!("image processing is not available yet")),
+        Job::ProcessImage { asset_id } => media::process_asset(state, asset_id).await,
         Job::PurgePublicCache => {
             tracing::info!("public cache purge requested; no purger is wired in yet");
             Ok(())

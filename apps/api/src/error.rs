@@ -42,6 +42,10 @@ pub enum ApiError {
     Gone(&'static str),
     #[error("unsupported: {0}")]
     Unsupported(&'static str),
+    #[error("payload too large: {0}")]
+    TooLarge(&'static str),
+    #[error("unprocessable: {0}")]
+    Unprocessable(&'static str),
     #[error("validation failed")]
     Validation(Vec<FieldError>),
     #[error(transparent)]
@@ -59,6 +63,12 @@ impl ApiError {
             Self::Unsupported(code) => (
                 StatusCode::UNSUPPORTED_MEDIA_TYPE,
                 "Unsupported Media Type",
+                code,
+            ),
+            Self::TooLarge(code) => (StatusCode::PAYLOAD_TOO_LARGE, "Payload Too Large", code),
+            Self::Unprocessable(code) => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "Unprocessable Entity",
                 code,
             ),
             Self::Validation(_) => (
@@ -153,6 +163,8 @@ mod tests {
             (ApiError::Conflict("access_link_used"), 409),
             (ApiError::Gone("gone"), 410),
             (ApiError::Unsupported("unsupported_media_type"), 415),
+            (ApiError::TooLarge("file_too_large"), 413),
+            (ApiError::Unprocessable("image_too_large"), 422),
         ] {
             assert_eq!(render(error).await.0.as_u16(), expected);
         }

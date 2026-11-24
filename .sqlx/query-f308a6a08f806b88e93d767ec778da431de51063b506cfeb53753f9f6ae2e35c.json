@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT done_at, attempts FROM jobs",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "done_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "done_at"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "attempts",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "attempts"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "f308a6a08f806b88e93d767ec778da431de51063b506cfeb53753f9f6ae2e35c"
+}

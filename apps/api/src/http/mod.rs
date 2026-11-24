@@ -24,7 +24,8 @@ pub fn api_router() -> OpenApiRouter<AppState> {
         "/api",
         health::router()
             .merge(village::router())
-            .merge(auth::router()),
+            .merge(auth::router())
+            .merge(crate::media::router()),
     )
 }
 

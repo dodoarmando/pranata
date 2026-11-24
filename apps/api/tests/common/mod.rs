@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use pranata::{AppState, Config, HashLimiter, auth::session::SessionClock};
+use pranata::{AppState, Config, HashLimiter, auth::session::SessionClock, media::LocalStorage};
 use secrecy::SecretString;
 use sqlx::PgPool;
 use time::{Duration, OffsetDateTime};
@@ -47,13 +47,17 @@ pub fn test_state(pool: PgPool) -> AppState {
 /// Like [`test_state`], with an injected clock.
 #[must_use]
 pub fn test_state_with_clock(pool: PgPool, clock: Arc<dyn SessionClock>) -> AppState {
+    // Every state gets its own media directory, so tests never see each
+    // other's files.
+    let media_dir =
+        std::env::temp_dir().join(format!("pranata-test-media-{}", uuid::Uuid::new_v4()));
     let config = Config {
         database_url: String::new(),
         migration_database_url: String::new(),
         public_origin: "http://localhost:3000".parse().expect("valid url"),
         web_internal_url: "http://localhost:3000".parse().expect("valid url"),
         purge_token: SecretString::from("test-purge-token"),
-        media_dir: std::env::temp_dir().join("pranata-test-media"),
+        media_dir: media_dir.clone(),
         listen: "127.0.0.1:0".parse().expect("valid addr"),
     };
     AppState {
@@ -61,5 +65,6 @@ pub fn test_state_with_clock(pool: PgPool, clock: Arc<dyn SessionClock>) -> AppS
         config: Arc::new(config),
         clock,
         hasher: HashLimiter::new(2).expect("dummy hash"),
+        storage: Arc::new(LocalStorage::new(media_dir)),
     }
 }

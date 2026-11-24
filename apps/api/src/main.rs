@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use pranata::auth::session::{SessionClock, SystemClock};
+use pranata::media::LocalStorage;
 use pranata::region_codes::VillageCode;
 use pranata::village::{self, InitError};
 use pranata::{AppState, Config, HashLimiter, auth, db, jobs, openapi};
@@ -134,11 +135,13 @@ async fn serve() -> Result<()> {
         .await
         .context("binding listener")?;
     tracing::info!(addr = %config.listen, "listening");
+    let media_dir = config.media_dir.clone();
     let state = AppState {
         db: pool,
         config: Arc::new(config),
         clock: Arc::new(SystemClock),
         hasher: HashLimiter::for_host().context("preparing the password hasher")?,
+        storage: Arc::new(LocalStorage::new(media_dir)),
     };
     // Exactly one worker; it stops with the server and finishes its current job.
     let shutdown = CancellationToken::new();

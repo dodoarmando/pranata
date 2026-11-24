@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE media_assets SET status = 'failed' WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cbcb94c763c7d894e5d41b98646ba452251ef910d5c40bcc7bb437003f6bfd6a"
+}

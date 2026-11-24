@@ -137,3 +137,38 @@ async fn two_workers_never_claim_the_same_job(pool: PgPool) {
         25
     );
 }
+
+#[sqlx::test]
+async fn worker_runs_due_jobs_and_stops_on_cancel(pool: PgPool) {
+    let state = test_state(pool.clone());
+    enqueue_now(&pool, Job::PurgePublicCache).await;
+    let shutdown = tokio_util::sync::CancellationToken::new();
+    let worker = tokio::spawn(jobs::run_worker_every(
+        state,
+        shutdown.clone(),
+        std::time::Duration::from_millis(20),
+    ));
+
+    let done = async {
+        loop {
+            let open =
+                sqlx::query_scalar!(r#"SELECT count(*) AS "n!" FROM jobs WHERE done_at IS NULL"#)
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap();
+            if open == 0 {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+    };
+    tokio::time::timeout(std::time::Duration::from_secs(10), done)
+        .await
+        .expect("the worker picks the job up");
+
+    shutdown.cancel();
+    tokio::time::timeout(std::time::Duration::from_secs(5), worker)
+        .await
+        .expect("the worker stops after cancellation")
+        .unwrap();
+}
