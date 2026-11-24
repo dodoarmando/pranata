@@ -1,0 +1,90 @@
+{
+	"openapi": "3.1.0",
+	"info": {
+		"title": "Pranata API",
+		"description": "Village website and administration API.",
+		"license": {
+			"name": "AGPL-3.0-or-later",
+			"identifier": "AGPL-3.0-or-later"
+		},
+		"version": "0.1.0"
+	},
+	"paths": {
+		"/api/healthz": {
+			"get": {
+				"tags": ["ops"],
+				"summary": "Liveness and version probe.",
+				"operationId": "healthz",
+				"responses": {
+					"200": {
+						"description": "The API is up",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Health"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"schemas": {
+			"FieldError": {
+				"type": "object",
+				"description": "One invalid field in a validation failure.",
+				"required": ["field", "code"],
+				"properties": {
+					"code": {
+						"type": "string"
+					},
+					"field": {
+						"type": "string"
+					}
+				}
+			},
+			"Health": {
+				"type": "object",
+				"required": ["status", "version"],
+				"properties": {
+					"status": {
+						"type": "string"
+					},
+					"version": {
+						"type": "string"
+					}
+				}
+			},
+			"Problem": {
+				"type": "object",
+				"description": "`RFC 9457` problem document returned for every error.",
+				"required": ["type", "title", "status", "code"],
+				"properties": {
+					"code": {
+						"type": "string",
+						"description": "Stable machine-readable code (snake case)."
+					},
+					"errors": {
+						"type": ["array", "null"],
+						"items": {
+							"$ref": "#/components/schemas/FieldError"
+						}
+					},
+					"status": {
+						"type": "integer",
+						"format": "int32",
+						"minimum": 0
+					},
+					"title": {
+						"type": "string"
+					},
+					"type": {
+						"type": "string"
+					}
+				}
+			}
+		}
+	}
+}
