@@ -185,42 +185,58 @@ where
     };
 
     let mut tx = state.db.begin().await.context("starting a transaction")?;
-    match outcome {
-        Ok(()) => {
-            sqlx::query!(
-                "UPDATE jobs SET done_at = now(), locked_until = NULL WHERE id = $1",
-                claimed.id
-            )
-            .execute(&mut *tx)
-            .await
-            .context("marking a job done")?;
-        }
+    // Every write is tied to the attempt this worker claimed: when the lease
+    // ran out and another worker took the job over, this result is stale.
+    let applied = match outcome {
+        Ok(()) => sqlx::query!(
+            "UPDATE jobs SET done_at = now(), locked_until = NULL
+                 WHERE id = $1 AND attempts = $2 AND done_at IS NULL AND failed_at IS NULL",
+            claimed.id,
+            claimed.attempts,
+        )
+        .execute(&mut *tx)
+        .await
+        .context("marking a job done")?
+        .rows_affected(),
         Err(error) => {
             let attempts = claimed.attempts;
             tracing::warn!(job_id = claimed.id, attempts, error = ?error, "job failed");
             let exhausted = attempts >= MAX_ATTEMPTS;
             #[allow(clippy::cast_precision_loss)] // at most 300
             let delay = backoff_secs(attempts) as f64;
-            sqlx::query!(
+            let rows = sqlx::query!(
                 "UPDATE jobs
-                 SET last_error = $2,
+                 SET last_error = $3,
                      locked_until = NULL,
-                     run_at = now() + make_interval(secs => $3),
-                     failed_at = CASE WHEN $4 THEN now() END
-                 WHERE id = $1",
+                     run_at = now() + make_interval(secs => $4),
+                     failed_at = CASE WHEN $5 THEN now() END
+                 WHERE id = $1 AND attempts = $2 AND done_at IS NULL AND failed_at IS NULL",
                 claimed.id,
+                attempts,
                 format!("{error:#}"),
                 delay,
                 exhausted,
             )
             .execute(&mut *tx)
             .await
-            .context("rescheduling a failed job")?;
+            .context("rescheduling a failed job")?
+            .rows_affected();
             // Giving up on an image must not leave its asset pending forever.
-            if exhausted && let Ok(Job::ProcessImage { asset_id }) = &claimed.job {
+            if rows > 0
+                && exhausted
+                && let Ok(Job::ProcessImage { asset_id }) = &claimed.job
+            {
                 media::mark_failed(&mut tx, *asset_id).await?;
             }
+            rows
         }
+    };
+    if applied == 0 {
+        tracing::warn!(
+            job_id = claimed.id,
+            attempts = claimed.attempts,
+            "stale job result discarded"
+        );
     }
     tx.commit().await.context("committing the job result")?;
     Ok(true)

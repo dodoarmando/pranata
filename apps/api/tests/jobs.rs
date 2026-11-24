@@ -255,3 +255,72 @@ async fn panicking_handler_does_not_kill_worker(pool: PgPool) {
     enqueue_now(&pool, Job::PurgePublicCache).await;
     assert!(jobs::claim_and_run(&state).await.unwrap());
 }
+
+#[sqlx::test]
+async fn stale_worker_result_is_discarded(pool: PgPool) {
+    use std::sync::Arc;
+    use tokio::sync::Notify;
+
+    let state = test_state(pool.clone());
+    enqueue_now(&pool, Job::PurgePublicCache).await;
+
+    // Worker A claims the job and then stalls inside its handler.
+    let (a_started, a_release) = (Arc::new(Notify::new()), Arc::new(Notify::new()));
+    let worker_a = {
+        let (state, started, release) = (state.clone(), a_started.clone(), a_release.clone());
+        tokio::spawn(async move {
+            jobs::claim_and_run_with(&state, move |_state, _job| async move {
+                started.notify_one();
+                release.notified().await;
+                Err(anyhow::anyhow!("late failure of a stale worker"))
+            })
+            .await
+            .unwrap()
+        })
+    };
+    a_started.notified().await;
+
+    // The lease runs out and worker B claims the same job.
+    sqlx::query!("UPDATE jobs SET locked_until = now() - interval '1 second'")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let (b_started, b_release) = (Arc::new(Notify::new()), Arc::new(Notify::new()));
+    let worker_b = {
+        let (state, started, release) = (state.clone(), b_started.clone(), b_release.clone());
+        tokio::spawn(async move {
+            jobs::claim_and_run_with(&state, move |_state, _job| async move {
+                started.notify_one();
+                release.notified().await;
+                Ok(())
+            })
+            .await
+            .unwrap()
+        })
+    };
+    b_started.notified().await;
+
+    // A finishes late, with a failure. It must not touch B's claim.
+    a_release.notify_one();
+    assert!(worker_a.await.unwrap());
+    let row = sqlx::query!(
+        "SELECT attempts, last_error, done_at, locked_until, run_at <= now() AS \"due!\" FROM jobs"
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(row.attempts, 2);
+    assert!(row.last_error.is_none(), "A's failure was discarded");
+    assert!(row.locked_until.is_some(), "B's lease is intact");
+    assert!(row.done_at.is_none());
+    assert!(row.due, "A did not push the job into the future");
+
+    b_release.notify_one();
+    assert!(worker_b.await.unwrap());
+    let row = sqlx::query!("SELECT attempts, done_at, locked_until FROM jobs")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(row.attempts, 2);
+    assert!(row.done_at.is_some() && row.locked_until.is_none());
+}
