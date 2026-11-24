@@ -36,6 +36,11 @@ owner_url="$(printf "$db" pranata_owner pranata_owner_dev)"
 # shellcheck disable=SC2059
 app_url="$(printf "$db" pranata_app pranata_app_dev)"
 
+# Everything this script creates carries this label, and `down` removes only
+# what carries it. A pod or container with our name prefix but without the
+# label belongs to someone else: `up` refuses to touch it.
+owner_label="pranata.e2e.owner=stack.sh"
+
 api_env=(
     -e "PRANATA_DATABASE_URL=$app_url"
     -e "PRANATA_MIGRATION_DATABASE_URL=$owner_url"
@@ -46,17 +51,48 @@ api_env=(
     -e "PRANATA_LISTEN=0.0.0.0:8080"
 )
 
+owned_pod() {
+    podman pod ps --quiet --filter "name=^$pod\$" --filter "label=$owner_label"
+}
+
+# Refuse to start over resources that are not ours.
+check_no_foreign() {
+    local name foreign=()
+    while read -r name; do
+        [ -n "$name" ] || continue
+        if [ -z "$(podman pod ps --quiet --filter "name=^$name\$" --filter "label=$owner_label")" ]; then
+            foreign+=("pod $name")
+        fi
+    done < <(podman pod ps --format '{{.Name}}' --filter "name=^$pod\$")
+    while read -r name; do
+        [ -n "$name" ] || continue
+        if [ -z "$(podman ps -a --quiet --filter "name=^$name\$" --filter "label=$owner_label")" ]; then
+            foreign+=("container $name")
+        fi
+    done < <(podman ps -a --format '{{.Names}}' --filter "name=^$pod-")
+    if [ ${#foreign[@]} -gt 0 ]; then
+        echo "stack: refusing to start: ${foreign[*]} already exist with the prefix $pod" >&2
+        echo "stack: but without the label $owner_label, so they are not ours." >&2
+        echo "stack: remove or rename them yourself, then run this again." >&2
+        exit 3
+    fi
+}
+
 down() {
-    podman pod rm -f "$pod" >/dev/null 2>&1 || true
+    local id
+    id="$(owned_pod)"
+    if [ -n "$id" ]; then
+        podman pod rm -f "$id" >/dev/null 2>&1 || true
+        echo "stack: $pod removed"
+    fi
     # Files written by the api belong to a subordinate uid; remove them from
     # inside the user namespace.
     podman unshare rm -rf "$media_dir" >/dev/null 2>&1 || true
-    echo "stack: $pod removed"
 }
 
 # One-shot CLI run inside the pod (shares the database on localhost).
 api_cli() {
-    podman run --rm --pod "$pod" "${api_env[@]}" "localhost/pranata-api:$tag" "$@"
+    podman run --rm --pod "$pod" --label "$owner_label" "${api_env[@]}" "localhost/pranata-api:$tag" "$@"
 }
 
 wait_for() {
@@ -71,11 +107,12 @@ wait_for() {
 }
 
 up() {
+    check_no_foreign
     down >/dev/null
     mkdir -p "$out_dir"
     rm -f "$out_dir/access-link.txt"
 
-    podman pod create --name "$pod" --cpus=2 --memory=2g \
+    podman pod create --name "$pod" --label "$owner_label" --cpus=2 --memory=2g \
         --add-host api:127.0.0.1 --add-host web:127.0.0.1 \
         -p "127.0.0.1:$port:443" >/dev/null
 
@@ -84,7 +121,7 @@ up() {
     mkdir -p "$media_dir"
     podman unshare chown 65532:65532 "$media_dir"
 
-    podman run -d --pod "$pod" --name "$pod-db" \
+    podman run -d --pod "$pod" --label "$owner_label" --name "$pod-db" \
         -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=pranata \
         -v "$root/infra/dev/postgres-init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro,z" \
         "$postgres_image" >/dev/null
@@ -99,13 +136,13 @@ up() {
         api_cli user create-admin e2e --name "Admin E2E" >"$out_dir/access-link.txt"
     fi
 
-    podman run -d --pod "$pod" --name "$pod-api" "${api_env[@]}" \
+    podman run -d --pod "$pod" --label "$owner_label" --name "$pod-api" "${api_env[@]}" \
         -v "$media_dir:/media:z" "localhost/pranata-api:$tag" serve >/dev/null
-    podman run -d --pod "$pod" --name "$pod-web" \
+    podman run -d --pod "$pod" --label "$owner_label" --name "$pod-web" \
         -e "PRANATA_API_INTERNAL_URL=http://127.0.0.1:8080" \
         -e "PRANATA_PURGE_TOKEN=$purge_token" \
         "localhost/pranata-web:$tag" >/dev/null
-    podman run -d --pod "$pod" --name "$pod-caddy" \
+    podman run -d --pod "$pod" --label "$owner_label" --name "$pod-caddy" \
         -v "$root/infra/dev/Caddyfile:/etc/caddy/Caddyfile:ro,z" \
         -v "$media_dir:/srv/media:ro,z" \
         "$caddy_image" >/dev/null
@@ -121,7 +158,7 @@ up() {
 
 case "$cmd" in
     up)
-        trap 'status=$?; if [ $status -ne 0 ]; then
+        trap 'status=$?; if [ $status -ne 0 ] && [ $status -ne 3 ]; then
             for c in db api web caddy; do echo "--- $pod-$c" >&2; podman logs --tail 30 "$pod-$c" >&2 || true; done
             down; fi' EXIT
         up
