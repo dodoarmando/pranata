@@ -68,3 +68,14 @@ async fn security_headers_present(pool: PgPool) {
     );
     assert_eq!(headers["x-frame-options"], "DENY");
 }
+
+#[sqlx::test]
+async fn not_found_carries_request_id_and_security_headers(pool: PgPool) {
+    let response = get(pool, "/api/nope", None).await;
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    let headers = response.headers();
+    let id = headers["x-request-id"].to_str().unwrap();
+    assert!(uuid::Uuid::parse_str(id).is_ok(), "not a uuid: {id}");
+    assert_eq!(headers["x-frame-options"], "DENY");
+    assert_eq!(headers["strict-transport-security"], "max-age=31536000");
+}
