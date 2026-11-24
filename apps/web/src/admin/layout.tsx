@@ -55,7 +55,7 @@ function UserMenu({ user }: Readonly<{ user: CurrentUser }>) {
 				queryClient.clear();
 				void navigate({ to: "/masuk", search: {} });
 			},
-			onError: (error) => toast.error(messageFor(error.code)),
+			onError: (error) => toast.error(messageFor(error.messageCode)),
 		},
 	});
 

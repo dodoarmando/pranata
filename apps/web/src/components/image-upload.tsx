@@ -49,7 +49,7 @@ const TIMEOUT =
 const FAILED = "Foto gagal diproses. Coba foto lain.";
 
 function errorText(error: unknown): string {
-	return error instanceof ApiError ? messageFor(error.code) : OFFLINE;
+	return error instanceof ApiError ? messageFor(error.messageCode) : OFFLINE;
 }
 
 const sleep = (ms: number, signal: AbortSignal) =>

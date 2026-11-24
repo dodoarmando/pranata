@@ -65,6 +65,36 @@ describe("apiFetch", () => {
 		expect((err as ApiError).status).toBe(409);
 	});
 
+	it("prefers the first field error code for messageCode", async () => {
+		mockFetch(
+			new Response(
+				JSON.stringify({
+					type: "x",
+					title: "Unprocessable Entity",
+					status: 422,
+					code: "validation_failed",
+					errors: [{ field: "username", code: "username_invalid" }],
+				}),
+				{ status: 422 },
+			),
+		);
+		const err = (await apiFetch("/api/x").catch((e: unknown) => e)) as ApiError;
+		expect(err.code).toBe("validation_failed");
+		expect(err.messageCode).toBe("username_invalid");
+	});
+
+	it("uses the problem code for messageCode without field errors", async () => {
+		const plain = new ApiError(409, {
+			type: "x",
+			title: "Conflict",
+			status: 409,
+			code: "stale_write",
+			errors: [],
+		});
+		expect(plain.messageCode).toBe("stale_write");
+		expect(new ApiError(502, null).messageCode).toBe("internal_error");
+	});
+
 	it("falls back to internal_error when the body is not json", async () => {
 		mockFetch(new Response("boom", { status: 502 }));
 		const err = (await apiFetch("/api/x").catch((e: unknown) => e)) as ApiError;

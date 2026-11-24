@@ -1,11 +1,14 @@
 import { getCsrfToken } from "@/lib/csrf";
 import type { Problem } from "./generated/model";
 
-// Thrown for every non-2xx response. Pages call `messageFor(err.code)`.
+// Thrown for every non-2xx response. Pages call `messageFor(err.messageCode)`.
 export class ApiError extends Error {
 	readonly status: number;
 	readonly code: string;
 	readonly problem: Problem | null;
+	// The code to show the user: a validation problem's `code` is always
+	// `validation_failed`, so the first field error says more.
+	readonly messageCode: string;
 
 	constructor(status: number, problem: Problem | null) {
 		super(problem?.title ?? `HTTP ${status}`);
@@ -13,6 +16,7 @@ export class ApiError extends Error {
 		this.status = status;
 		this.code = problem?.code ?? "internal_error";
 		this.problem = problem;
+		this.messageCode = problem?.errors?.[0]?.code ?? this.code;
 	}
 }
 

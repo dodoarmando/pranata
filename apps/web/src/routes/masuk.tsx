@@ -113,7 +113,7 @@ function SignIn() {
 				</Label>
 				{login.error ? (
 					<p role="alert" className="text-sm text-destructive">
-						{messageFor(login.error.code)}
+						{messageFor(login.error.messageCode)}
 					</p>
 				) : null}
 				<Button type="submit" size="lg" disabled={login.isPending}>

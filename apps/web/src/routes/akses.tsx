@@ -62,7 +62,9 @@ function Access() {
 		const form = new FormData(event.currentTarget);
 		const password = String(form.get("password") ?? "");
 		const confirmation = String(form.get("confirmation") ?? "");
-		if (password.length < MIN || password.length > MAX) {
+		// The server counts characters, not UTF-16 units, so emoji count once.
+		const length = [...password].length;
+		if (length < MIN || length > MAX) {
 			setClientError(messageFor("password_length"));
 			return;
 		}
@@ -74,7 +76,7 @@ function Access() {
 		redeem.mutate({ data: { token: state.token, password } });
 	}
 
-	const apiError = redeem.error ? messageFor(redeem.error.code) : null;
+	const apiError = redeem.error ? messageFor(redeem.error.messageCode) : null;
 	const error = clientError ?? apiError;
 
 	return (

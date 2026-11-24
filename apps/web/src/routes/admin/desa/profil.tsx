@@ -35,7 +35,7 @@ function ProfilePage() {
 	if (profile.isError) {
 		return (
 			<p role="alert" className="text-destructive">
-				{messageFor(profile.error.code)}
+				{messageFor(profile.error.messageCode)}
 			</p>
 		);
 	}
@@ -72,7 +72,7 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
 			},
 			onError: (error) => {
 				if (error.code === "stale_write") setStale(true);
-				toast.error(messageFor(error.code));
+				toast.error(messageFor(error.messageCode));
 			},
 		},
 	});
@@ -120,7 +120,9 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
 			);
 		} catch (error) {
 			toast.error(
-				messageFor(error instanceof ApiError ? error.code : "internal_error"),
+				messageFor(
+					error instanceof ApiError ? error.messageCode : "internal_error",
+				),
 			);
 		} finally {
 			setReloading(false);

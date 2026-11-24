@@ -16,6 +16,14 @@ const MESSAGES: Record<string, string> = {
 	file_too_large: "Ukuran berkas melebihi batas.",
 	image_too_large: "Resolusi foto terlalu besar.",
 	image_truncated: "Berkas foto rusak atau tidak lengkap. Unggah ulang.",
+	image_unreadable:
+		"Berkas ini bukan foto yang bisa dibaca. Gunakan foto lain.",
+	image_undecodable: "Foto tidak dapat diproses. Gunakan foto lain.",
+	username_taken: "Nama pengguna sudah dipakai. Pilih yang lain.",
+	required: "Isian ini wajib diisi.",
+	duplicate: "Isian ini hanya boleh dikirim satu kali.",
+	invalid: "Isian tidak valid. Periksa kembali.",
+	database_unavailable: "Layanan sedang terganggu. Coba lagi sebentar lagi.",
 	invalid_multipart: "Unggahan tidak dapat dibaca. Coba lagi.",
 	media_not_found: "Foto tidak ditemukan.",
 	stale_write: "Data sudah diubah orang lain. Muat ulang halaman.",
@@ -29,6 +37,9 @@ const MESSAGES: Record<string, string> = {
 	csrf_mismatch: "Sesi tidak valid. Muat ulang halaman lalu coba lagi.",
 	internal_error: FALLBACK,
 };
+
+// The codes that have copy, for the test that compares them with the API.
+export const MESSAGE_CODES: readonly string[] = Object.keys(MESSAGES);
 
 export function messageFor(code: string): string {
 	return Object.hasOwn(MESSAGES, code)
