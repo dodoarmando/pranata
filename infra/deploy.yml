@@ -51,15 +51,23 @@
             pranata_release: "{{ pranata_version }}"
       rescue:
         - name: Roll back to the previous version
-          ansible.builtin.include_role:
-            name: pranata
-            tasks_from: release.yml
-          vars:
-            pranata_release: "{{ pranata_previous }}"
-          when: pranata_previous is defined
+          block:
+            - name: Move back to the previous version
+              ansible.builtin.include_role:
+                name: pranata
+                tasks_from: release.yml
+              vars:
+                pranata_release: "{{ pranata_previous }}"
+          rescue:
+            - name: Report the failed rollback
+              ansible.builtin.fail:
+                msg: >-
+                  ROLLBACK FAILED on {{ inventory_hostname }}: still on
+                  {{ pranata_version }}; site may be down. Previous version was
+                  {{ pranata_previous }}.
 
         - name: Report the failed deploy
           ansible.builtin.fail:
             msg: >-
               Deploying {{ pranata_version }} failed its health check;
-              rolled back to {{ pranata_previous | default('(unknown, nothing recorded)') }}.
+              rolled back to {{ pranata_previous }}.

@@ -1,0 +1,66 @@
+---
+# Wait until `pranata_release` answers /api/healthz with its version and the
+# web server answers through Caddy, within one deadline of pranata_health_timeout seconds.
+- name: Start the health deadline
+  ansible.builtin.set_fact:
+    pranata_health_deadline: "{{ now(utc=true).timestamp() | int + pranata_health_timeout | int }}"
+
+- name: Wait for the release to report its version
+  ansible.builtin.command:
+    argv:
+      - curl
+      - --fail
+      - --silent
+      - --insecure
+      - --max-time
+      - "5"
+      - --resolve
+      - "{{ pranata_domain }}:{{ pranata_https_port }}:127.0.0.1"
+      - "https://{{ pranata_domain }}:{{ pranata_https_port }}/api/healthz"
+  register: pranata_health
+  changed_when: false
+  failed_when: false
+  retries: 1000
+  delay: 2
+  until: >-
+    (pranata_health.rc == 0 and
+     pranata_health.stdout is regex('"version"\s*:\s*"' ~ (pranata_release | regex_escape) ~ '"'))
+    or now(utc=true).timestamp() | int > pranata_health_deadline|int
+
+- name: Fail when the release did not report its version in time
+  ansible.builtin.fail:
+    msg: "/api/healthz did not report {{ pranata_release }} within {{ pranata_health_timeout }} s (last answer: {{ pranata_health.stdout | default('none') }})"
+  when: >-
+    pranata_health.rc != 0 or
+    pranata_health.stdout is not regex('"version"\s*:\s*"' ~ (pranata_release | regex_escape) ~ '"')
+
+# Any HTTP answer from the web server is fine (it may say 503 while the Village
+# is missing); a 502 or 504 means Caddy cannot reach it.
+- name: Wait for the web server to answer through Caddy
+  ansible.builtin.command:
+    argv:
+      - curl
+      - --silent
+      - --insecure
+      - --output
+      - /dev/null
+      - --write-out
+      - "%{http_code}"
+      - --max-time
+      - "5"
+      - --resolve
+      - "{{ pranata_domain }}:{{ pranata_https_port }}:127.0.0.1"
+      - "https://{{ pranata_domain }}:{{ pranata_https_port }}/"
+  register: pranata_web_health
+  changed_when: false
+  failed_when: false
+  retries: 1000
+  delay: 2
+  until: >-
+    pranata_web_health.stdout not in ['000', '502', '504', ''] or
+    now(utc=true).timestamp() | int > pranata_health_deadline|int
+
+- name: Fail when the web server did not answer in time
+  ansible.builtin.fail:
+    msg: "The web server did not answer through Caddy within {{ pranata_health_timeout }} s (last status: {{ pranata_web_health.stdout }})"
+  when: pranata_web_health.stdout in ['000', '502', '504', '']
