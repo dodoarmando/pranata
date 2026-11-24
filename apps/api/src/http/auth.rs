@@ -22,7 +22,7 @@ use crate::{
 /// Longest password sign-in will hash. Anything longer cannot be valid.
 const MAX_SIGN_IN_PASSWORD: usize = password::MAX_LENGTH;
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema)]
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
@@ -32,7 +32,7 @@ pub struct LoginRequest {
 }
 
 /// The signed-in User and the CSRF token to send as `x-csrf-token`.
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct SessionInfo {
     pub user: CurrentUser,
     pub csrf_token: String,
@@ -40,10 +40,38 @@ pub struct SessionInfo {
 
 /// The Access Link token travels in the body, never in the URL, so request
 /// logs and proxies cannot capture it.
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema)]
 pub struct RedeemAccessLinkRequest {
     pub token: String,
     pub password: String,
+}
+
+impl std::fmt::Debug for LoginRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LoginRequest")
+            .field("username", &self.username)
+            .field("password", &"[redacted]")
+            .field("remember", &self.remember)
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for RedeemAccessLinkRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RedeemAccessLinkRequest")
+            .field("token", &"[redacted]")
+            .field("password", &"[redacted]")
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for SessionInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SessionInfo")
+            .field("user", &self.user)
+            .field("csrf_token", &"[redacted]")
+            .finish()
+    }
 }
 
 fn no_store() -> AppendHeaders<[(header::HeaderName, HeaderValue); 1]> {

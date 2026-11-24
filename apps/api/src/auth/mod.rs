@@ -31,11 +31,19 @@ pub struct CurrentUser {
 }
 
 /// A freshly created User and the Access Link that lets them set a password.
-#[derive(Debug)]
 pub struct NewUser {
     pub id: UserId,
     /// The one-time secret; only its hash is stored.
     pub access_link_token: String,
+}
+
+impl std::fmt::Debug for NewUser {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NewUser")
+            .field("id", &self.id)
+            .field("access_link_token", &"[redacted]")
+            .finish()
+    }
 }
 
 /// 32 random bytes from the operating system, base64url without padding.

@@ -704,3 +704,45 @@ async fn extractor_fails_closed_outside_the_guarded_router(pool: PgPool) {
     assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
     assert_eq!(body["code"], "internal_error");
 }
+
+#[test]
+fn debug_output_redacts_secrets() {
+    use pranata::auth::{CurrentUser, NewUser, session::NewSession};
+    use pranata::http::auth::{LoginRequest, RedeemAccessLinkRequest, SessionInfo};
+
+    let login: LoginRequest = serde_json::from_value(
+        json!({"username": "budi", "password": "hunter2-secret", "remember": true}),
+    )
+    .unwrap();
+    let redeem: RedeemAccessLinkRequest =
+        serde_json::from_value(json!({"token": "link-secret", "password": "hunter2-secret"}))
+            .unwrap();
+    let new_session = NewSession {
+        token: "cookie-secret".into(),
+        csrf_token: "csrf-secret".into(),
+    };
+    let new_user = NewUser {
+        id: UserId(uuid::Uuid::nil()),
+        access_link_token: "link-secret".into(),
+    };
+    let info = SessionInfo {
+        user: CurrentUser {
+            id: UserId(uuid::Uuid::nil()),
+            username: "budi".into(),
+            display_name: "Budi".into(),
+        },
+        csrf_token: "csrf-secret".into(),
+    };
+
+    let dump = format!("{login:?} {redeem:?} {new_session:?} {new_user:?} {info:?}");
+    for secret in [
+        "hunter2-secret",
+        "link-secret",
+        "cookie-secret",
+        "csrf-secret",
+    ] {
+        assert!(!dump.contains(secret), "Debug leaked {secret}: {dump}");
+    }
+    // Non-secret fields stay useful for debugging.
+    assert!(dump.contains("budi"));
+}

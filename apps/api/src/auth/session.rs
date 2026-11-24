@@ -53,18 +53,36 @@ pub(crate) fn not_resolved() -> ApiError {
 }
 
 /// A session found for a request, with the CSRF token that belongs to it.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AuthSession {
     pub user: CurrentUser,
     pub csrf_token: String,
     pub(crate) token_hash: Vec<u8>,
 }
 
+impl std::fmt::Debug for AuthSession {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AuthSession")
+            .field("user", &self.user)
+            .field("csrf_token", &"[redacted]")
+            .field("token_hash", &"[redacted]")
+            .finish()
+    }
+}
+
 /// A session just created at sign-in.
-#[derive(Debug)]
 pub struct NewSession {
     pub token: String,
     pub csrf_token: String,
+}
+
+impl std::fmt::Debug for NewSession {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NewSession")
+            .field("token", &"[redacted]")
+            .field("csrf_token", &"[redacted]")
+            .finish()
+    }
 }
 
 /// Create a session for `user`.
@@ -266,4 +284,26 @@ fn from_extensions(parts: &Parts) -> Result<AuthSession, ApiError> {
         .get::<AuthSession>()
         .cloned()
         .ok_or(ApiError::Unauthorized("unauthenticated"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn auth_session_debug_hides_tokens() {
+        let session = AuthSession {
+            user: CurrentUser {
+                id: UserId(uuid::Uuid::nil()),
+                username: "budi".into(),
+                display_name: "Budi".into(),
+            },
+            csrf_token: "csrf-secret".into(),
+            token_hash: vec![1, 2, 3, 4],
+        };
+        let dump = format!("{session:?}");
+        assert!(!dump.contains("csrf-secret"));
+        assert!(!dump.contains("[1, 2, 3, 4]"));
+        assert!(dump.contains("budi"));
+    }
 }
