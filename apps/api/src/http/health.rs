@@ -41,6 +41,10 @@ const READY_TIMEOUT: Duration = Duration::from_secs(3);
 
 /// Readiness probe for an external uptime check: the API is up and the
 /// database answers. `/healthz` stays a pure liveness probe.
+///
+/// # Errors
+/// `Unavailable` (503 `database_unavailable`) when the database query fails or
+/// takes longer than three seconds.
 #[utoipa::path(
     get,
     path = "/readyz",

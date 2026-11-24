@@ -158,6 +158,9 @@ export const getReadyzUrl = () => {
 }
 
 /**
+ * # Errors
+ * `Unavailable` (503 `database_unavailable`) when the database query fails or
+ * takes longer than three seconds.
  * @summary Readiness probe for an external uptime check: the API is up and the
 database answers. `/healthz` stays a pure liveness probe.
  */
@@ -206,6 +209,9 @@ export type ReadyzQueryError = ErrorType<Problem>
 
 
 /**
+ * # Errors
+ * `Unavailable` (503 `database_unavailable`) when the database query fails or
+ * takes longer than three seconds.
  * @summary Readiness probe for an external uptime check: the API is up and the
 database answers. `/healthz` stays a pure liveness probe.
  */
@@ -220,6 +226,9 @@ export function useReadyz<TData = Awaited<ReturnType<typeof readyz>>, TError = E
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
+ * # Errors
+ * `Unavailable` (503 `database_unavailable`) when the database query fails or
+ * takes longer than three seconds.
  * @summary Readiness probe for an external uptime check: the API is up and the
 database answers. `/healthz` stays a pure liveness probe.
  */
@@ -234,6 +243,9 @@ export function useReadyz<TData = Awaited<ReturnType<typeof readyz>>, TError = E
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
+ * # Errors
+ * `Unavailable` (503 `database_unavailable`) when the database query fails or
+ * takes longer than three seconds.
  * @summary Readiness probe for an external uptime check: the API is up and the
 database answers. `/healthz` stays a pure liveness probe.
  */
@@ -242,6 +254,9 @@ export function useReadyz<TData = Awaited<ReturnType<typeof readyz>>, TError = E
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
+ * # Errors
+ * `Unavailable` (503 `database_unavailable`) when the database query fails or
+ * takes longer than three seconds.
  * @summary Readiness probe for an external uptime check: the API is up and the
 database answers. `/healthz` stays a pure liveness probe.
  */

@@ -521,6 +521,7 @@
 			"get": {
 				"tags": ["ops"],
 				"summary": "Readiness probe for an external uptime check: the API is up and the\ndatabase answers. `/healthz` stays a pure liveness probe.",
+				"description": "# Errors\n`Unavailable` (503 `database_unavailable`) when the database query fails or\ntakes longer than three seconds.",
 				"operationId": "readyz",
 				"responses": {
 					"200": {
