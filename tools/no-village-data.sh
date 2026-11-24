@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 pattern='Sidomukti|Sukamaju'
-allowed='^(apps/api/seed/|docs/|CONTEXT\.md$)|(^|/)fixtures/|^tools/no-village-data\.sh$'
+allowed='^(apps/api/seed/|docs/|CONTEXT\.md:)|(^|/)fixtures/|^tools/no-village-data\.sh:'
 
 hits=$(git ls-files -z | xargs -0 grep -IinE "$pattern" -- 2>/dev/null | grep -vE "$allowed" || true)
 
