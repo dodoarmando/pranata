@@ -549,6 +549,22 @@ Each check turns green. `systemctl --user list-timers` (same prefix) shows the
 next runs, and `journalctl --user -u pranata-backup.service` the output of the
 last one.
 
+### Watch that the site is up
+
+The three pings above run on the VPS, so they cannot tell you that the VPS or
+the site is down: Healthchecks.io only waits for pings and never probes a URL.
+Add an external uptime check from a hosted prober (Uptime Kuma, self-hosted
+elsewhere, or any hosted monitor) with two checks, every minute or two:
+
+| URL                            | Expect | Tells you                                                      |
+| ------------------------------ | ------ | -------------------------------------------------------------- |
+| `https://<domain>/`            | 200    | Caddy, the web server and the API behind it serve the home page |
+| `https://<domain>/api/readyz`  | 200    | The API is up and the database answers                         |
+
+`/api/readyz` answers 503 with the problem code `database_unavailable` when the
+database does not. `/api/healthz` is only a liveness check (the process runs and
+reports its version), so do not use it for uptime.
+
 ## Troubleshooting
 
 ### Provisioning refuses to start
