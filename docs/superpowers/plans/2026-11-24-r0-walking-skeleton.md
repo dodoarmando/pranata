@@ -43,7 +43,7 @@ apps/api/
   Cargo.toml                 crate `pranata` (lib + bin)
   Containerfile
   migrations/                SQLx migrations (owner role applies them)
-  seed/                      demo seed data (R1, Plan P6)
+  seed/                      demo seed data (R1, Plan R1-E)
   data/region-codes.csv.gz   bundled Kepmendagri dataset
   src/
     main.rs                  CLI entry (clap)
@@ -246,7 +246,7 @@ These are outward-facing actions. The executor runs each command only after the 
     - `POST /api/auth/access-links/{token}/password {password}` → 204. It sets the password and marks the link used. A used link gives 410 `access_link_used`; an expired one gives 410 `access_link_expired`; an unknown one gives 404 `access_link_not_found`.
   - CLI `pranata user create-admin <username> --name "<display name>"` creates the user and an Access Link valid for 24 h, then prints `{PRANATA_PUBLIC_ORIGIN}/akses#{token}`. The token travels in the URL fragment so no server or proxy log ever sees it; redemption is `POST /api/auth/access-links/redeem {token, password}`.
   - Sign-in and sign-out write Audit Entries (`SignIn`, `SignOut`).
-  - Roles, passkeys, sudo mode and throttling come in Plan P2. In R0, every User has full access.
+  - Roles, passkeys, sudo mode and throttling come in Plan R1-A. In R0, every User has full access.
 
 - [ ] **Step 1: Failing tests:**
   - `login_sets_session_cookie_and_returns_csrf`.
@@ -409,7 +409,7 @@ These are outward-facing actions. The executor runs each command only after the 
     - Loader: `getPublicVillage()` (Orval, server-side against `PRANATA_API_INTERNAL_URL`).
     - Renders site header (village name, "Kab. {regency}, {province}"), a hero (photo `srcset` from variants with `fetchpriority="high"`, overview HTML), and a footer ("© {year} Pemerintah Desa {name} · Dikelola dengan Pranata").
     - Before init it renders "Situs desa belum disiapkan." with status 503.
-    - The layout follows `.prototype/public/index.html` (hero and footer only in R0). Other sections come in Plan P5 (D-58).
+    - The layout follows `.prototype/public/index.html` (hero and footer only in R0). Other sections come in Plan R1-D (D-58).
   - Accessibility basics: `lang="id"`, a skip link "Lewati ke konten" targeting `#konten`, a landmark per region.
 
 - [ ] **Step 1: Failing unit tests** (Rstest):
@@ -434,7 +434,7 @@ These are outward-facing actions. The executor runs each command only after the 
   - `/masuk`:
     - Follows `.prototype/login/index.html`: fields "Nama pengguna" and "Kata sandi" with a show/hide toggle, and "Ingat saya di perangkat ini".
     - The "Lupa kata sandi?" link opens a dialog with "Hubungi Administrator desa untuk mendapatkan tautan akses baru." (ADR 0007).
-    - The Passkey button is hidden until Plan P2.
+    - The Passkey button is hidden until Plan R1-A.
     - The photo carousel uses a static illustration in R0.
   - `/akses` reads the token from `location.hash` (never from the path or query), then shows a set-password form (new password plus confirmation) that POSTs `{token, password}` to `/api/auth/access-links/redeem`. It clears the hash with `history.replaceState` after reading it. On success it redirects to `/masuk`.
   - `export async function downscaleImage(file: File, maxEdge = 2560, quality = 0.85): Promise<Blob>` uses `createImageBitmap(file, { imageOrientation: "from-image" })` and `OffscreenCanvas.convertToBlob({ type: "image/jpeg", quality })`. Files already within `maxEdge` and under 2 MB pass through unchanged. Non-images pass through, and the server decides.
@@ -444,7 +444,7 @@ These are outward-facing actions. The executor runs each command only after the 
     - Usable at 390 px width: the toolbar scrolls horizontally, and the content font is 16 px so iOS does not zoom.
   - `<ImageUpload onUploaded />` takes multiple files from camera or gallery (`accept="image/*"`, no `capture`), downscales each, uploads sequentially with a progress list, and polls `GET /api/admin/media/{id}` until it is `ready` or `failed`.
   - The profile page has a card "Gambaran umum" (editor) and a card "Foto hero" (upload or replace). The "Simpan" button sends `updated_at` for the 409 check. A save shows a sonner toast "Profil desa disimpan."
-  - D-23: the profile is status-less content, so saving makes it live (D-23's status-less rule). Permission checks come in Plan P2.
+  - D-23: the profile is status-less content, so saving makes it live (D-23's status-less rule). Permission checks come in Plan R1-A.
 
 - [ ] **Step 1:** Implement the routes and components above. They are exercised end to end in Task 14. Run `bun run typecheck` and `bunx biome ci` → PASS.
 - [ ] **Step 2: Commit** in two commits: `feat(web): sign in and set a password from an access link` and `feat(web): edit the village profile with rich text and phone photo uploads`.
@@ -544,7 +544,7 @@ These are outward-facing actions. The executor runs each command only after the 
     - Everything else → `web:3000`.
     - `encode zstd gzip`.
   - The first run (when no Village exists) runs `pranata village init` and `pranata user create-admin`, and prints the Access Link once as Ansible debug output.
-  - `deploy.yml` only changes `pranata_version`, pulls the images, restarts `api` (migrations run on start) then `web`, and waits for `/api/healthz` to report the new version. A failed health check rolls back automatically to the previous version tag recorded in `~pranata/.pranata-version`. The N/N-1 schema compatibility test is Plan P6.
+  - `deploy.yml` only changes `pranata_version`, pulls the images, restarts `api` (migrations run on start) then `web`, and waits for `/api/healthz` to report the new version. A failed health check rolls back automatically to the previous version tag recorded in `~pranata/.pranata-version`. The N/N-1 schema compatibility test is Plan R1-E.
 - Recipes:
   - `just deploy host version` = `ansible-playbook -i $PRANATA_INVENTORY infra/deploy.yml -l {{host}} -e pranata_version={{version}}`; with `host=all` it targets every Installation.
   - `just provision host`.
@@ -589,7 +589,7 @@ These are outward-facing actions. The executor runs each command only after the 
 - [ ] **Step 2: First release.** Merge a `feat` change so release-please opens `0.1.0`. Merge it, and confirm the GHCR images for `0.1.0` exist (`gh api /users/dodoarmando/packages/container/pranata-api/versions`).
 - [ ] **Step 3: Provision staging.** `just provision staging` → the Access Link is printed. Open it, set a password, sign in, edit the profile and upload a photo from a real phone, then confirm the public home updates.
 - [ ] **Step 4: Backups on staging.** Run `systemctl --user start pranata-backup` as `pranata` → a snapshot exists in the bucket, and the backup ping is received.
-- [ ] **Step 5: Draft the install guide.** `infra/README.md` covers procurement, inventory, provision, first Administrator, deploy, rollback, backups and restore. D-54's stranger test runs before R1 (Plan P6).
+- [ ] **Step 5: Draft the install guide.** `infra/README.md` covers procurement, inventory, provision, first Administrator, deploy, rollback, backups and restore. D-54's stranger test runs before R1 (Plan R1-E).
 - [ ] **Step 6: R0 exit checklist.** Write it in the PR that closes R0 and tick every item:
   - All CI jobs are required and green on `main`.
   - `just check-trace` is green.
@@ -604,7 +604,7 @@ These are outward-facing actions. The executor runs each command only after the 
 
 ## R1 roadmap (plans written after R0 lands)
 
-Each plan below is written with the writing-plans skill once R0's code exists, so its file paths and interfaces are exact. A decision listed here is considered planned, not built; `just check-trace-strict`, which gates the R1 release, requires each one to appear on a task's `**Decisions:**` line.
+Plans are named after their release. This plan is R0 (the walking skeleton). The R1 plans are R1-A to R1-E, in the order below. Each plan below is written with the writing-plans skill once R0's code exists, so its file paths and interfaces are exact. A decision listed here is considered planned, not built; `just check-trace-strict`, which gates the R1 release, requires each one to appear on a task's `**Decisions:**` line.
 
 | Plan | Scope | Decisions |
 |---|---|---|
@@ -622,7 +622,7 @@ Each plan below is written with the writing-plans skill once R0's code exists, s
 
 The final whole-branch review of R0 deferred these items. Each plan must pick up its group when it is written. Items are one line each, with their source.
 
-### Carry-over to the Access plan (P2)
+### Carry-over to the Access plan (R1-A)
 
 - `audit::fields_of` silently maps non-object values to an empty diff (final review).
 - An old session row survives re-login (final review).
@@ -633,13 +633,13 @@ The final whole-branch review of R0 deferred these items. Each plan must pick up
 - There is no way to issue an Access Link for an existing user (final review).
 - Per-IP throttling sees a single IP behind rootless port forwarding; use pasta source-IP preservation or a trusted X-Forwarded-For from Caddy (final review).
 
-### Carry-over to the Village plan (P3)
+### Carry-over to the Village plan (R1-B)
 
 - VillageProfile construction is duplicated (final review).
 - Dataset currency: the README says 2430 while the SQL header says 2138; verify against the official Kepmendagri (final review).
 - Large transparent PNGs become JPEGs with a black background (final review).
 
-### Carry-over to the Website content plan (P4)
+### Carry-over to the Website content plan (R1-C)
 
 - An orphan file is left when the upload transaction rolls back; add media garbage collection (final review).
 - ICC colour profiles are dropped (final review).
@@ -655,7 +655,7 @@ The final whole-branch review of R0 deferred these items. Each plan must pick up
 - Weak-signal uploads have no timeout and show only a fake 45 % progress; use XHR progress plus a timeout (final review).
 - Session expiry loses edits; keep a local draft (final review).
 
-### Carry-over to the Public site plan (P5)
+### Carry-over to the Public site plan (R1-D)
 
 - API down gives a 500 with the English Start error page; add stale-if-error and an Indonesian error page (final review).
 - The SSR fetch has no timeout; set 5 s (final review).
@@ -671,7 +671,7 @@ The final whole-branch review of R0 deferred these items. Each plan must pick up
 - The modulepreload count is not captured (final review).
 - The e2e tests depend on execution order (final review).
 
-### Carry-over to the Operations and release plan (P6)
+### Carry-over to the Operations and release plan (R1-E)
 
 - The trace parser ignores `### Task N` without a colon, ignores fenced blocks, and reads D-1234 as D-123; fix this before `check-trace-strict` gates R1 (final review).
 - `migrate` and `village init` need unrelated config (final review).
