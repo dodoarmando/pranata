@@ -15,8 +15,18 @@ use crate::Config;
 /// Header that carries the shared purge secret.
 pub const TOKEN_HEADER: &str = "x-pranata-purge-token";
 
-/// Path of the web server's purge endpoint.
-const PURGE_PATH: &str = "_internal/cache/purge";
+/// Path segments of the web server's purge endpoint.
+const PURGE_PATH: [&str; 3] = ["_internal", "cache", "purge"];
+
+/// The purge endpoint below `base`, keeping any path `base` already has.
+fn purge_url(base: &Url) -> Result<Url> {
+    let mut url = base.clone();
+    url.path_segments_mut()
+        .map_err(|()| anyhow::anyhow!("the web internal URL cannot carry a path"))?
+        .pop_if_empty()
+        .extend(PURGE_PATH);
+    Ok(url)
+}
 
 /// How long one purge request may take.
 const TIMEOUT: Duration = Duration::from_secs(5);
@@ -49,10 +59,7 @@ impl Purger {
             .timeout(TIMEOUT)
             .build()
             .context("building the purge client")?;
-        let url = config
-            .web_internal_url
-            .join(PURGE_PATH)
-            .context("deriving the purge URL")?;
+        let url = purge_url(&config.web_internal_url).context("deriving the purge URL")?;
         Ok(Self {
             client,
             url,
@@ -80,5 +87,30 @@ impl Purger {
             bail!("the web server answered the purge with {status}");
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn purge_url_of(base: &str) -> String {
+        purge_url(&base.parse().unwrap()).unwrap().to_string()
+    }
+
+    #[test]
+    fn purge_url_appends_to_the_base_path() {
+        assert_eq!(
+            purge_url_of("http://web:3000"),
+            "http://web:3000/_internal/cache/purge"
+        );
+        assert_eq!(
+            purge_url_of("http://web/app"),
+            "http://web/app/_internal/cache/purge"
+        );
+        assert_eq!(
+            purge_url_of("http://web/app/"),
+            "http://web/app/_internal/cache/purge"
+        );
     }
 }
