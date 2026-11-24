@@ -11,12 +11,25 @@ pub async fn migrate(owner_url: &str) -> Result<()> {
         .connect(owner_url)
         .await
         .context("connecting with the migration (owner) URL")?;
-    sqlx::migrate!("./migrations")
-        .run(&pool)
-        .await
-        .context("running migrations")?;
+    run_migrations(&pool).await?;
     pool.close().await;
     Ok(())
+}
+
+/// Apply the embedded migrations that are not applied yet.
+///
+/// Migrations that the database has but this binary does not know are
+/// ignored: after a rollback the previous release must start on the schema of
+/// the newer one (expand/contract, D-50).
+///
+/// # Errors
+/// Fails when a migration fails or an applied one was edited.
+pub async fn run_migrations(pool: &PgPool) -> Result<()> {
+    sqlx::migrate!("./migrations")
+        .set_ignore_missing(true)
+        .run(pool)
+        .await
+        .context("running migrations")
 }
 
 /// Connect the runtime pool with the restricted app role.
