@@ -150,6 +150,19 @@ mod api {
     }
 
     #[sqlx::test]
+    async fn concurrent_inits_yield_exactly_one_winner(pool: PgPool) {
+        let (a, b) = (code("14.05.03.2002"), code("14.05.03.2003"));
+        let (first, second) = tokio::join!(village::init(&pool, &a), village::init(&pool, &b));
+        let results = [first, second];
+        let ok = results.iter().filter(|r| r.is_ok()).count();
+        let already = results
+            .iter()
+            .filter(|r| matches!(r, Err(InitError::AlreadyInitialised)))
+            .count();
+        assert_eq!((ok, already), (1, 1));
+    }
+
+    #[sqlx::test]
     async fn init_rejects_a_code_missing_from_the_dataset(pool: PgPool) {
         let result = village::init(&pool, &code("99.99.99.9999")).await;
         assert!(matches!(result, Err(InitError::UnknownCode)));
