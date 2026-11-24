@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# Provisions a disposable Debian 13 + systemd container with infra/provision.yml
+# (tls internal, no firewall, no ssh hardening), then asserts the Installation
+# works and that a failing deploy rolls back. Everything it creates is named
+# pranata-infra-test*; it touches nothing else.
+#
+# Needs the images localhost/pranata-{api,web}:$PRANATA_INFRA_TEST_TAG (default local; `just images [tag]`).
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export PATH="$root/target/infra/bin:$PATH"
+export ANSIBLE_CONFIG="$root/infra/ansible.cfg"
+cd "$root"
+
+name="pranata-infra-test"
+image="localhost/$name:latest"
+label="pranata.infra-test.owner=run.sh"
+work="$root/target/infra-test"
+version="$(sed -n 's/^version = "\(.*\)"$/\1/p' apps/api/Cargo.toml | head -n 1)"
+tag="${PRANATA_INFRA_TEST_TAG:-local}"
+tagged=()
+
+cleanup() {
+    local status=$?
+    if [ $status -ne 0 ]; then
+        echo "--- journal of the test container (last 25 lines)" >&2
+        podman exec "$name" journalctl --no-pager -n 25 -o cat >&2 2>/dev/null || true
+        podman exec "$name" su -s /bin/sh pranata -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) journalctl --user --no-pager -n 40 -o cat' >&2 2>/dev/null || true
+    fi
+    if [ -n "$(podman ps -a --quiet --filter "name=^$name\$" --filter "label=$label")" ]; then
+        podman rm -f -v "$name" >/dev/null 2>&1 || true
+    fi
+    for ref in "${tagged[@]}"; do
+        podman untag "$ref" "$ref" >/dev/null 2>&1 || true
+    done
+}
+trap cleanup EXIT
+
+if [ -n "$(podman ps -a --quiet --filter "name=^$name\$")" ] &&
+    [ -z "$(podman ps -a --quiet --filter "name=^$name\$" --filter "label=$label")" ]; then
+    echo "infra-test: a container named $name exists without the label $label; it is not ours, remove it yourself" >&2
+    exit 3
+fi
+podman rm -f -v "$name" >/dev/null 2>&1 || true
+
+mkdir -p "$work"
+podman build --quiet -f infra/test/Containerfile -t "$image" infra/test >/dev/null
+
+# The units pull pranata-{api,web}:<version>; give the local builds that tag
+# for the duration of the test and ship them to the container as an archive.
+for app in api web; do
+    ref="localhost/pranata-$app:$version"
+    if ! podman image exists "$ref"; then
+        podman tag "localhost/pranata-$app:$tag" "$ref"
+        tagged+=("$ref")
+    fi
+done
+rm -f "$work/images.tar"
+podman save --multi-image-archive -o "$work/images.tar" \
+    "localhost/pranata-api:$version" "localhost/pranata-web:$version"
+
+podman run -d --name "$name" --label "$label" --privileged --systemd=always "$image" >/dev/null
+for _ in $(seq 1 60); do
+    state="$(podman exec "$name" systemctl is-system-running 2>/dev/null || true)"
+    case "$state" in running | degraded) break ;; esac
+    sleep 1
+done
+echo "infra-test: systemd in the container is $state"
+
+cat >"$work/inventory.yml" <<YAML
+all:
+  hosts:
+    $name:
+      ansible_connection: containers.podman.podman
+      ansible_python_interpreter: /usr/bin/python3
+      pranata_domain: localhost
+      pranata_version: "$version"
+      pranata_tls: internal
+      pranata_image_registry: localhost
+      # The nested user and its subordinate ids must all fit in the 65537 ids of a rootless container.
+      pranata_user_uid: 65536
+      pranata_pull_images: false
+      pranata_images_archive: "$work/images.tar"
+      pranata_village_code: "14.05.03.2002"
+      pranata_admin_username: infra-test
+      pranata_admin_name: Infra Test
+      pranata_db_owner_password: "test owner/password+1"
+      pranata_db_app_password: "test app/password+1"
+      pranata_purge_token: infra-test-purge-token
+YAML
+
+play() { ansible-playbook -i "$work/inventory.yml" "$@"; }
+in_container() { podman exec "$name" "$@"; }
+
+echo "infra-test: provision"
+play infra/provision.yml --skip-tags firewall,ssh | tee "$work/provision.log"
+if ! grep -q 'Access Link for infra-test' "$work/provision.log"; then
+    echo "infra-test: the first run did not print the Access Link" >&2
+    exit 1
+fi
+
+echo "infra-test: provision again (nothing to bootstrap)"
+play infra/provision.yml --skip-tags firewall,ssh | tee "$work/provision-2.log"
+if grep -q 'Access Link for' "$work/provision-2.log"; then
+    echo "infra-test: the second run created another Administrator" >&2
+    exit 1
+fi
+
+echo "infra-test: assertions"
+health="$(in_container curl -fsk https://localhost/api/healthz)"
+echo "  healthz: $health"
+case "$health" in *"\"version\":\"$version\""*) ;; *)
+    echo "infra-test: healthz does not report $version" >&2
+    exit 1
+    ;;
+esac
+
+purge="$(in_container curl -sk -o /dev/null -w '%{http_code}' -X POST https://localhost/_internal/cache/purge)"
+echo "  /_internal/cache/purge: $purge"
+[ "$purge" = "404" ] || { echo "infra-test: the purge hook is reachable through Caddy" >&2; exit 1; }
+
+in_container sh -c 'echo probe > /home/pranata/media/public/probe.txt'
+headers="$(in_container curl -skI https://localhost/media/probe.txt)"
+echo "$headers" | sed 's/^/  /'
+echo "$headers" | grep -qi '^cache-control: public, max-age=31536000, immutable' ||
+    { echo "infra-test: /media/ lacks the immutable Cache-Control" >&2; exit 1; }
+
+echo "infra-test: a failing deploy rolls back"
+if play infra/deploy.yml -e pranata_version=9.9.9 | tee "$work/deploy.log"; then
+    echo "infra-test: deploying a missing version should have failed" >&2
+    exit 1
+fi
+grep -q "rolled back to $version" "$work/deploy.log" ||
+    { echo "infra-test: the deploy did not report the rollback" >&2; exit 1; }
+health="$(in_container curl -fsk https://localhost/api/healthz)"
+case "$health" in *"\"version\":\"$version\""*) ;; *)
+    echo "infra-test: after the rollback healthz does not report $version" >&2
+    exit 1
+    ;;
+esac
+echo "infra-test: ok"

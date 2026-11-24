@@ -158,6 +158,10 @@ test-web:
 test-api:
     cargo test --workspace --locked
 
+# Provision a disposable Debian 13 + systemd container with the role and check the Installation.
+infra-test: infra-tools images
+    infra/test/run.sh
+
 # Provision one Installation (or `all`) from the inventory named by $PRANATA_INVENTORY.
 provision host: infra-tools
     PATH="{{ justfile_directory() }}/target/infra/bin:$PATH" ANSIBLE_CONFIG="{{ justfile_directory() }}/infra/ansible.cfg" \
