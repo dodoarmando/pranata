@@ -1,6 +1,6 @@
 ---
 # Encrypted backups (D-51): a daily restic backup of the database dump and the
-# media originals, and a monthly restore check. Both run as systemd user units
+# media directory, and a monthly restore check. Both run as systemd user units
 # of the Pranata user, because `podman exec` needs that user's rootless Podman.
 - name: Learn the user's runtime directory
   ansible.builtin.import_tasks: user_env.yml

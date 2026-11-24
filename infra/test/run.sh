@@ -243,7 +243,7 @@ if in_container grep -rqF -e "$restic_password" -e "$s3_secret" /home/pranata/.c
 fi
 
 # A private original, owned by the api's uid, which only the user namespace can read.
-as_pranata 'podman unshare sh -c "mkdir -p /home/pranata/media/originals/ab && echo original > /home/pranata/media/originals/ab/abcdef.jpg && chown -R 65532:65532 /home/pranata/media/originals"'
+as_pranata 'podman unshare sh -c "mkdir -p /home/pranata/media/originals/ab /home/pranata/media/public/ab && echo original > /home/pranata/media/originals/ab/abcdef.jpg && echo variant > /home/pranata/media/public/ab/abcdef-480.webp && chown -R 65532:65532 /home/pranata/media/originals"'
 psql_live pranata "UPDATE village SET overview = '{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"before-backup\"}]}]}'" >/dev/null
 
 as_pranata 'systemctl --user start pranata-backup.service'
@@ -262,8 +262,9 @@ case "$listing" in *originals/ab/abcdef.jpg*) ;; *)
     exit 1
     ;;
 esac
-case "$listing" in */public*)
-    echo "infra-test: the snapshot holds the public variants" >&2
+# A restore without the variants would leave every image broken.
+case "$listing" in *public/ab/abcdef-480.webp*) ;; *)
+    echo "infra-test: the snapshot lacks the public variants" >&2
     exit 1
     ;;
 esac

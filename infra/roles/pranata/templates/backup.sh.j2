@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# Managed by Ansible. Encrypted backup of the database and the private media
-# originals to the restic repository (D-51). Runs as the Pranata user from
-# pranata-backup.service, which loads the credentials with EnvironmentFile=.
-# Variants are not backed up: they can be regenerated from the originals.
+# Managed by Ansible. Encrypted backup of the database and the media directory
+# (the private originals and the public variants) to the restic repository
+# (D-51). Runs as the Pranata user from pranata-backup.service, which loads the
+# credentials with EnvironmentFile=. The variants are backed up too: nothing
+# regenerates them yet, so a restore without them would leave every image broken.
 set -euo pipefail
 
 container=pranata-postgres
-originals="{{ pranata_media_dir }}/originals"
+media="{{ pranata_media_dir }}"
 dump_dir="$HOME/.local/state/pranata/backup"
 dump="$dump_dir/pranata.dump"
 
@@ -40,11 +41,11 @@ podman exec "$container" pg_dump --username postgres --dbname pranata --format=c
 [ -s "$dump" ] || { echo "pranata-backup: the dump is empty" >&2; exit 1; }
 
 paths=("$dump")
-# The originals are owned by a subordinate uid, so read them from the user namespace.
-if podman unshare test -d "$originals"; then
-    paths+=("$originals")
+# The media files are owned by a subordinate uid, so read them from the user namespace.
+if podman unshare test -d "$media"; then
+    paths+=("$media")
 else
-    echo "pranata-backup: $originals does not exist yet, backing up the database only"
+    echo "pranata-backup: $media does not exist yet, backing up the database only"
 fi
 podman unshare restic backup --tag pranata "${paths[@]}"
 

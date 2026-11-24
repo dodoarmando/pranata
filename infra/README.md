@@ -349,14 +349,15 @@ was off catches up):
 
 | Timer                          | When                                    | What                                                                     |
 | ------------------------------ | --------------------------------------- | ------------------------------------------------------------------------ |
-| `pranata-backup.timer`         | daily at 02:00, up to 30 minutes late   | dumps the database and backs up the dump and the media originals with restic |
+| `pranata-backup.timer`         | daily at 02:00, up to 30 minutes late   | dumps the database and backs up the dump and the media directory with restic |
 | `pranata-restore-check.timer`  | monthly, day 1 at 04:00                 | restores the latest dump into a scratch database, counts the Village rows, drops it |
 | `pranata-disk-check.timer`     | hourly                                  | checks `/` is below 80 % full                                            |
 
 Snapshots are tagged `pranata` and encrypted with `pranata_restic_password`
 before they leave the VPS. Retention is 7 daily, 4 weekly and 12 monthly
-snapshots; older ones are pruned after each backup. The public image variants are
-not backed up, only the private originals and the database.
+snapshots; older ones are pruned after each backup. The whole media directory is
+backed up, the private originals and the public image variants, together with the
+database.
 
 For the commands below, open a shell as the `pranata` user (its login shell is
 disabled, so use `sudo` like this):
@@ -381,7 +382,7 @@ restic snapshots --tag pranata
 
 Each snapshot has an ID, a time and the paths it holds: the dump
 `/home/pranata/.local/state/pranata/backup/pranata.dump` and
-`/home/pranata/media/originals`. Run the restore check on demand with
+`/home/pranata/media` (`originals/` and `public/`). Run the restore check on demand with
 `systemctl --user start pranata-restore-check.service`.
 
 ### Inspect a backup in a scratch database
@@ -456,20 +457,20 @@ is not rehearsed by CI, so practice it once on a spare VPS before you need it.
        --dbname pranata --no-owner --role pranata_owner --exit-on-error
    ```
 
-6. Restore the media originals. They belong to a subordinate user id, so restore
+6. Restore the media directory (`originals/` and `public/`). They belong to a subordinate user id, so restore
    them from inside the user namespace, as the backup reads them:
 
    ```sh
    podman unshare restic restore --tag pranata latest \
-     --include /home/pranata/media/originals --target /home/pranata/restore-tmp
-   podman unshare mkdir -p /home/pranata/media/originals
-   podman unshare cp -a /home/pranata/restore-tmp/home/pranata/media/originals/. \
-     /home/pranata/media/originals/
+     --include /home/pranata/media --target /home/pranata/restore-tmp
+   podman unshare mkdir -p /home/pranata/media
+   podman unshare cp -a /home/pranata/restore-tmp/home/pranata/media/. \
+     /home/pranata/media/
    podman unshare rm -rf /home/pranata/restore-tmp
    ```
 
-   If the snapshot has no originals (nothing had been uploaded yet), the restore
-   finds nothing to include; skip this whole step.
+   If the snapshot has no media directory (nothing had been uploaded yet), the
+   restore finds nothing to include; skip this whole step.
 7. Start the services and check the site:
 
    ```sh
@@ -485,10 +486,6 @@ is not rehearsed by CI, so practice it once on a spare VPS before you need it.
 
 What is not automated, and what to expect:
 
-- The public image variants are not in the backup and there is no command yet to
-  rebuild them. Images already uploaded may be missing on the public site after a
-  restore until their originals are processed again. This is a gap; plan to
-  re-upload important photos.
 - Everything written after the last backup, up to a day, is lost.
 - The restore needs the same release in the images as the dump was made with, or
   a newer one. If the inventory's `pranata_version` is older than the dump, deploy
