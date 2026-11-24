@@ -38,5 +38,31 @@
 				"organizeImports": "on"
 			}
 		}
+	},
+	"overrides": [
+		{
+			"includes": ["apps/web/src/components/ui/**"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"useExhaustiveDependencies": "off"
+					},
+					"suspicious": {
+						"noArrayIndexKey": "off",
+						"noDoubleEquals": "off",
+						"noDocumentCookie": "off"
+					},
+					"a11y": {
+						"noLabelWithoutControl": "off",
+						"useSemanticElements": "off"
+					}
+				}
+			}
+		}
+	],
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
 	}
 }

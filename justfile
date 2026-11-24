@@ -7,13 +7,27 @@ export DATABASE_URL := env("DATABASE_URL", "postgres://postgres@127.0.0.1:55432/
 default:
     @just --list
 
-# Install dependencies (Task 10).
+# Install JavaScript dependencies (tooling, git hooks and the web app).
 install:
-    @echo "install: not implemented yet (Task 10)"
+    bun install --frozen-lockfile
 
-# Run the API and web app in development mode (Task 10).
+# Run the API and the web dev server together (needs `just db-up db-migrate`).
+# The web dev server proxies /api to the API. Values here are dev-only.
 dev:
-    @echo "dev: not implemented yet (Task 10)"
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export PRANATA_DATABASE_URL="${PRANATA_DATABASE_URL:-postgres://pranata_app:pranata_app_dev@127.0.0.1:55432/pranata}"
+    export PRANATA_MIGRATION_DATABASE_URL="${PRANATA_MIGRATION_DATABASE_URL:-postgres://pranata_owner:pranata_owner_dev@127.0.0.1:55432/pranata}"
+    export PRANATA_PUBLIC_ORIGIN="${PRANATA_PUBLIC_ORIGIN:-http://localhost:3000}"
+    export PRANATA_WEB_INTERNAL_URL="${PRANATA_WEB_INTERNAL_URL:-http://127.0.0.1:3000}"
+    export PRANATA_PURGE_TOKEN="${PRANATA_PURGE_TOKEN:-dev-purge-token}"
+    export PRANATA_MEDIA_DIR="${PRANATA_MEDIA_DIR:-{{ justfile_directory() }}/target/dev-media}"
+    export PRANATA_LISTEN="${PRANATA_LISTEN:-127.0.0.1:8080}"
+    mkdir -p "$PRANATA_MEDIA_DIR"
+    trap 'kill 0' EXIT
+    cargo run -q -- serve &
+    bun run --filter @pranata/web dev &
+    wait -n
 
 # Start the local database container (no-op in CI, where a service container is used).
 db-up:
@@ -50,11 +64,11 @@ gen:
     mv apps/api/openapi.json.tmp apps/api/openapi.json
     @echo "gen: web client codegen (Orval) is not wired yet, it arrives in Task 10"
 
-# Run all tests (the web tests join in Task 10).
-test: test-api
+# Run all tests.
+test: test-api test-web
 
-# Run every check available so far (web and infra checks join in later tasks).
-check: check-api check-trace check-village-data
+# Run every check available so far (infra checks join in later tasks).
+check: check-api check-web check-trace check-village-data
 
 # Validate commit messages from a ref to HEAD.
 check-commits from="origin/main":
@@ -67,9 +81,12 @@ check-api:
     cargo sqlx prepare --workspace --check -- --all-targets
     cargo test --workspace --locked
 
-# Run web checks (Task 10).
+# Run web checks: Biome, typecheck, unit tests, production build.
 check-web:
-    @echo "check-web: not implemented yet (Task 10)"
+    bunx biome ci
+    bun run --filter @pranata/web typecheck
+    bun run --filter @pranata/web test
+    bun run --filter @pranata/web build
 
 # Verify the OpenAPI contract is up to date (Task 10).
 check-contract:
@@ -86,6 +103,10 @@ check-infra:
 # Run decision traceability in strict mode (roadmap-only citations fail).
 check-trace-strict:
     bun tools/trace/trace.ts --strict
+
+# Run web unit tests.
+test-web:
+    bun run --filter @pranata/web test
 
 # Run API tests (needs `just db-up`).
 test-api:
