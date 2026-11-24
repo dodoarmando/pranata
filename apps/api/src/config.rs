@@ -65,10 +65,20 @@ impl Config {
             database_url: required("PRANATA_DATABASE_URL")?,
             migration_database_url: required("PRANATA_MIGRATION_DATABASE_URL")?,
             public_origin: parse("PRANATA_PUBLIC_ORIGIN", &required("PRANATA_PUBLIC_ORIGIN")?)?,
-            web_internal_url: parse(
-                "PRANATA_WEB_INTERNAL_URL",
-                &required("PRANATA_WEB_INTERNAL_URL")?,
-            )?,
+            web_internal_url: {
+                let url = parse(
+                    "PRANATA_WEB_INTERNAL_URL",
+                    &required("PRANATA_WEB_INTERNAL_URL")?,
+                )?;
+                // Plain HTTP on the pod network; the purger has no TLS support.
+                if url.scheme() != "http" {
+                    return Err(ConfigError::Invalid {
+                        name: "PRANATA_WEB_INTERNAL_URL",
+                        reason: "the scheme must be http".to_owned(),
+                    });
+                }
+                url
+            },
             purge_token: SecretString::from(required("PRANATA_PURGE_TOKEN")?),
             media_dir: PathBuf::from(required("PRANATA_MEDIA_DIR")?),
             listen: listen
@@ -113,6 +123,20 @@ mod tests {
         assert_eq!(config.listen.to_string(), "0.0.0.0:8080");
         assert_eq!(config.purge_token.expose_secret(), "s3cret");
         assert_eq!(config.public_origin.as_str(), "https://desa.example/");
+    }
+
+    #[test]
+    fn web_internal_url_must_be_http() {
+        let mut env = env();
+        env.insert("PRANATA_WEB_INTERNAL_URL", "https://web:3000");
+        let err = load(&env).unwrap_err();
+        assert!(matches!(
+            err,
+            ConfigError::Invalid {
+                name: "PRANATA_WEB_INTERNAL_URL",
+                ..
+            }
+        ));
     }
 
     #[test]
