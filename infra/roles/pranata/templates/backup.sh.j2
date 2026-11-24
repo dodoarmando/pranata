@@ -43,6 +43,8 @@ paths=("$dump")
 # The originals are owned by a subordinate uid, so read them from the user namespace.
 if podman unshare test -d "$originals"; then
     paths+=("$originals")
+else
+    echo "pranata-backup: $originals does not exist yet, backing up the database only"
 fi
 podman unshare restic backup --tag pranata "${paths[@]}"
 
