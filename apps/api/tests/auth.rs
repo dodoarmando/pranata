@@ -93,6 +93,17 @@ impl Harness {
         .await
     }
 
+    async fn redeem(&self, token: &str, password: &str) -> Reply {
+        self.send(
+            Method::POST,
+            "/api/auth/access-links/redeem",
+            None,
+            None,
+            Some(json!({"token": token, "password": password})),
+        )
+        .await
+    }
+
     async fn me(&self, token: &str) -> Reply {
         self.send(Method::GET, "/api/auth/me", Some(token), None, None)
             .await
@@ -400,39 +411,20 @@ async fn access_link_sets_password_once(pool: PgPool) {
         auth::create_user_with_access_link(&h.pool, "Siti", "Siti Aminah", h.clock.now_for_test())
             .await
             .unwrap();
-    let uri = format!(
-        "/api/auth/access-links/{}/password",
-        created.access_link_token
-    );
+    let link_token = created.access_link_token.clone();
 
     // No password yet: sign-in is refused.
     let early = h.login("siti", PASSWORD, false).await;
     assert_eq!(early.status, StatusCode::UNAUTHORIZED);
 
-    let set = h
-        .send(
-            Method::POST,
-            &uri,
-            None,
-            None,
-            Some(json!({"password": PASSWORD})),
-        )
-        .await;
+    let set = h.redeem(&link_token, PASSWORD).await;
     assert_eq!(set.status, StatusCode::NO_CONTENT);
     assert_eq!(
         h.login("siti", PASSWORD, false).await.status,
         StatusCode::OK
     );
 
-    let again = h
-        .send(
-            Method::POST,
-            &uri,
-            None,
-            None,
-            Some(json!({"password": "another long password"})),
-        )
-        .await;
+    let again = h.redeem(&link_token, "another long password").await;
     assert_eq!(again.status, StatusCode::GONE);
     assert_eq!(again.body["code"], "access_link_used");
     // The second attempt did not change the password.
@@ -441,15 +433,7 @@ async fn access_link_sets_password_once(pool: PgPool) {
         StatusCode::OK
     );
 
-    let unknown = h
-        .send(
-            Method::POST,
-            "/api/auth/access-links/nope/password",
-            None,
-            None,
-            Some(json!({"password": PASSWORD})),
-        )
-        .await;
+    let unknown = h.redeem("nope", PASSWORD).await;
     assert_eq!(unknown.status, StatusCode::NOT_FOUND);
     assert_eq!(unknown.body["code"], "access_link_not_found");
 
@@ -482,16 +466,8 @@ async fn using_an_access_link_signs_out_existing_sessions(pool: PgPool) {
     .await
     .unwrap();
 
-    let uri = format!("/api/auth/access-links/{link}/password");
-    let set = h
-        .send(
-            Method::POST,
-            &uri,
-            None,
-            None,
-            Some(json!({"password": "a brand new password"})),
-        )
-        .await;
+    let link_token = link;
+    let set = h.redeem(&link_token, "a brand new password").await;
     assert_eq!(set.status, StatusCode::NO_CONTENT);
     assert_eq!(h.me(&token).await.status, StatusCode::UNAUTHORIZED);
     assert_eq!(
@@ -507,21 +483,10 @@ async fn expired_access_link_is_410(pool: PgPool) {
         auth::create_user_with_access_link(&h.pool, "siti", "Siti", h.clock.now_for_test())
             .await
             .unwrap();
-    let uri = format!(
-        "/api/auth/access-links/{}/password",
-        created.access_link_token
-    );
+    let link_token = created.access_link_token.clone();
 
     h.clock.advance(Duration::hours(24));
-    let reply = h
-        .send(
-            Method::POST,
-            &uri,
-            None,
-            None,
-            Some(json!({"password": PASSWORD})),
-        )
-        .await;
+    let reply = h.redeem(&link_token, PASSWORD).await;
     assert_eq!(reply.status, StatusCode::GONE);
     assert_eq!(reply.body["code"], "access_link_expired");
     assert_eq!(
@@ -537,21 +502,10 @@ async fn access_link_works_just_before_it_expires(pool: PgPool) {
         auth::create_user_with_access_link(&h.pool, "siti", "Siti", h.clock.now_for_test())
             .await
             .unwrap();
-    let uri = format!(
-        "/api/auth/access-links/{}/password",
-        created.access_link_token
-    );
+    let link_token = created.access_link_token.clone();
 
     h.clock.advance(Duration::hours(23) + Duration::minutes(59));
-    let reply = h
-        .send(
-            Method::POST,
-            &uri,
-            None,
-            None,
-            Some(json!({"password": PASSWORD})),
-        )
-        .await;
+    let reply = h.redeem(&link_token, PASSWORD).await;
     assert_eq!(reply.status, StatusCode::NO_CONTENT);
 }
 
@@ -562,20 +516,9 @@ async fn short_password_rejected(pool: PgPool) {
         auth::create_user_with_access_link(&h.pool, "siti", "Siti", h.clock.now_for_test())
             .await
             .unwrap();
-    let uri = format!(
-        "/api/auth/access-links/{}/password",
-        created.access_link_token
-    );
+    let link_token = created.access_link_token.clone();
 
-    let reply = h
-        .send(
-            Method::POST,
-            &uri,
-            None,
-            None,
-            Some(json!({"password": "too short"})),
-        )
-        .await;
+    let reply = h.redeem(&link_token, "too short").await;
     assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert_eq!(reply.body["code"], "validation_failed");
     assert_eq!(
@@ -584,15 +527,7 @@ async fn short_password_rejected(pool: PgPool) {
     );
 
     // A rejected password does not burn the link.
-    let ok = h
-        .send(
-            Method::POST,
-            &uri,
-            None,
-            None,
-            Some(json!({"password": PASSWORD})),
-        )
-        .await;
+    let ok = h.redeem(&link_token, PASSWORD).await;
     assert_eq!(ok.status, StatusCode::NO_CONTENT);
 }
 
@@ -652,4 +587,57 @@ async fn audit_entries_survive_user_deactivation(pool: PgPool) {
     .execute(&h.pool)
     .await;
     assert!(ghost.is_err());
+}
+
+/// Collects tracing output so a test can search it.
+#[derive(Clone, Default)]
+struct LogBuffer(Arc<std::sync::Mutex<Vec<u8>>>);
+
+impl std::io::Write for LogBuffer {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.0.lock().unwrap().extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+#[sqlx::test]
+async fn redeeming_an_access_link_logs_no_token_or_password(pool: PgPool) {
+    let logs = LogBuffer::default();
+    let writer = logs.clone();
+    let subscriber = tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::TRACE)
+        .with_writer(move || writer.clone())
+        .finish();
+    let _guard = tracing::subscriber::set_default(subscriber);
+
+    let h = Harness::new(pool);
+    let created =
+        auth::create_user_with_access_link(&h.pool, "siti", "Siti", h.clock.now_for_test())
+            .await
+            .unwrap();
+    let token = created.access_link_token;
+    let secret = "a very secret password";
+
+    // A failed attempt and a successful one.
+    assert_eq!(
+        h.redeem(&token, "short").await.status,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+    assert_eq!(
+        h.redeem(&token, secret).await.status,
+        StatusCode::NO_CONTENT
+    );
+    assert_eq!(h.redeem(&token, secret).await.status, StatusCode::GONE);
+
+    let output = String::from_utf8(logs.0.lock().unwrap().clone()).unwrap();
+    assert!(
+        output.contains("/api/auth/access-links/redeem"),
+        "the request was not captured: {output}"
+    );
+    assert!(!output.contains(&token), "token leaked into the logs");
+    assert!(!output.contains(secret), "password leaked into the logs");
 }

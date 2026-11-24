@@ -112,7 +112,7 @@ async fn create_admin(username: &str, name: &str) -> Result<()> {
             other => anyhow::anyhow!("{other}"),
         })?;
     let origin = config.public_origin.as_str().trim_end_matches('/');
-    println!("{origin}/akses/{}", created.access_link_token);
+    println!("{origin}/akses#{}", created.access_link_token);
     Ok(())
 }
 

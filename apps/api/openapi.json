@@ -10,28 +10,17 @@
 		"version": "0.1.0"
 	},
 	"paths": {
-		"/api/auth/access-links/{token}/password": {
+		"/api/auth/access-links/redeem": {
 			"post": {
 				"tags": ["auth"],
 				"summary": "Set a password with an Access Link. The link works once.",
 				"description": "# Errors\n404 `access_link_not_found`, 410 `access_link_used` or\n`access_link_expired`, 422 `password_length`.",
 				"operationId": "setPasswordWithAccessLink",
-				"parameters": [
-					{
-						"name": "token",
-						"in": "path",
-						"description": "The Access Link token",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
 				"requestBody": {
 					"content": {
 						"application/json": {
 							"schema": {
-								"$ref": "#/components/schemas/SetPasswordRequest"
+								"$ref": "#/components/schemas/RedeemAccessLinkRequest"
 							}
 						}
 					},
@@ -336,6 +325,19 @@
 					}
 				}
 			},
+			"RedeemAccessLinkRequest": {
+				"type": "object",
+				"description": "The Access Link token travels in the body, never in the URL, so request\nlogs and proxies cannot capture it.",
+				"required": ["token", "password"],
+				"properties": {
+					"password": {
+						"type": "string"
+					},
+					"token": {
+						"type": "string"
+					}
+				}
+			},
 			"SessionInfo": {
 				"type": "object",
 				"description": "The signed-in User and the CSRF token to send as `x-csrf-token`.",
@@ -346,15 +348,6 @@
 					},
 					"user": {
 						"$ref": "#/components/schemas/CurrentUser"
-					}
-				}
-			},
-			"SetPasswordRequest": {
-				"type": "object",
-				"required": ["password"],
-				"properties": {
-					"password": {
-						"type": "string"
 					}
 				}
 			},

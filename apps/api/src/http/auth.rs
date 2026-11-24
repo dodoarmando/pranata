@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::State,
     http::{HeaderValue, StatusCode, header},
     response::{AppendHeaders, IntoResponse},
 };
@@ -38,8 +38,11 @@ pub struct SessionInfo {
     pub csrf_token: String,
 }
 
+/// The Access Link token travels in the body, never in the URL, so request
+/// logs and proxies cannot capture it.
 #[derive(Debug, Deserialize, ToSchema)]
-pub struct SetPasswordRequest {
+pub struct RedeemAccessLinkRequest {
+    pub token: String,
     pub password: String,
 }
 
@@ -217,11 +220,10 @@ pub async fn get_me(session: AuthSession) -> impl IntoResponse {
 /// `access_link_expired`, 422 `password_length`.
 #[utoipa::path(
     post,
-    path = "/auth/access-links/{token}/password",
+    path = "/auth/access-links/redeem",
     operation_id = "setPasswordWithAccessLink",
     tag = "auth",
-    params(("token" = String, Path, description = "The Access Link token")),
-    request_body = SetPasswordRequest,
+    request_body = RedeemAccessLinkRequest,
     responses(
         (status = 204, description = "Password set; the link is used up"),
         (status = 404, description = "Unknown link (code access_link_not_found)", body = Problem, content_type = "application/problem+json"),
@@ -231,10 +233,15 @@ pub async fn get_me(session: AuthSession) -> impl IntoResponse {
 )]
 pub async fn set_password_with_access_link(
     State(state): State<AppState>,
-    Path(token): Path<String>,
-    Json(request): Json<SetPasswordRequest>,
+    Json(request): Json<RedeemAccessLinkRequest>,
 ) -> Result<StatusCode, ApiError> {
-    access_link::redeem(&state.db, &token, &request.password, state.clock.now()).await?;
+    access_link::redeem(
+        &state.db,
+        &request.token,
+        &request.password,
+        state.clock.now(),
+    )
+    .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
