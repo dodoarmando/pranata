@@ -437,13 +437,75 @@ async fn fake_web(status: &str) -> (String, tokio::task::JoinHandle<String>) {
     (url, task)
 }
 
+/// Queue a purge job directly, as the save does, without the inline purge.
+async fn enqueue_purge(h: &Harness) {
+    let mut conn = h.pool.acquire().await.unwrap();
+    jobs::enqueue(
+        &mut conn,
+        jobs::Job::PurgePublicCache,
+        time::OffsetDateTime::now_utc(),
+    )
+    .await
+    .unwrap();
+}
+
+#[sqlx::test]
+async fn profile_save_purges_before_responding(pool: PgPool) {
+    let (url, request) = fake_web("204 No Content").await;
+    let h = Harness::with_state(pool.clone(), test_state_with_web(pool, &url)).await;
+    let updated_at = h.get_profile().await.body["updated_at"].clone();
+    let put = h
+        .put_profile(
+            &json!({"overview": doc("A"), "hero_asset_id": null, "updated_at": updated_at}),
+        )
+        .await;
+    assert_eq!(put.status, StatusCode::OK, "{}", put.body);
+
+    // The stand-in web server has the purge by the time the PUT has returned
+    // (no worker was run), and the redundant job is marked done.
+    let request = tokio::time::timeout(std::time::Duration::from_secs(1), request)
+        .await
+        .expect("the purge was not sent before the answer")
+        .unwrap()
+        .to_lowercase();
+    assert!(
+        request.starts_with("post /_internal/cache/purge "),
+        "{request}"
+    );
+    let done = sqlx::query_scalar!(
+        r#"SELECT done_at IS NOT NULL AS "done!" FROM jobs WHERE kind = 'purge_public_cache'"#
+    )
+    .fetch_one(&h.pool)
+    .await
+    .unwrap();
+    assert!(done);
+}
+
+#[sqlx::test]
+async fn profile_save_keeps_the_purge_job_when_the_inline_purge_fails(pool: PgPool) {
+    let (url, _request) = fake_web("503 Service Unavailable").await;
+    let h = Harness::with_state(pool.clone(), test_state_with_web(pool, &url)).await;
+    let updated_at = h.get_profile().await.body["updated_at"].clone();
+    let put = h
+        .put_profile(
+            &json!({"overview": doc("A"), "hero_asset_id": null, "updated_at": updated_at}),
+        )
+        .await;
+    assert_eq!(put.status, StatusCode::OK, "{}", put.body);
+    let pending: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM jobs WHERE kind = 'purge_public_cache' AND done_at IS NULL",
+    )
+    .fetch_one(&h.pool)
+    .await
+    .unwrap();
+    assert_eq!(pending, 1);
+}
+
 #[sqlx::test]
 async fn purge_job_posts_the_token_and_completes(pool: PgPool) {
     let (url, request) = fake_web("204 No Content").await;
     let h = Harness::with_state(pool.clone(), test_state_with_web(pool, &url)).await;
-    let updated_at = h.get_profile().await.body["updated_at"].clone();
-    h.put_profile(&json!({"overview": doc("A"), "hero_asset_id": null, "updated_at": updated_at}))
-        .await;
+    enqueue_purge(&h).await;
     assert!(jobs::claim_and_run(&h.state).await.unwrap());
 
     let request = request.await.unwrap().to_lowercase();
@@ -471,9 +533,7 @@ async fn purge_job_retries_when_web_is_down(pool: PgPool) {
     let url = format!("http://{}", closed.local_addr().unwrap());
     drop(closed);
     let h = Harness::with_state(pool.clone(), test_state_with_web(pool, &url)).await;
-    let updated_at = h.get_profile().await.body["updated_at"].clone();
-    h.put_profile(&json!({"overview": doc("A"), "hero_asset_id": null, "updated_at": updated_at}))
-        .await;
+    enqueue_purge(&h).await;
     assert!(jobs::claim_and_run(&h.state).await.unwrap());
 
     let job = sqlx::query!(
@@ -493,9 +553,7 @@ async fn purge_job_retries_when_web_is_down(pool: PgPool) {
 async fn purge_job_retries_on_a_non_2xx_answer(pool: PgPool) {
     let (url, _request) = fake_web("503 Service Unavailable").await;
     let h = Harness::with_state(pool.clone(), test_state_with_web(pool, &url)).await;
-    let updated_at = h.get_profile().await.body["updated_at"].clone();
-    h.put_profile(&json!({"overview": doc("A"), "hero_asset_id": null, "updated_at": updated_at}))
-        .await;
+    enqueue_purge(&h).await;
     assert!(jobs::claim_and_run(&h.state).await.unwrap());
     let job = sqlx::query!(
         r#"SELECT attempts, done_at, run_at > now() AS "later!" FROM jobs WHERE kind = 'purge_public_cache'"#

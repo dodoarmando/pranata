@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use axum::{Json, extract::State};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -82,7 +84,37 @@ pub async fn put_village_profile(
     user: CurrentUser,
     Json(input): Json<ProfileUpdate>,
 ) -> Result<Json<Profile>, ApiError> {
-    profile::update(&state.db, user.id, input).await.map(Json)
+    let saved = profile::update(&state.db, user.id, input).await?;
+    purge_now(&state).await;
+    Ok(Json(saved))
+}
+
+/// How long a save waits for the web server to drop its cached pages.
+const INLINE_PURGE_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// D-12: the next public request after a save must already be fresh, so the
+/// purge runs before the answer instead of waiting for the job worker. When it
+/// fails the queued job stays as the retry; when it works that job is redundant
+/// (a purge is idempotent) and is marked done.
+async fn purge_now(state: &AppState) {
+    match tokio::time::timeout(INLINE_PURGE_TIMEOUT, state.purger.purge_all()).await {
+        Ok(Ok(())) => {
+            let done = sqlx::query(
+                "UPDATE jobs SET done_at = now()
+                 WHERE kind = 'purge_public_cache' AND done_at IS NULL
+                   AND failed_at IS NULL AND locked_until IS NULL",
+            )
+            .execute(&state.db)
+            .await;
+            if let Err(error) = done {
+                tracing::warn!(%error, "could not mark the purge job done; it will run harmlessly");
+            }
+        }
+        Ok(Err(error)) => {
+            tracing::warn!(%error, "inline cache purge failed; the queued job will retry");
+        }
+        Err(_) => tracing::warn!("inline cache purge timed out; the queued job will retry"),
+    }
 }
 
 pub fn router() -> OpenApiRouter<AppState> {
