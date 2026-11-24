@@ -13,7 +13,7 @@ pub enum ConfigError {
     Invalid { name: &'static str, reason: String },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Config {
     pub database_url: String,
     pub migration_database_url: String,
@@ -22,6 +22,20 @@ pub struct Config {
     pub purge_token: SecretString,
     pub media_dir: PathBuf,
     pub listen: SocketAddr,
+}
+
+impl std::fmt::Debug for Config {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Config")
+            .field("database_url", &"[redacted]")
+            .field("migration_database_url", &"[redacted]")
+            .field("public_origin", &self.public_origin)
+            .field("web_internal_url", &self.web_internal_url)
+            .field("purge_token", &"[redacted]")
+            .field("media_dir", &self.media_dir)
+            .field("listen", &self.listen)
+            .finish()
+    }
 }
 
 impl Config {
@@ -110,8 +124,11 @@ mod tests {
     }
 
     #[test]
-    fn debug_output_hides_the_purge_token() {
+    fn debug_output_hides_secrets() {
         let config = load(&env()).unwrap();
-        assert!(!format!("{config:?}").contains("s3cret"));
+        let debug = format!("{config:?}");
+        for secret in ["s3cret", "apppw", "ownerpw"] {
+            assert!(!debug.contains(secret), "leaked {secret}");
+        }
     }
 }
