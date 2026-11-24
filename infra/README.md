@@ -121,7 +121,7 @@ the village (this is the `<host>` you pass to `just`).
 | `pranata_version`           | The release to install, for example `0.1.0`. It is the tag of the published images. Required. |
 | `pranata_tls`               | `acme` (Let's Encrypt through Caddy). `internal` is for tests only.                       |
 | `pranata_village_code`      | The village's official region code. Used once, on the first run.                          |
-| `pranata_admin_username`    | The first Administrator's sign-in name: 3 to 64 characters of `a-z`, `0-9`, `.`, `_`, `-`. |
+| `pranata_admin_username`    | The first Administrator's sign-in name: 3 to 64 characters of `a-z`, `0-9`, `.`, `_`, `-`, starting with a letter or digit. |
 | `pranata_admin_name`        | The first Administrator's display name.                                                  |
 | `pranata_db_owner_password` | Password of the database owner role. Secret.                                             |
 | `pranata_db_app_password`   | Password of the database role the API uses. Secret.                                      |
