@@ -98,7 +98,10 @@ function cleanNode(node: unknown): RichTextNode[] {
 	if (CONTAINERS.has(type)) {
 		const clean: RichTextNode = { type, content: cleanChildren(node) };
 		if (type === "heading") {
-			const level = typeof attrs.level === "number" ? attrs.level : 2;
+			const level =
+				typeof attrs.level === "number" && Number.isFinite(attrs.level)
+					? attrs.level
+					: 2;
 			clean.attrs = { level: Math.min(4, Math.max(2, Math.round(level))) };
 		}
 		return [clean];

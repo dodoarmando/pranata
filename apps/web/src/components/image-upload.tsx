@@ -1,7 +1,7 @@
 import { CheckCircle2Icon, ImagePlusIcon, RotateCcwIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/api/fetcher";
-import { getMedia, useUploadMedia } from "@/api/generated/media/media";
+import { getMedia, uploadMedia } from "@/api/generated/media/media";
 import type { MediaAsset } from "@/api/generated/model";
 import { Button } from "@/components/ui/button";
 import { FilePicker } from "@/components/ui/file-picker";
@@ -52,7 +52,18 @@ function errorText(error: unknown): string {
 	return error instanceof ApiError ? messageFor(error.code) : OFFLINE;
 }
 
-const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const sleep = (ms: number, signal: AbortSignal) =>
+	new Promise<void>((resolve) => {
+		const timer = setTimeout(resolve, ms);
+		signal.addEventListener(
+			"abort",
+			() => {
+				clearTimeout(timer);
+				resolve();
+			},
+			{ once: true },
+		);
+	});
 
 export function ImageUpload({
 	onUploaded,
@@ -64,18 +75,23 @@ export function ImageUpload({
 	label?: string;
 }>) {
 	const [items, setItems] = useState<Item[]>([]);
-	const upload = useUploadMedia();
 	const queue = useRef<Item[]>([]);
 	const running = useRef(false);
 	const nextKey = useRef(0);
 	const alive = useRef(true);
+	const abort = useRef<AbortController | null>(null);
 	const onUploadedRef = useRef(onUploaded);
 	onUploadedRef.current = onUploaded;
 
 	useEffect(() => {
 		alive.current = true;
+		abort.current = new AbortController();
 		return () => {
+			// Unmounting (e.g. the insert dialog closing) cancels in-flight
+			// requests and drops files that were still queued.
 			alive.current = false;
+			queue.current = [];
+			abort.current?.abort();
 		};
 	}, []);
 
@@ -89,16 +105,18 @@ export function ImageUpload({
 	// Polls until the server finished the image jobs; tolerates dropped
 	// connections because the signal on a phone comes and goes.
 	const waitUntilReady = useCallback(
-		async (first: MediaAsset): Promise<MediaAsset> => {
+		async (first: MediaAsset, signal: AbortSignal): Promise<MediaAsset> => {
 			let asset = first;
 			const started = Date.now();
 			for (let attempt = 0; asset.status === "pending"; attempt++) {
 				if (!alive.current) return asset;
 				if (Date.now() - started > POLL_TIMEOUT_MS) throw new Error(TIMEOUT);
-				await sleep(pollDelay(attempt));
+				await sleep(pollDelay(attempt), signal);
+				if (signal.aborted) return asset;
 				try {
-					asset = await getMedia(first.id);
+					asset = await getMedia(first.id, { signal });
 				} catch (error) {
+					if (signal.aborted) return asset;
 					if (error instanceof ApiError) throw error;
 				}
 			}
@@ -109,15 +127,19 @@ export function ImageUpload({
 
 	const process = useCallback(
 		async (item: Item) => {
+			const signal = abort.current?.signal;
+			if (!signal || signal.aborted) return;
 			try {
 				patch(item.key, { phase: "resizing", error: null });
 				const blob = await downscaleImage(item.file);
 				patch(item.key, { phase: "uploading" });
-				const created = await upload.mutateAsync({
-					data: { file: blob, kind: "image" },
-				});
+				const created = await uploadMedia(
+					{ file: blob, kind: "image" },
+					{ signal },
+				);
 				patch(item.key, { phase: "processing" });
-				const asset = await waitUntilReady(created);
+				const asset = await waitUntilReady(created, signal);
+				if (signal.aborted) return;
 				if (asset.status === "failed") {
 					patch(item.key, { phase: "failed", error: FAILED });
 					return;
@@ -127,6 +149,7 @@ export function ImageUpload({
 					onUploadedRef.current(asset);
 				}
 			} catch (error) {
+				if (signal.aborted) return;
 				const message =
 					error instanceof Error && error.message === TIMEOUT
 						? TIMEOUT
@@ -134,7 +157,7 @@ export function ImageUpload({
 				patch(item.key, { phase: "failed", error: message });
 			}
 		},
-		[patch, upload.mutateAsync, waitUntilReady],
+		[patch, waitUntilReady],
 	);
 
 	// Files go up one at a time so a slow connection is not split across many

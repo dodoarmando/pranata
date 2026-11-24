@@ -107,6 +107,19 @@ describe("sanitizeDoc", () => {
 	});
 });
 
+describe("heading levels", () => {
+	it("clamps to 2-4 and treats NaN as 2", () => {
+		const level = (value: number) =>
+			sanitizeDoc({
+				type: "doc",
+				content: [{ type: "heading", attrs: { level: value }, content: [] }],
+			}).content[0]?.attrs?.level;
+		expect(level(Number.NaN)).toBe(2);
+		expect(level(9)).toBe(4);
+		expect(level(3)).toBe(3);
+	});
+});
+
 describe("isEmptyDoc and asDoc", () => {
 	it("treats blank paragraphs as empty", () => {
 		expect(
