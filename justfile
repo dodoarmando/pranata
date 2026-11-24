@@ -1,5 +1,8 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
+# Dev defaults for sqlx macros and tests (trust auth, dev container only).
+export DATABASE_URL := env("DATABASE_URL", "postgres://postgres@127.0.0.1:55432/pranata")
+
 # List available recipes.
 default:
     @just --list
@@ -12,33 +15,55 @@ install:
 dev:
     @echo "dev: not implemented yet (Task 10)"
 
-# Start the local database container (Task 3).
+# Start the local database container (no-op in CI, where a service container is used).
 db-up:
-    @echo "db-up: not implemented yet (Task 3)"
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -n "${CI:-}" ]; then
+        echo "db-up: CI is set, skipping (CI provides its own postgres)"
+        exit 0
+    fi
+    if podman container exists pranata-db; then
+        podman start pranata-db >/dev/null
+    else
+        podman run -d --name pranata-db \
+            -e POSTGRES_HOST_AUTH_METHOD=trust \
+            -e POSTGRES_DB=pranata \
+            -p 127.0.0.1:55432:5432 \
+            -v "{{ justfile_directory() }}/infra/dev/postgres-init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro,z" \
+            docker.io/library/postgres:19 >/dev/null
+    fi
+    until podman exec pranata-db pg_isready -U postgres -d pranata -h 127.0.0.1 >/dev/null 2>&1; do
+        sleep 1
+    done
+    echo "db-up: postgres ready on 127.0.0.1:55432"
 
-# Apply database migrations (Task 3).
+# Apply database migrations with the owner role.
 db-migrate:
-    @echo "db-migrate: not implemented yet (Task 3)"
+    cargo run -q -- migrate
 
-# Generate the OpenAPI contract and web client (Task 3).
+# Generate the OpenAPI contract (the web client codegen arrives in Task 10).
 gen:
-    @echo "gen: not implemented yet (Task 3)"
+    cargo run -q -- openapi | bunx biome format --stdin-file-path=apps/api/openapi.json > apps/api/openapi.json.tmp
+    mv apps/api/openapi.json.tmp apps/api/openapi.json
+    @echo "gen: web client codegen (Orval) is not wired yet, it arrives in Task 10"
 
-# Run all tests (Task 3).
-test:
-    @echo "test: not implemented yet (Task 3)"
+# Run all tests (the web tests join in Task 10).
+test: test-api
 
-# Run every check (Task 3).
-check:
-    @echo "check: not implemented yet (Task 3)"
+# Run every check available so far (web and infra checks join in later tasks).
+check: check-api check-trace check-village-data
 
 # Validate commit messages from a ref to HEAD.
 check-commits from="origin/main":
     bunx commitlint --from {{ from }} --to HEAD
 
-# Run API checks (Task 3).
+# Run API checks: format, clippy pedantic, sqlx offline data, tests.
 check-api:
-    @echo "check-api: not implemented yet (Task 3)"
+    cargo fmt --all --check
+    cargo clippy --workspace --all-targets --locked -- -D warnings
+    cargo sqlx prepare --workspace --check -- --all-targets
+    cargo test --workspace --locked
 
 # Run web checks (Task 10).
 check-web:
@@ -60,9 +85,9 @@ check-infra:
 check-trace-strict:
     bun tools/trace/trace.ts --strict
 
-# Run API tests (Task 3).
+# Run API tests (needs `just db-up`).
 test-api:
-    @echo "test-api: not implemented yet (Task 3)"
+    cargo test --workspace --locked
 
 # Provision one Installation (Task 16).
 provision:
