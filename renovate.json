@@ -16,10 +16,14 @@
 			]
 		},
 		{
-			"description": "Container images pinned in scripts and the justfile",
+			"description": "Container images pinned in scripts, the justfile and the Ansible role defaults",
 			"customType": "regex",
 			"datasourceTemplate": "docker",
-			"managerFilePatterns": ["/^justfile$/", "/^infra/dev/stack\\.sh$/"],
+			"managerFilePatterns": [
+				"/^justfile$/",
+				"/^infra/dev/stack\\.sh$/",
+				"/^infra/roles/pranata/defaults/main\\.yml$/"
+			],
 			"matchStrings": [
 				"(?<depName>docker\\.io/[a-z0-9._/-]+):(?<currentValue>[0-9][A-Za-z0-9._-]*)"
 			]
