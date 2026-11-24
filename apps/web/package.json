@@ -6,7 +6,7 @@
 		"dev": "rsbuild dev",
 		"build": "rsbuild build",
 		"typecheck": "tsc --noEmit",
-		"test": "rstest run",
+		"test": "rsbuild build && rstest run",
 		"gen": "orval --config orval.config.ts"
 	},
 	"dependencies": {
