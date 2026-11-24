@@ -28,6 +28,36 @@
 					}
 				}
 			}
+		},
+		"/api/public/village": {
+			"get": {
+				"tags": ["public"],
+				"summary": "The Village profile shown on the public site.",
+				"description": "# Errors\n404 `village_not_initialized` before `pranata village init` has run.",
+				"operationId": "getPublicVillage",
+				"responses": {
+					"200": {
+						"description": "The Village profile",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/VillageProfile"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "The Village is not initialised yet (code village_not_initialized)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 	},
 	"components": {
@@ -82,6 +112,40 @@
 					},
 					"type": {
 						"type": "string"
+					}
+				}
+			},
+			"VillageProfile": {
+				"type": "object",
+				"description": "What the public site shows about the Village.",
+				"required": [
+					"code",
+					"name",
+					"district",
+					"regency",
+					"province",
+					"time_zone"
+				],
+				"properties": {
+					"code": {
+						"type": "string",
+						"description": "Dotted 10-digit village code."
+					},
+					"district": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"province": {
+						"type": "string"
+					},
+					"regency": {
+						"type": "string"
+					},
+					"time_zone": {
+						"type": "string",
+						"description": "IANA time zone name."
 					}
 				}
 			}

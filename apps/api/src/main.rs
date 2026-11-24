@@ -1,5 +1,7 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
+use pranata::region_codes::VillageCode;
+use pranata::village::{self, InitError};
 use pranata::{AppState, Config, db, openapi};
 use std::sync::Arc;
 use tracing_subscriber::{EnvFilter, fmt};
@@ -19,6 +21,21 @@ enum Command {
     Migrate,
     /// Print the `OpenAPI` document as JSON.
     Openapi,
+    /// Manage the Installation's Village.
+    Village {
+        #[command(subcommand)]
+        command: VillageCommand,
+    },
+}
+
+#[derive(Subcommand)]
+enum VillageCommand {
+    /// Create the Village from its code (fails when one already exists).
+    Init {
+        /// Village code, dotted (14.05.03.2002) or plain (1405032002).
+        #[arg(long)]
+        code: String,
+    },
 }
 
 #[tokio::main]
@@ -33,10 +50,32 @@ async fn main() -> Result<()> {
             let config = Config::from_env().context("loading configuration")?;
             db::migrate(&config.migration_database_url).await
         }
+        Command::Village {
+            command: VillageCommand::Init { code },
+        } => village_init(&code).await,
         Command::Serve => {
             init_tracing();
             serve().await
         }
+    }
+}
+
+async fn village_init(code: &str) -> Result<()> {
+    let code = VillageCode::parse(code).context("invalid village code")?;
+    let config = Config::from_env().context("loading configuration")?;
+    // The app role cannot insert into `village`; initialisation is an owner task.
+    let pool = db::connect(&config.migration_database_url).await?;
+    match village::init(&pool, &code).await {
+        Ok(profile) => {
+            println!(
+                "Village initialised: {} ({}, {}, {})",
+                profile.name, profile.district, profile.regency, profile.province
+            );
+            Ok(())
+        }
+        Err(InitError::UnknownCode) => anyhow::bail!("village code {code} is not in the dataset"),
+        Err(InitError::AlreadyInitialised) => anyhow::bail!("a village is already initialised"),
+        Err(InitError::Internal(error)) => Err(error),
     }
 }
 

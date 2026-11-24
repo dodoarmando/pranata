@@ -1,6 +1,7 @@
 pub mod health;
 pub mod request_id;
 pub mod security_headers;
+pub mod village;
 
 use axum::{Router, middleware};
 use utoipa::OpenApi;
@@ -11,7 +12,8 @@ use crate::{ApiError, AppState, openapi::ApiDoc};
 /// Routes plus their `OpenAPI` metadata. Later tasks nest more routers here.
 #[must_use]
 pub fn api_router() -> OpenApiRouter<AppState> {
-    OpenApiRouter::with_openapi(ApiDoc::openapi()).nest("/api", health::router())
+    OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .nest("/api", health::router().merge(village::router()))
 }
 
 pub fn router(state: AppState) -> Router {
