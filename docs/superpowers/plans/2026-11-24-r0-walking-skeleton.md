@@ -123,7 +123,7 @@ These are outward-facing actions. The executor runs each command only after the 
 **Interfaces:**
 - Produces: CLI `bun tools/trace/trace.ts [--strict]`.
   - Reads `docs/superpowers/specs/*.md` for decision headings matching `^\*\*(D-\d{2,3}) `.
-  - Reads `docs/superpowers/plans/*.md` for task `**Decisions:**` lines, roadmap table rows (`| Pnn … | D-xx, D-yy |`) and the `**Not built:**` line.
+  - Reads `docs/superpowers/plans/*.md` for task `**Decisions:**` lines, roadmap table rows (`| R1-A … | D-xx, D-yy |`) and the `**Not built:**` line.
   - Exit 0 or 1, with a report on stdout.
 - `export function check(specs: string[], plans: string[], strict: boolean): { ok: boolean; missing: string[]; tasksWithoutDecisions: string[]; unknown: string[] }`
 
@@ -608,11 +608,11 @@ Each plan below is written with the writing-plans skill once R0's code exists, s
 
 | Plan | Scope | Decisions |
 |---|---|---|
-| P2 Access | Roles and the fixed Permission catalogue (including `budget.manage`), passkeys, sudo mode, login throttling, Users screen, Roles screen, Audit Log screen, Access Link issuing from the admin, login carousel | D-30, D-31, D-32, D-33, D-34, D-35, D-21, D-38, D-39 |
-| P3 Village | Setup Wizard, Village Settings (logo, colour, Hamlet naming, office hours, contacts, social links, tile source, external service URL), region tree, Positions/Tenures/Officials, Institutions, Indeks Desa Editions, map with Landmarks and boundary | D-02, D-21, D-22, D-24, D-29, D-57, D-39, D-06 |
-| P4 Website content | Publication workflow, News Posts, Announcements, Events, Pages, Albums, Important Contacts and Contact Categories, Partners, Transparency Documents, APBDes Summaries, Quick Links, Categories, Home Hero, Head's Welcome, search API, slugs and redirects, dashboard | D-23, D-25, D-26, D-27, D-28, D-17, D-18, D-24, D-12, D-14, D-39 |
-| P5 Public site | Every public page of D-03, home sections in order, hidden sections and the external service button, accessibility panel, SEO (sitemap, RSS, structured data, Open Graph), 404, mobile-first layouts, extended k6 scenario | D-03, D-04, D-06, D-07, D-08, D-09, D-19, D-20, D-58, D-57, D-11 |
-| P6 Operations and release | N/N-1 migration compatibility test, multi-Installation deploy, monitoring docs, demo seed, the stranger install test, R1 release checklist with strict trace | D-50, D-51, D-52, D-53, D-54, D-56, D-01, D-46, D-55, D-10, D-15, D-16, D-36, D-37, D-40, D-41, D-42, D-43, D-44, D-45, D-47, D-48, D-49, D-59, D-60, D-13 |
+| R1-A Access | Roles and the fixed Permission catalogue (including `budget.manage`), passkeys, sudo mode, login throttling, Users screen, Roles screen, Audit Log screen, Access Link issuing from the admin, login carousel | D-30, D-31, D-32, D-33, D-34, D-35, D-21, D-38, D-39 |
+| R1-B Village | Setup Wizard, Village Settings (logo, colour, Hamlet naming, office hours, contacts, social links, tile source, external service URL), region tree, Positions/Tenures/Officials, Institutions, Indeks Desa Editions, map with Landmarks and boundary | D-02, D-21, D-22, D-24, D-29, D-57, D-39, D-06 |
+| R1-C Website content | Publication workflow, News Posts, Announcements, Events, Pages, Albums, Important Contacts and Contact Categories, Partners, Transparency Documents, APBDes Summaries, Quick Links, Categories, Home Hero, Head's Welcome, search API, slugs and redirects, dashboard | D-23, D-25, D-26, D-27, D-28, D-17, D-18, D-24, D-12, D-14, D-39 |
+| R1-D Public site | Every public page of D-03, home sections in order, hidden sections and the external service button, accessibility panel, SEO (sitemap, RSS, structured data, Open Graph), 404, mobile-first layouts, extended k6 scenario | D-03, D-04, D-06, D-07, D-08, D-09, D-19, D-20, D-58, D-57, D-11 |
+| R1-E Operations and release | N/N-1 migration compatibility test, multi-Installation deploy, monitoring docs, demo seed, the stranger install test, R1 release checklist with strict trace | D-50, D-51, D-52, D-53, D-54, D-56, D-01, D-46, D-55, D-10, D-15, D-16, D-36, D-37, D-40, D-41, D-42, D-43, D-44, D-45, D-47, D-48, D-49, D-59, D-60, D-13 |
 
 **Not built:** D-05 (WordPress import is a non-goal).
 
