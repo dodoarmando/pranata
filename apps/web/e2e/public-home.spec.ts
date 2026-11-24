@@ -10,7 +10,8 @@ import {
 } from "./stack";
 
 const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];
-const JS_BUDGET_BYTES = 120 * 1024;
+// size-limit counts 1 KB as 1000 bytes; use the same unit for both gates.
+const JS_BUDGET_BYTES = 120_000;
 
 // Bytes on the wire for a gzip-capable client (the budget is stated in gzip).
 function gzipBytes(url: string): Promise<number> {

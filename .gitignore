@@ -20,3 +20,6 @@ dist/
 coverage/
 playwright-report/
 test-results/
+
+# Lighthouse CI scratch
+.lighthouseci/

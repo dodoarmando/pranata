@@ -145,9 +145,23 @@ e2e: images
     bunx playwright install chromium
     bunx playwright test
 
-# Run performance checks (Task 14).
-perf:
-    @echo "perf: not implemented yet (Task 14)"
+# Run Lighthouse CI (mobile, `/`) and the bundle size limit against the images.
+perf: images
+    #!/usr/bin/env bash
+    set -euo pipefail
+    root="{{ justfile_directory() }}"
+    trap '"$root/infra/dev/stack.sh" down' EXIT
+    "$root/infra/dev/stack.sh" up
+    "$root/load/seed.sh"
+    rm -rf "$root/target/lighthouse"
+    cd "$root/apps/web"
+    bunx playwright install chromium
+    bun run build
+    bun run size
+    bunx lhci autorun --config=lighthouserc.cjs
+    for report in "$root"/target/lighthouse/*.report.json; do
+        jq -r '"lighthouse: performance \(.categories.performance.score) accessibility \(.categories.accessibility.score) lcp \(.audits["largest-contentful-paint"].displayValue) tbt \(.audits["total-blocking-time"].displayValue)"' "$report"
+    done
 
 # Run load tests (Task 14).
 load:
