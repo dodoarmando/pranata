@@ -388,7 +388,7 @@ fn render_youtube(node: &Value, out: &mut String) {
     let _ = write!(
         out,
         "<a class=\"yt-facade\" href=\"https://www.youtube.com/watch?v={id}\" data-video-id=\"{id}\">\
-         <img src=\"{YOUTUBE_PLACEHOLDER}\" alt=\"Play video\" loading=\"lazy\" decoding=\"async\"></a>"
+         <img src=\"{YOUTUBE_PLACEHOLDER}\" alt=\"Putar video\" loading=\"lazy\" decoding=\"async\"></a>"
     );
 }
 

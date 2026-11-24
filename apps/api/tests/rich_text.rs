@@ -103,6 +103,7 @@ fn youtube_renders_facade_without_iframe() {
         "<a class=\"yt-facade\" href=\"https://www.youtube.com/watch?v=dQw4w9WgXcQ\" data-video-id=\"dQw4w9WgXcQ\">"
     ));
     assert!(html.contains("/assets/youtube-placeholder.svg"));
+    assert!(html.contains("alt=\"Putar video\""), "{html}");
     assert!(!html.contains("ytimg.com"));
 }
 
