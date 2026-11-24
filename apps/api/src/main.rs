@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use pranata::auth::session::SystemClock;
+use pranata::auth::session::{SessionClock, SystemClock};
 use pranata::region_codes::VillageCode;
 use pranata::village::{self, InitError};
-use pranata::{AppState, Config, db, openapi};
+use pranata::{AppState, Config, auth, db, openapi};
 use std::sync::Arc;
 use tracing_subscriber::{EnvFilter, fmt};
 
@@ -22,10 +22,28 @@ enum Command {
     Migrate,
     /// Print the `OpenAPI` document as JSON.
     Openapi,
+    /// Manage Users.
+    User {
+        #[command(subcommand)]
+        command: UserCommand,
+    },
     /// Manage the Installation's Village.
     Village {
         #[command(subcommand)]
         command: VillageCommand,
+    },
+}
+
+#[derive(Subcommand)]
+enum UserCommand {
+    /// Create a User and print the Access Link (valid 24 hours) that lets them
+    /// set a password. In R0 every User has full access.
+    CreateAdmin {
+        /// Sign-in name: 3 to 64 of a-z, 0-9, dot, underscore, hyphen.
+        username: String,
+        /// Name shown in the interface.
+        #[arg(long = "name")]
+        name: String,
     },
 }
 
@@ -51,6 +69,9 @@ async fn main() -> Result<()> {
             let config = Config::from_env().context("loading configuration")?;
             db::migrate(&config.migration_database_url).await
         }
+        Command::User {
+            command: UserCommand::CreateAdmin { username, name },
+        } => create_admin(&username, &name).await,
         Command::Village {
             command: VillageCommand::Init { code },
         } => village_init(&code).await,
@@ -78,6 +99,21 @@ async fn village_init(code: &str) -> Result<()> {
         Err(InitError::AlreadyInitialised) => anyhow::bail!("a village is already initialised"),
         Err(InitError::Internal(error)) => Err(error),
     }
+}
+
+async fn create_admin(username: &str, name: &str) -> Result<()> {
+    let config = Config::from_env().context("loading configuration")?;
+    // Users are an application concern, so this uses the app role's URL.
+    let pool = db::connect(&config.database_url).await?;
+    let created = auth::create_user_with_access_link(&pool, username, name, SystemClock.now())
+        .await
+        .map_err(|error| match error {
+            pranata::ApiError::Internal(error) => error,
+            other => anyhow::anyhow!("{other}"),
+        })?;
+    let origin = config.public_origin.as_str().trim_end_matches('/');
+    println!("{origin}/akses/{}", created.access_link_token);
+    Ok(())
 }
 
 fn init_tracing() {
