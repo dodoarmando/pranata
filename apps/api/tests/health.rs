@@ -79,3 +79,34 @@ async fn not_found_carries_request_id_and_security_headers(pool: PgPool) {
     assert_eq!(headers["x-frame-options"], "DENY");
     assert_eq!(headers["strict-transport-security"], "max-age=31536000");
 }
+
+#[sqlx::test]
+async fn readyz_is_ok_while_the_database_answers(pool: PgPool) {
+    let response = get(pool, "/api/readyz", None).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let json: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json, json!({"status": "ok"}));
+}
+
+#[sqlx::test]
+async fn readyz_is_503_when_the_database_is_gone(pool: PgPool) {
+    pool.close().await;
+    let response = get(pool, "/api/readyz", None).await;
+    assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(
+        response.headers()[header::CONTENT_TYPE],
+        "application/problem+json"
+    );
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let json: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["code"], "database_unavailable");
+    assert_eq!(json["status"], 503);
+}
+
+#[sqlx::test]
+async fn healthz_stays_up_without_the_database(pool: PgPool) {
+    pool.close().await;
+    let response = get(pool, "/api/healthz", None).await;
+    assert_eq!(response.status(), StatusCode::OK);
+}

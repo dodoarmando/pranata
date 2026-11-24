@@ -516,6 +516,35 @@
 					}
 				}
 			}
+		},
+		"/api/readyz": {
+			"get": {
+				"tags": ["ops"],
+				"summary": "Readiness probe for an external uptime check: the API is up and the\ndatabase answers. `/healthz` stays a pure liveness probe.",
+				"operationId": "readyz",
+				"responses": {
+					"200": {
+						"description": "The API is up and the database answers",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Ready"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "The database does not answer (code database_unavailable)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 	},
 	"components": {
@@ -720,6 +749,15 @@
 						"type": "string",
 						"format": "date-time",
 						"description": "Opaque value; send back exactly as received."
+					}
+				}
+			},
+			"Ready": {
+				"type": "object",
+				"required": ["status"],
+				"properties": {
+					"status": {
+						"type": "string"
 					}
 				}
 			},

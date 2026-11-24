@@ -18,6 +18,7 @@ export * from './profile';
 export * from './profileOverview';
 export * from './profileUpdate';
 export * from './profileUpdateOverview';
+export * from './ready';
 export * from './redeemAccessLinkRequest';
 export * from './sessionInfo';
 export * from './uploadForm';

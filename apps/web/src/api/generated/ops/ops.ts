@@ -21,7 +21,9 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  Health
+  Health,
+  Problem,
+  Ready
 } from '../model';
 
 import { apiFetch } from '../../fetcher';
@@ -136,6 +138,119 @@ export function useHealthz<TData = Awaited<ReturnType<typeof healthz>>, TError =
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getHealthzQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getReadyzUrl = () => {
+
+
+
+
+  return `/api/readyz`
+}
+
+/**
+ * @summary Readiness probe for an external uptime check: the API is up and the
+database answers. `/healthz` stays a pure liveness probe.
+ */
+export const readyz = async ( options?: Parameters<typeof apiFetch>[1]): Promise<Ready> => {
+
+  return apiFetch<Ready>(getReadyzUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getReadyzQueryKey = () => {
+    return [
+    `/api/readyz`
+    ] as const;
+    }
+
+
+export const getReadyzQueryOptions = <TData = Awaited<ReturnType<typeof readyz>>, TError = ErrorType<Problem>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyz>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getReadyzQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof readyz>>> = ({ signal }) => readyz({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof readyz>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ReadyzQueryResult = NonNullable<Awaited<ReturnType<typeof readyz>>>
+export type ReadyzQueryError = ErrorType<Problem>
+
+
+/**
+ * @summary Readiness probe for an external uptime check: the API is up and the
+database answers. `/healthz` stays a pure liveness probe.
+ */
+export function useReadyz<TData = Awaited<ReturnType<typeof readyz>>, TError = ErrorType<Problem>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyz>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof readyz>>,
+          TError,
+          Awaited<ReturnType<typeof readyz>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Readiness probe for an external uptime check: the API is up and the
+database answers. `/healthz` stays a pure liveness probe.
+ */
+export function useReadyz<TData = Awaited<ReturnType<typeof readyz>>, TError = ErrorType<Problem>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyz>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof readyz>>,
+          TError,
+          Awaited<ReturnType<typeof readyz>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Readiness probe for an external uptime check: the API is up and the
+database answers. `/healthz` stays a pure liveness probe.
+ */
+export function useReadyz<TData = Awaited<ReturnType<typeof readyz>>, TError = ErrorType<Problem>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyz>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Readiness probe for an external uptime check: the API is up and the
+database answers. `/healthz` stays a pure liveness probe.
+ */
+export function useReadyz<TData = Awaited<ReturnType<typeof readyz>>, TError = ErrorType<Problem>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyz>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getReadyzQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

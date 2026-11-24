@@ -46,6 +46,8 @@ pub enum ApiError {
     TooLarge(&'static str),
     #[error("unprocessable: {0}")]
     Unprocessable(&'static str),
+    #[error("unavailable: {0}")]
+    Unavailable(&'static str),
     #[error("validation failed")]
     Validation(Vec<FieldError>),
     #[error(transparent)]
@@ -71,6 +73,9 @@ impl ApiError {
                 "Unprocessable Entity",
                 code,
             ),
+            Self::Unavailable(code) => {
+                (StatusCode::SERVICE_UNAVAILABLE, "Service Unavailable", code)
+            }
             Self::Validation(_) => (
                 StatusCode::UNPROCESSABLE_ENTITY,
                 "Unprocessable Entity",
