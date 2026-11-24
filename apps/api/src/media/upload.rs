@@ -223,11 +223,28 @@ pub async fn upload_media(
     .await?;
 
     let Some(id) = inserted else {
-        tx.rollback().await?;
-        let existing = sqlx::query_scalar!("SELECT id FROM media_assets WHERE sha256 = $1", sha256)
-            .fetch_one(&state.db)
+        // The same file again. A failed image gets another try with the new
+        // bytes; anything else answers with the existing asset.
+        let existing = sqlx::query!(
+            "SELECT id, status FROM media_assets WHERE sha256 = $1 FOR UPDATE",
+            sha256
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+        if existing.status == "failed" {
+            retry_failed(
+                &state,
+                &mut tx,
+                &user,
+                existing.id,
+                &original_path(&hex, sniffed),
+                file,
+                &name,
+            )
             .await?;
-        let asset = load(&state.db, existing)
+        }
+        tx.commit().await?;
+        let asset = load(&state.db, existing.id)
             .await?
             .ok_or_else(|| ApiError::Internal(anyhow::anyhow!("asset vanished")))?;
         return Ok((StatusCode::OK, Json(asset)));
@@ -267,6 +284,50 @@ pub async fn upload_media(
         .await?
         .ok_or_else(|| ApiError::Internal(anyhow::anyhow!("asset vanished")))?;
     Ok((StatusCode::CREATED, Json(asset)))
+}
+
+/// Give a failed image another go with the newly uploaded bytes: back to
+/// `pending`, original rewritten, audit entry and fresh job, in the caller's
+/// transaction.
+async fn retry_failed(
+    state: &AppState,
+    tx: &mut sqlx::PgConnection,
+    user: &CurrentUser,
+    id: Uuid,
+    original: &str,
+    file: Bytes,
+    name: &str,
+) -> Result<(), ApiError> {
+    state.storage.put(original, file).await?;
+    sqlx::query!(
+        "UPDATE media_assets SET status = 'pending' WHERE id = $1",
+        id
+    )
+    .execute(&mut *tx)
+    .await?;
+    audit::record(
+        &mut *tx,
+        NewAuditEntry {
+            actor: Some(user.id),
+            action: AuditAction::Update,
+            object_type: "media_asset",
+            object_id: id.to_string(),
+            summary: format!("Retried processing of {name}"),
+            changes: vec![FieldChange {
+                field: "status".to_owned(),
+                before: Value::from("failed"),
+                after: Value::from("pending"),
+            }],
+        },
+    )
+    .await?;
+    jobs::enqueue(
+        &mut *tx,
+        Job::ProcessImage { asset_id: id },
+        OffsetDateTime::now_utc(),
+    )
+    .await?;
+    Ok(())
 }
 
 fn created(field: &str, after: Value) -> FieldChange {

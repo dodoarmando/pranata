@@ -216,6 +216,10 @@ where
             .execute(&mut *tx)
             .await
             .context("rescheduling a failed job")?;
+            // Giving up on an image must not leave its asset pending forever.
+            if exhausted && let Ok(Job::ProcessImage { asset_id }) = &claimed.job {
+                media::mark_failed(&mut tx, *asset_id).await?;
+            }
         }
     }
     tx.commit().await.context("committing the job result")?;

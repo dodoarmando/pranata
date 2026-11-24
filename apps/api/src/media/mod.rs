@@ -129,6 +129,21 @@ pub async fn load(db: &PgPool, id: Uuid) -> Result<Option<MediaAsset>> {
     }))
 }
 
+/// Mark a pending asset `failed`, in the caller's transaction.
+///
+/// # Errors
+/// Fails when the update fails.
+pub async fn mark_failed(conn: &mut sqlx::PgConnection, asset_id: Uuid) -> Result<()> {
+    sqlx::query!(
+        "UPDATE media_assets SET status = 'failed' WHERE id = $1 AND status = 'pending'",
+        asset_id
+    )
+    .execute(conn)
+    .await
+    .context("marking the asset failed")?;
+    Ok(())
+}
+
 /// The `ProcessImage` job: replace the raw upload with a metadata-free
 /// original, write the public variants and mark the asset ready. A file the
 /// pipeline rejects marks the asset `failed` without retrying; storage and

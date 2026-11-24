@@ -491,7 +491,7 @@ async fn undecodable_image_is_marked_failed_without_retries(pool: PgPool) {
         .await
         .unwrap();
     assert!(job.done_at.is_some());
-    assert_eq!(job.attempts, 0);
+    assert_eq!(job.attempts, 1, "one attempt, no retries");
 }
 
 #[sqlx::test]
@@ -531,4 +531,71 @@ async fn upload_needs_a_file_field(pool: PgPool) {
     let reply = h.upload_with(body, true, Some(&h.csrf)).await;
     assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert_eq!(reply.body["errors"][0]["field"], "file");
+}
+
+/// Upload an image, lose its stored original, and run its job until it gives up.
+async fn exhaust_job(h: &Harness, file: &[u8]) -> Value {
+    let created = h.upload("kegiatan.jpg", file, None).await;
+    assert_eq!(created.status, StatusCode::CREATED);
+    let row = sqlx::query!("SELECT sha256 FROM media_assets")
+        .fetch_one(&h.pool)
+        .await
+        .unwrap();
+    let hex = hex_of(&row.sha256);
+    std::fs::remove_file(
+        h.state
+            .config
+            .media_dir
+            .join(format!("originals/{}/{hex}.jpg", &hex[..2])),
+    )
+    .unwrap();
+    for _ in 0..jobs::MAX_ATTEMPTS {
+        sqlx::query!("UPDATE jobs SET run_at = now()")
+            .execute(&h.pool)
+            .await
+            .unwrap();
+        assert!(jobs::claim_and_run(&h.state).await.unwrap());
+    }
+    created.body
+}
+
+#[sqlx::test]
+async fn exhausted_job_marks_asset_failed(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let body = exhaust_job(&h, &jpeg(300, 200)).await;
+    let job = sqlx::query!("SELECT failed_at FROM jobs")
+        .fetch_one(&h.pool)
+        .await
+        .unwrap();
+    assert!(job.failed_at.is_some());
+    let asset = h.get(body["id"].as_str().unwrap()).await;
+    assert_eq!(asset.body["status"], "failed");
+}
+
+#[sqlx::test]
+async fn reupload_of_failed_asset_retries(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let file = jpeg(300, 200);
+    let body = exhaust_job(&h, &file).await;
+
+    let again = h.upload("kegiatan.jpg", &file, None).await;
+    assert_eq!(again.status, StatusCode::OK);
+    assert_eq!(again.body["id"], body["id"]);
+    assert_eq!(again.body["status"], "pending");
+    let open = sqlx::query_scalar!(
+        r#"SELECT count(*) AS "n!" FROM jobs WHERE done_at IS NULL AND failed_at IS NULL"#
+    )
+    .fetch_one(&h.pool)
+    .await
+    .unwrap();
+    assert_eq!(open, 1, "a fresh job is queued");
+
+    h.run_jobs().await;
+    let asset = h.get(body["id"].as_str().unwrap()).await;
+    assert_eq!(asset.body["status"], "ready");
+    let assets = sqlx::query_scalar!(r#"SELECT count(*) AS "n!" FROM media_assets"#)
+        .fetch_one(&h.pool)
+        .await
+        .unwrap();
+    assert_eq!(assets, 1);
 }
