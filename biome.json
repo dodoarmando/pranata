@@ -66,17 +66,13 @@
 											"@/routes/admin",
 											"@/routes/admin/**",
 											"./admin",
-											"./admin/**",
-											"../admin",
-											"../admin/**",
-											"../../admin",
-											"../../admin/**",
-											"../../../admin",
-											"../../../admin/**",
-											"../../../../admin",
-											"../../../../admin/**"
+											"./admin/**"
 										],
 										"message": "Public routes must not import admin modules (D-08)"
+									},
+									{
+										"group": ["..", "../**"],
+										"message": "Public routes import other modules via @/ (D-08)"
 									}
 								]
 							}
