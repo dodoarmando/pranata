@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AdminLayout } from "@/admin/layout";
 import { loadSession } from "@/admin/session";
+import { AppQueryProvider } from "@/lib/query-client-provider";
 
 // Admin is a client-rendered app: the session cookie is HttpOnly and the CSRF
 // token comes from /api/auth/me, so nothing here can be rendered on the server.
@@ -19,8 +20,10 @@ export const Route = createFileRoute("/admin")({
 function AdminShell() {
 	const { session } = Route.useRouteContext();
 	return (
-		<AdminLayout user={session.user}>
-			<Outlet />
-		</AdminLayout>
+		<AppQueryProvider>
+			<AdminLayout user={session.user}>
+				<Outlet />
+			</AdminLayout>
+		</AppQueryProvider>
 	);
 }

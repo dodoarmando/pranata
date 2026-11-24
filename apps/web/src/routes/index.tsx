@@ -3,7 +3,7 @@ import { createIsomorphicFn } from "@tanstack/react-start";
 import { setResponseStatus } from "@tanstack/react-start/server";
 import { useEffect } from "react";
 import { ApiError } from "@/api/fetcher";
-import { getPublicVillage } from "@/api/generated/client";
+import { getPublicVillage } from "@/api/generated/public/public";
 import { SiteFooter } from "@/components/site/footer";
 import { SiteHeader } from "@/components/site/header";
 import { Hero } from "@/components/site/hero";

@@ -11,8 +11,8 @@ export default defineConfig({
 			// Operation paths in the contract already start with /api, so the
 			// generated URLs are same-origin relative and need no extra base URL.
 			baseUrl: "",
-			mode: "single",
-			target: "src/api/generated/client.ts",
+			mode: "tags-split",
+			target: "src/api/generated",
 			schemas: "src/api/generated/model",
 			clean: true,
 			override: {

@@ -1,7 +1,7 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { type FormEvent, useState } from "react";
-import { useLogin } from "@/api/generated/client";
+import { useLogin } from "@/api/generated/auth/auth";
 import { AuthShell } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -17,14 +17,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { setCsrfToken } from "@/lib/csrf";
 import { messageFor } from "@/lib/errors";
+import { AppQueryProvider } from "@/lib/query-client-provider";
 import { safeAdminRedirect } from "@/lib/safe-redirect";
 
 export const Route = createFileRoute("/masuk")({
 	validateSearch: (search: Record<string, unknown>): { ke?: string } =>
 		typeof search.ke === "string" ? { ke: search.ke } : {},
 	head: () => ({ meta: [{ title: "Masuk Pengelola Situs" }] }),
-	component: SignIn,
+	component: SignInPage,
 });
+
+function SignInPage() {
+	return (
+		<AppQueryProvider>
+			<SignIn />
+		</AppQueryProvider>
+	);
+}
 
 function SignIn() {
 	const { ke } = Route.useSearch();

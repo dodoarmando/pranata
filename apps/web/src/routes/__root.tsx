@@ -5,7 +5,6 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { QueryProvider } from "@/components/query-provider";
 import "@/styles.css";
 
 export const Route = createRootRoute({
@@ -34,7 +33,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
 				<HeadContent />
 			</head>
 			<body>
-				<QueryProvider>{children}</QueryProvider>
+				{children}
 				<Scripts />
 			</body>
 		</html>

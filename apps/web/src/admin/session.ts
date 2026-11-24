@@ -1,5 +1,4 @@
 import { ApiError } from "@/api/fetcher";
-import { getMe } from "@/api/generated/client";
 import type { SessionInfo } from "@/api/generated/model";
 import { setCsrfToken } from "@/lib/csrf";
 
@@ -7,6 +6,10 @@ import { setCsrfToken } from "@/lib/csrf";
 // Also refreshes the CSRF token the fetcher sends on unsafe requests.
 export async function loadSession(): Promise<SessionInfo | null> {
 	try {
+		// Imported lazily: this runs from the admin route's beforeLoad, which the
+		// router keeps in the entry chunk. A static import would drag react-query
+		// into every public page.
+		const { getMe } = await import("@/api/generated/auth/auth");
 		const session = await getMe();
 		setCsrfToken(session.csrf_token);
 		return session;

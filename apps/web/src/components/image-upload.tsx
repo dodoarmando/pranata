@@ -1,7 +1,7 @@
 import { CheckCircle2Icon, ImagePlusIcon, RotateCcwIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/api/fetcher";
-import { getMedia, useUploadMedia } from "@/api/generated/client";
+import { getMedia, useUploadMedia } from "@/api/generated/media/media";
 import type { MediaAsset } from "@/api/generated/model";
 import { Button } from "@/components/ui/button";
 import { FilePicker } from "@/components/ui/file-picker";

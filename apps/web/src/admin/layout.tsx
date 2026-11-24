@@ -1,10 +1,11 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ChevronsUpDownIcon, HouseIcon, LogOutIcon } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import { toast } from "sonner";
 import { visibleNav } from "@/admin/nav";
 import { initials } from "@/admin/session";
-import { useLogout } from "@/api/generated/client";
+import { useLogout } from "@/api/generated/auth/auth";
 import type { CurrentUser } from "@/api/generated/model";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,10 +47,12 @@ function pageTitle(pathname: string): string {
 
 function UserMenu({ user }: Readonly<{ user: CurrentUser }>) {
 	const navigate = useNavigate();
+	const queryClient = useQueryClient();
 	const logout = useLogout({
 		mutation: {
 			onSuccess: () => {
 				setCsrfToken(null);
+				queryClient.clear();
 				void navigate({ to: "/masuk", search: {} });
 			},
 			onError: (error) => toast.error(messageFor(error.code)),

@@ -1,12 +1,13 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { type FormEvent, useEffect, useState } from "react";
-import { useSetPasswordWithAccessLink } from "@/api/generated/client";
+import { useSetPasswordWithAccessLink } from "@/api/generated/auth/auth";
 import { AuthShell } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { parseAccessToken } from "@/lib/access-token";
 import { messageFor } from "@/lib/errors";
+import { AppQueryProvider } from "@/lib/query-client-provider";
 
 export const Route = createFileRoute("/akses")({
 	head: () => ({
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/akses")({
 			{ name: "referrer", content: "no-referrer" },
 		],
 	}),
-	component: Access,
+	component: AccessPage,
 });
 
 const MIN = 10;
@@ -28,6 +29,14 @@ type TokenState =
 	| { status: "reading" }
 	| { status: "missing" }
 	| { status: "ready"; token: string };
+
+function AccessPage() {
+	return (
+		<AppQueryProvider>
+			<Access />
+		</AppQueryProvider>
+	);
+}
 
 function Access() {
 	const router = useRouter();

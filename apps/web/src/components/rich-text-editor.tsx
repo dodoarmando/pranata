@@ -30,7 +30,7 @@ import {
 	VideoIcon,
 } from "lucide-react";
 import { type FormEvent, useState } from "react";
-import { useGetMedia } from "@/api/generated/client";
+import { useGetMedia } from "@/api/generated/media/media";
 import type { MediaAsset, MediaVariant } from "@/api/generated/model";
 import { ImageUpload } from "@/components/image-upload";
 import { Button } from "@/components/ui/button";

@@ -2,12 +2,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import type { MediaRef, Profile } from "@/api/generated/model";
 import {
 	getGetVillageProfileQueryKey,
 	useGetVillageProfile,
 	usePutVillageProfile,
-} from "@/api/generated/client";
-import type { MediaRef, Profile } from "@/api/generated/model";
+} from "@/api/generated/village/village";
 import { ImageUpload } from "@/components/image-upload";
 import { pickVariant, RichTextEditor } from "@/components/rich-text-editor";
 import { Button } from "@/components/ui/button";
