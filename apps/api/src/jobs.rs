@@ -35,7 +35,7 @@ pub const POLL_INTERVAL: Duration = Duration::from_secs(2);
 pub enum Job {
     /// Derive the metadata-free original and the WebP variants of an upload.
     ProcessImage { asset_id: Uuid },
-    /// Drop cached public pages. Does nothing until the purger is wired in.
+    /// Ask the web server to drop its cached public pages.
     PurgePublicCache,
 }
 
@@ -179,10 +179,7 @@ pub async fn claim(conn: &mut PgConnection) -> Result<Option<Claimed>> {
 async fn handle(state: AppState, job: Job) -> Result<()> {
     match job {
         Job::ProcessImage { asset_id } => media::process_asset(&state, asset_id).await,
-        Job::PurgePublicCache => {
-            tracing::info!("public cache purge requested; no purger is wired in yet");
-            Ok(())
-        }
+        Job::PurgePublicCache => state.purger.purge_all().await,
     }
 }
 

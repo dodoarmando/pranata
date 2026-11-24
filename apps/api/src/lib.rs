@@ -2,6 +2,7 @@
 
 pub mod audit;
 pub mod auth;
+pub mod cache_purge;
 pub mod config;
 pub mod db;
 pub mod error;
@@ -24,7 +25,7 @@ pub use crate::auth::session::SessionClock;
 pub use crate::config::Config;
 pub use crate::error::{ApiError, FieldError};
 
-/// Shared handler state. Later tasks add fields (cache purger).
+/// Shared handler state.
 #[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,
@@ -35,6 +36,8 @@ pub struct AppState {
     pub hasher: HashLimiter,
     /// Where uploaded files are kept.
     pub storage: Arc<dyn media::Storage>,
+    /// Signals the web server to drop its cached public pages.
+    pub purger: cache_purge::Purger,
 }
 
 /// Build the full router, mounted under `/api`.

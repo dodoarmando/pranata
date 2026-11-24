@@ -136,12 +136,15 @@ async fn serve() -> Result<()> {
         .context("binding listener")?;
     tracing::info!(addr = %config.listen, "listening");
     let media_dir = config.media_dir.clone();
+    let purger =
+        pranata::cache_purge::Purger::new(&config).context("preparing the cache purger")?;
     let state = AppState {
         db: pool,
         config: Arc::new(config),
         clock: Arc::new(SystemClock),
         hasher: HashLimiter::for_host().context("preparing the password hasher")?,
         storage: Arc::new(LocalStorage::new(media_dir)),
+        purger,
     };
     // Exactly one worker; it stops with the server and finishes its current job.
     let shutdown = CancellationToken::new();
