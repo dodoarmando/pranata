@@ -140,7 +140,7 @@ pub async fn update(db: &PgPool, actor: UserId, input: ProfileUpdate) -> Result<
 
     let updated_at = sqlx::query_scalar!(
         "UPDATE village
-         SET overview = $1, hero_asset_id = $2, updated_at = now()
+         SET overview = $1, hero_asset_id = $2, updated_at = clock_timestamp()
          WHERE id = 1 AND updated_at = $3
          RETURNING updated_at",
         overview,
