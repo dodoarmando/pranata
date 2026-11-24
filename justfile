@@ -269,6 +269,6 @@ load: images
         -e BASE_URL="https://localhost:${PRANATA_E2E_PORT:-8443}" \
         docker.io/grafana/k6:2.4.0 run --summary-export=/out/summary.json /load/public.js
 
-# Load seed data (plan P6).
+# Load seed data (plan R1-E).
 seed:
-    @echo "seed: not implemented yet (plan P6)"
+    @echo "seed: not implemented yet (plan R1-E)"

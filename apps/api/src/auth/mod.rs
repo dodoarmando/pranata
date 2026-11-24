@@ -1,5 +1,5 @@
 //! Authentication: passwords, server-side sessions, CSRF and Access Links
-//! (D-30, D-32). In R0 every User has full access; roles arrive with plan P2.
+//! (D-30, D-32). In R0 every User has full access; roles arrive with plan R1-A.
 
 pub mod access_link;
 pub mod csrf;
