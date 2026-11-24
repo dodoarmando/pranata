@@ -9,5 +9,8 @@ export default defineConfig({
 		proxy: { "/api": process.env.PRANATA_API_URL ?? "http://127.0.0.1:8080" },
 	},
 	resolve: { alias: { "@": "./src" } },
-	plugins: [pluginReact(), tanstackStart()],
+	plugins: [
+		pluginReact(),
+		tanstackStart({ server: { entry: "./server/entry.ts" } }),
+	],
 });

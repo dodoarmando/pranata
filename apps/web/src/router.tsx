@@ -1,10 +1,14 @@
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
+import { NONCE_PLACEHOLDER } from "./server/csp";
 
 export function getRouter() {
 	return createRouter({
 		routeTree,
 		scrollRestoration: true,
+		// The server entry swaps this token for a per-response nonce (see server/handler.ts).
+		ssr:
+			typeof window === "undefined" ? { nonce: NONCE_PLACEHOLDER } : undefined,
 	});
 }
 
