@@ -71,7 +71,7 @@ apps/web/
     components/ui/           shadcn (only place for raw controls)
     components/rich-text-editor.tsx
     lib/{downscale-image.ts,errors.ts}
-    routes/__root.tsx, index.tsx, masuk.tsx, akses.$token.tsx
+    routes/__root.tsx, index.tsx, masuk.tsx, akses.tsx
     routes/admin/route.tsx, admin/index.tsx, admin/desa/profil.tsx
     admin/                   admin-only modules (public routes may not import)
     styles.css
@@ -244,7 +244,7 @@ These are outward-facing actions. The executor runs each command only after the 
     - `POST /api/auth/logout` → 204.
     - `GET /api/auth/me` → `{user, csrf_token}`.
     - `POST /api/auth/access-links/{token}/password {password}` → 204. It sets the password and marks the link used. A used link gives 410 `access_link_used`; an expired one gives 410 `access_link_expired`; an unknown one gives 404 `access_link_not_found`.
-  - CLI `pranata user create-admin <username> --name "<display name>"` creates the user and an Access Link valid for 24 h, then prints `{PRANATA_PUBLIC_ORIGIN}/akses/{token}`.
+  - CLI `pranata user create-admin <username> --name "<display name>"` creates the user and an Access Link valid for 24 h, then prints `{PRANATA_PUBLIC_ORIGIN}/akses#{token}`. The token travels in the URL fragment so no server or proxy log ever sees it; redemption is `POST /api/auth/access-links/redeem {token, password}`.
   - Sign-in and sign-out write Audit Entries (`SignIn`, `SignOut`).
   - Roles, passkeys, sudo mode and throttling come in Plan P2. In R0, every User has full access.
 
@@ -424,7 +424,7 @@ These are outward-facing actions. The executor runs each command only after the 
 
 **Decisions:** D-06, D-16, D-17, D-23, D-38, D-32
 
-**Files:** Create `apps/web/src/routes/masuk.tsx`, `routes/akses.$token.tsx`, `routes/admin/route.tsx`, `routes/admin/index.tsx`, `routes/admin/desa/profil.tsx`, `src/admin/{layout.tsx,nav.ts,session.ts}`, `src/components/rich-text-editor.tsx`, `src/components/image-upload.tsx`, `src/lib/downscale-image.ts`
+**Files:** Create `apps/web/src/routes/masuk.tsx`, `routes/akses.tsx`, `routes/admin/route.tsx`, `routes/admin/index.tsx`, `routes/admin/desa/profil.tsx`, `src/admin/{layout.tsx,nav.ts,session.ts}`, `src/components/rich-text-editor.tsx`, `src/components/image-upload.tsx`, `src/lib/downscale-image.ts`
 
 **Interfaces:**
 - Consumes: the Orval hooks `useLogin`, `useGetMe`, `useSetPasswordWithAccessLink`, `useGetVillageProfile`, `usePutVillageProfile`, `useUploadMedia`, `useGetMedia`.
@@ -436,7 +436,7 @@ These are outward-facing actions. The executor runs each command only after the 
     - The "Lupa kata sandi?" link opens a dialog with "Hubungi Administrator desa untuk mendapatkan tautan akses baru." (ADR 0007).
     - The Passkey button is hidden until Plan P2.
     - The photo carousel uses a static illustration in R0.
-  - `/akses/$token` is a set-password form (new password plus confirmation). On success it redirects to `/masuk`.
+  - `/akses` reads the token from `location.hash` (never from the path or query), then shows a set-password form (new password plus confirmation) that POSTs `{token, password}` to `/api/auth/access-links/redeem`. It clears the hash with `history.replaceState` after reading it. On success it redirects to `/masuk`.
   - `export async function downscaleImage(file: File, maxEdge = 2560, quality = 0.85): Promise<Blob>` uses `createImageBitmap(file, { imageOrientation: "from-image" })` and `OffscreenCanvas.convertToBlob({ type: "image/jpeg", quality })`. Files already within `maxEdge` and under 2 MB pass through unchanged. Non-images pass through, and the server decides.
   - `<RichTextEditor value onChange />`:
     - Tiptap StarterKit restricted to the D-17 allowlist (heading levels 2–4, the table extension, the YouTube extension storing only `videoId`, and image nodes inserted from uploads storing `assetId`).
