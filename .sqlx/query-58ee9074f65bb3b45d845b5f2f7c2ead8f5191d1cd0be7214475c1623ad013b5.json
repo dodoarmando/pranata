@@ -1,0 +1,86 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT actor, action, object_type, object_id, summary, changes FROM audit_entries",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "actor",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "actor"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "action",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "action"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "object_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "object_type"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "object_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "object_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "summary",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "changes",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "changes"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "58ee9074f65bb3b45d845b5f2f7c2ead8f5191d1cd0be7214475c1623ad013b5"
+}

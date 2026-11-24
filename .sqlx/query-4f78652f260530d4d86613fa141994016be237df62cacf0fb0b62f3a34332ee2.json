@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT actor, object_type, object_id FROM audit_entries WHERE action = 'sign_out'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "actor",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "actor"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "object_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "object_type"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "object_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "object_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "4f78652f260530d4d86613fa141994016be237df62cacf0fb0b62f3a34332ee2"
+}

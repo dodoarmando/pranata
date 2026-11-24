@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO audit_entries (actor, action, object_type, object_id, summary)\n         VALUES (gen_random_uuid(), 'update', 'x', 'y', 'z')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "e13a228011189e20fb76c214740d87775cdb66691874c95c848c1dbe3c05c4fb"
+}

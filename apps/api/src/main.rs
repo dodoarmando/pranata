@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
+use pranata::auth::session::SystemClock;
 use pranata::region_codes::VillageCode;
 use pranata::village::{self, InitError};
 use pranata::{AppState, Config, db, openapi};
@@ -99,6 +100,7 @@ async fn serve() -> Result<()> {
     let state = AppState {
         db: pool,
         config: Arc::new(config),
+        clock: Arc::new(SystemClock),
     };
     axum::serve(listener, pranata::app(state))
         .with_graceful_shutdown(shutdown_signal())

@@ -1,0 +1,100 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT s.csrf_token, s.remember, s.last_seen_at, s.expires_at,\n                  u.id AS \"user_id: UserId\", u.username, u.display_name\n           FROM sessions s JOIN users u ON u.id = s.user_id\n           WHERE s.token_hash = $1 AND u.is_active",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "csrf_token",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "sessions",
+            "name": "csrf_token"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "remember",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "sessions",
+            "name": "remember"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "last_seen_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "sessions",
+            "name": "last_seen_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "sessions",
+            "name": "expires_at"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "user_id: UserId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "username",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "username"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "display_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "display_name"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "184de0215c5dbd33d4949e826d99356248c7aa76588298f19d25c0fa062494a1"
+}

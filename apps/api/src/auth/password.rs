@@ -1,6 +1,8 @@
 //! Password hashing (argon2id with the crate's default parameters) and the
 //! password length rule.
 
+use std::sync::OnceLock;
+
 use anyhow::{Result, anyhow};
 use argon2::{Argon2, PasswordHasher, PasswordVerifier, password_hash::phc::PasswordHash};
 
@@ -31,6 +33,19 @@ pub fn verify_password(password: &str, hash: &str) -> bool {
     Argon2::default()
         .verify_password(password.as_bytes(), &hash)
         .is_ok()
+}
+
+/// Spend the time of one verification without a real hash. Sign-in calls this
+/// for unknown, inactive and password-less accounts, so the response time does
+/// not reveal whether the username exists.
+pub fn verify_against_dummy(password: &str) {
+    static DUMMY: OnceLock<String> = OnceLock::new();
+    let hash = DUMMY.get_or_init(|| {
+        // Hashing cannot realistically fail; an empty string would only make
+        // the dummy check cheap, never wrongly succeed.
+        hash_password("dummy password for constant sign-in cost").unwrap_or_default()
+    });
+    let _ = verify_password(password, hash);
 }
 
 /// Enforce the length rule: 10 to 128 characters, no composition rules.

@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT actor, action, object_id FROM audit_entries",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "actor",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "actor"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "action",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "action"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "object_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "object_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "e19e5e0e460b46fb3f3a21c8eae2bcdbcdca0416246f33d6e9b0f1546665b9e0"
+}

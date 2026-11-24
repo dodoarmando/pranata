@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE access_links SET used_at = $2 WHERE token_hash = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b5b0363cf40e0acfc848eeaccffabb2cf2baabe02605e250c6322653d81192d6"
+}

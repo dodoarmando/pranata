@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO users (username, display_name) VALUES ($1, $2)\n           ON CONFLICT (username) DO NOTHING\n           RETURNING id AS \"id: UserId\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: UserId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "190cb4d02514603d096a11519b36bb1c988d5ecf1ee97d7f3ce662cecfaf1048"
+}

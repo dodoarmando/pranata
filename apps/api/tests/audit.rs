@@ -44,7 +44,14 @@ async fn record_inserts_entry(pool: PgPool) {
 
 #[sqlx::test]
 async fn record_with_actor_stores_it(pool: PgPool) {
-    let actor = UserId(uuid::Uuid::new_v4());
+    // `audit_entries.actor` is a foreign key to `users`, so the actor must exist.
+    let actor = sqlx::query_scalar!(
+        r#"INSERT INTO users (username, display_name) VALUES ('petugas', 'Petugas')
+           RETURNING id AS "id: UserId""#
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
     let mut tx = pool.begin().await.unwrap();
     let id = record(
         &mut tx,

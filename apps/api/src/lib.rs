@@ -16,6 +16,7 @@ use std::sync::Arc;
 use axum::Router;
 use sqlx::PgPool;
 
+pub use crate::auth::session::SessionClock;
 pub use crate::config::Config;
 pub use crate::error::{ApiError, FieldError};
 
@@ -24,6 +25,8 @@ pub use crate::error::{ApiError, FieldError};
 pub struct AppState {
     pub db: PgPool,
     pub config: Arc<Config>,
+    /// Clock for session expiry; tests inject a fixed one.
+    pub clock: Arc<dyn SessionClock>,
 }
 
 /// Build the full router, mounted under `/api`.

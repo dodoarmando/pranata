@@ -1,14 +1,52 @@
 //! Shared helpers for integration tests.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
-use pranata::{AppState, Config};
+use pranata::{AppState, Config, auth::session::SessionClock};
 use secrecy::SecretString;
 use sqlx::PgPool;
+use time::{Duration, OffsetDateTime};
 
-/// Build an `AppState` around the pool handed out by `#[sqlx::test]`.
+/// A clock that only moves when a test says so.
+pub struct FixedClock(Mutex<OffsetDateTime>);
+
+impl FixedClock {
+    /// Start at a fixed instant (2026-11-24 08:00 UTC).
+    #[must_use]
+    #[allow(dead_code)]
+    pub fn new() -> Arc<Self> {
+        let start = OffsetDateTime::from_unix_timestamp(1_795_593_600).expect("valid timestamp");
+        Arc::new(Self(Mutex::new(start)))
+    }
+
+    #[allow(dead_code)]
+    pub fn now_for_test(&self) -> OffsetDateTime {
+        *self.0.lock().expect("clock lock")
+    }
+
+    #[allow(dead_code)]
+    pub fn advance(&self, by: Duration) {
+        *self.0.lock().expect("clock lock") += by;
+    }
+}
+
+impl SessionClock for FixedClock {
+    fn now(&self) -> OffsetDateTime {
+        *self.0.lock().expect("clock lock")
+    }
+}
+
+/// Build an `AppState` around the pool handed out by `#[sqlx::test]`, using the
+/// system clock.
 #[must_use]
+#[allow(dead_code)]
 pub fn test_state(pool: PgPool) -> AppState {
+    test_state_with_clock(pool, Arc::new(pranata::auth::session::SystemClock))
+}
+
+/// Like [`test_state`], with an injected clock.
+#[must_use]
+pub fn test_state_with_clock(pool: PgPool, clock: Arc<dyn SessionClock>) -> AppState {
     let config = Config {
         database_url: String::new(),
         migration_database_url: String::new(),
@@ -21,5 +59,6 @@ pub fn test_state(pool: PgPool) -> AppState {
     AppState {
         db: pool,
         config: Arc::new(config),
+        clock,
     }
 }

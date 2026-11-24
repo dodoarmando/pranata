@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT summary, changes FROM audit_entries",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "summary",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "changes",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "audit_entries",
+            "name": "changes"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "d347526181083747aa44c62434c2cf31b8b6629ceac706b6358cbd6b71cf2baa"
+}

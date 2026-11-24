@@ -10,6 +10,194 @@
 		"version": "0.1.0"
 	},
 	"paths": {
+		"/api/auth/access-links/{token}/password": {
+			"post": {
+				"tags": ["auth"],
+				"summary": "Set a password with an Access Link. The link works once.",
+				"description": "# Errors\n404 `access_link_not_found`, 410 `access_link_used` or\n`access_link_expired`, 422 `password_length`.",
+				"operationId": "setPasswordWithAccessLink",
+				"parameters": [
+					{
+						"name": "token",
+						"in": "path",
+						"description": "The Access Link token",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SetPasswordRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"204": {
+						"description": "Password set; the link is used up"
+					},
+					"404": {
+						"description": "Unknown link (code access_link_not_found)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"410": {
+						"description": "Link used or expired (codes access_link_used, access_link_expired)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Password length rule broken (code password_length)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/auth/login": {
+			"post": {
+				"tags": ["auth"],
+				"summary": "Sign in with a username and password.",
+				"description": "# Errors\n401 `invalid_credentials`, identical for an unknown user and a wrong\npassword.",
+				"operationId": "login",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/LoginRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Signed in; the session cookie is set",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionInfo"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Wrong username or password (code invalid_credentials)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/auth/logout": {
+			"post": {
+				"tags": ["auth"],
+				"summary": "End the current session.",
+				"description": "# Errors\n401 `unauthenticated`; 403 `csrf_mismatch` without the CSRF header.",
+				"operationId": "logout",
+				"parameters": [
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Signed out; the session cookie is cleared"
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Missing or wrong CSRF token (code csrf_mismatch)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
+		"/api/auth/me": {
+			"get": {
+				"tags": ["auth"],
+				"summary": "The signed-in User and their CSRF token.",
+				"description": "# Errors\n401 `unauthenticated`.",
+				"operationId": "getMe",
+				"responses": {
+					"200": {
+						"description": "The current session",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionInfo"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
 		"/api/healthz": {
 			"get": {
 				"tags": ["ops"],
@@ -62,6 +250,23 @@
 	},
 	"components": {
 		"schemas": {
+			"CurrentUser": {
+				"type": "object",
+				"description": "The signed-in User, as an axum extractor. A missing or expired session\nanswers 401 `unauthenticated`.",
+				"required": ["id", "username", "display_name"],
+				"properties": {
+					"display_name": {
+						"type": "string"
+					},
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"username": {
+						"type": "string"
+					}
+				}
+			},
 			"FieldError": {
 				"type": "object",
 				"description": "One invalid field in a validation failure.",
@@ -83,6 +288,22 @@
 						"type": "string"
 					},
 					"version": {
+						"type": "string"
+					}
+				}
+			},
+			"LoginRequest": {
+				"type": "object",
+				"required": ["username", "password"],
+				"properties": {
+					"password": {
+						"type": "string"
+					},
+					"remember": {
+						"type": "boolean",
+						"description": "Keep the session for 30 days instead of until the browser closes."
+					},
+					"username": {
 						"type": "string"
 					}
 				}
@@ -111,6 +332,28 @@
 						"type": "string"
 					},
 					"type": {
+						"type": "string"
+					}
+				}
+			},
+			"SessionInfo": {
+				"type": "object",
+				"description": "The signed-in User and the CSRF token to send as `x-csrf-token`.",
+				"required": ["user", "csrf_token"],
+				"properties": {
+					"csrf_token": {
+						"type": "string"
+					},
+					"user": {
+						"$ref": "#/components/schemas/CurrentUser"
+					}
+				}
+			},
+			"SetPasswordRequest": {
+				"type": "object",
+				"required": ["password"],
+				"properties": {
+					"password": {
 						"type": "string"
 					}
 				}
@@ -148,6 +391,13 @@
 						"description": "IANA time zone name."
 					}
 				}
+			}
+		},
+		"securitySchemes": {
+			"session": {
+				"type": "apiKey",
+				"in": "cookie",
+				"name": "pranata_session"
 			}
 		}
 	}

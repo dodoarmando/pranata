@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT token_hash FROM access_links",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "token_hash",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "access_links",
+            "name": "token_hash"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "48238b77610f87a74b709a1a9ae7736dcb1e3d7058bb8bad01bf88b80c533fd8"
+}
