@@ -14,7 +14,7 @@ cd "$root"
 
 name="pranata-infra-test"
 s3_name="$name-s3"
-s3_image="docker.io/dxflrs/garage:v2.5.0"
+s3_image="docker.io/dxflrs/garage:v2.5.0@sha256:23b16d34e0348d9aca9b960a7429a7e6d494974b5288bfb8f6c3ab856895f71e"
 image="localhost/$name:latest"
 label="pranata.infra-test.owner=run.sh"
 work="$root/target/infra-test"
@@ -202,6 +202,13 @@ psql_live() { printf '%s\n' "$2" | podman exec -i "$name" su -s /bin/sh pranata 
 scratch_exists() { psql_live postgres "SELECT count(*) FROM pg_database WHERE datname = 'pranata_restore_check'"; }
 pings() { in_container cat /tmp/pings.log 2>/dev/null || true; }
 
+pinned_restic="$(sed -n 's/^pranata_restic_version: "\(.*\)"$/\1/p' infra/roles/pranata/defaults/main.yml)"
+[ -n "$pinned_restic" ] || { echo "infra-test: no pinned restic version in the role defaults" >&2; exit 1; }
+case "$(in_container restic version)" in "restic $pinned_restic "*) echo "  restic $pinned_restic is installed" ;; *)
+    echo "infra-test: restic does not report the pinned version $pinned_restic" >&2
+    exit 1
+    ;;
+esac
 for timer in pranata-backup pranata-restore-check pranata-disk-check; do
     as_pranata "systemctl --user is-enabled $timer.timer" >/dev/null ||
         { echo "infra-test: $timer.timer is not enabled" >&2; exit 1; }
@@ -228,10 +235,18 @@ assert len(snapshots) == 1, f"expected one snapshot, got {len(snapshots)}"
 assert "pranata" in snapshots[0]["tags"], snapshots[0]["tags"]
 ' || { echo "infra-test: restic snapshots does not show one snapshot tagged pranata" >&2; exit 1; }
 echo "  one snapshot tagged pranata"
-restic_as_pranata 'ls latest' | grep -q 'originals/ab/abcdef.jpg' ||
-    { echo "infra-test: the snapshot lacks the media originals" >&2; exit 1; }
-restic_as_pranata 'ls latest' | grep -q '/public' &&
-    { echo "infra-test: the snapshot holds the public variants" >&2; exit 1; }
+# Capture the listing first: grep -q closing the pipe early would trip pipefail.
+listing="$(restic_as_pranata 'ls latest')"
+case "$listing" in *originals/ab/abcdef.jpg*) ;; *)
+    echo "infra-test: the snapshot lacks the media originals" >&2
+    exit 1
+    ;;
+esac
+case "$listing" in */public*)
+    echo "infra-test: the snapshot holds the public variants" >&2
+    exit 1
+    ;;
+esac
 pings | grep -qx 'GET /backup' || { echo "infra-test: the backup did not ping" >&2; exit 1; }
 
 # Change the live row, then restore the backup into the scratch database by hand.
