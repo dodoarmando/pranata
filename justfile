@@ -163,9 +163,20 @@ perf: images
         jq -r '"lighthouse: performance \(.categories.performance.score) accessibility \(.categories.accessibility.score) lcp \(.audits["largest-contentful-paint"].displayValue) tbt \(.audits["total-blocking-time"].displayValue)"' "$report"
     done
 
-# Run load tests (Task 14).
-load:
-    @echo "load: not implemented yet (Task 14)"
+# Run the k6 load test (300 visitors) against the images, with k6 from its official image.
+load: images
+    #!/usr/bin/env bash
+    set -euo pipefail
+    root="{{ justfile_directory() }}"
+    trap '"$root/infra/dev/stack.sh" down' EXIT
+    "$root/infra/dev/stack.sh" up
+    "$root/load/seed.sh"
+    mkdir -p "$root/target/load"
+    podman run --rm --network=host --user 0:0 \
+        -v "{{ justfile_directory() }}/load:/load:ro,z" \
+        -v "{{ justfile_directory() }}/target/load:/out:z" \
+        -e BASE_URL="https://localhost:${PRANATA_E2E_PORT:-8443}" \
+        docker.io/grafana/k6:2.4.0 run --summary-export=/out/summary.json /load/public.js
 
 # Load seed data (plan P6).
 seed:
