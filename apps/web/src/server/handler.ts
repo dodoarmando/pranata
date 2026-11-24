@@ -2,16 +2,41 @@ import { timingSafeEqual } from "node:crypto";
 import { cspHeader, nonce, withNonce } from "./csp";
 import type { HtmlCache } from "./html-cache";
 
-export type HandlerDeps = {
+export type HandlerDeps<Ctx> = {
 	cache: HtmlCache;
 	// Shared secret the API sends in `x-pranata-purge-token`. Empty disables purging.
 	purgeToken: string;
-	render: (request: Request) => Promise<Response>;
+	render: (request: Request, ctx: Ctx) => Promise<Response>;
 };
 
 const PURGE_PATH = "/_internal/cache/purge";
-const NEVER_CACHED = ["/admin", "/masuk", "/akses", "/_internal"];
+const PRIVATE_SEGMENTS = new Set(["admin", "masuk", "akses", "_internal"]);
 const SESSION_COOKIE = /(?:^|;\s*)pranata_session=/;
+const UNCACHEABLE_CONTROL = /\b(private|no-store|no-cache)\b/i;
+
+type Rendered = {
+	status: number;
+	statusText: string;
+	headers: Headers;
+	html: string | null;
+	body: ArrayBuffer | null;
+};
+
+// First path segment after percent-decoding, lowercasing and collapsing
+// slashes; null when the encoding is malformed.
+function firstSegment(pathname: string): string | null {
+	let decoded: string;
+	try {
+		decoded = decodeURIComponent(pathname);
+	} catch {
+		return null;
+	}
+	const parts = decoded
+		.toLowerCase()
+		.split("/")
+		.filter((part) => part !== "" && part !== ".");
+	return parts[0] ?? "";
+}
 
 function tokenMatches(given: string | null, expected: string): boolean {
 	if (!given || !expected) {
@@ -22,89 +47,129 @@ function tokenMatches(given: string | null, expected: string): boolean {
 	return a.length === b.length && timingSafeEqual(a, b);
 }
 
-function underPrefix(path: string, prefix: string): boolean {
-	return path === prefix || path.startsWith(`${prefix}/`);
+// Safe to hand to another visitor: no cookie, not marked private.
+function shareable(result: Rendered): boolean {
+	return (
+		!result.headers.has("set-cookie") &&
+		!UNCACHEABLE_CONTROL.test(result.headers.get("cache-control") ?? "")
+	);
 }
 
-function isCacheable(request: Request, path: string): boolean {
-	if (request.method !== "GET") {
-		return false;
-	}
-	if (SESSION_COOKIE.test(request.headers.get("cookie") ?? "")) {
-		return false;
-	}
-	return !NEVER_CACHED.some((prefix) => underPrefix(path, prefix));
+function storable(result: Rendered): boolean {
+	return result.status === 200 && result.html !== null && shareable(result);
 }
 
-function htmlResponse(
-	html: string,
-	init: ResponseInit,
-	source: Headers | null,
+async function buffer(response: Response): Promise<Rendered> {
+	const isHtml = (response.headers.get("content-type") ?? "").includes(
+		"text/html",
+	);
+	return {
+		status: response.status,
+		statusText: response.statusText,
+		headers: response.headers,
+		html: isHtml ? await response.text() : null,
+		body: isHtml ? null : await response.arrayBuffer(),
+	};
+}
+
+function toResponse(
+	result: Rendered,
 	cacheState: "HIT" | "MISS" | "BYPASS",
 ): Response {
+	const headers = new Headers(result.headers);
+	headers.set("x-cache", cacheState);
+	const init = { status: result.status, statusText: result.statusText };
+	if (result.html === null) {
+		return new Response(result.body, { ...init, headers });
+	}
 	const n = nonce();
-	const headers = new Headers(source ?? undefined);
 	// The body length changes with the nonce, and the stream is re-encoded.
 	headers.delete("content-length");
 	headers.delete("content-encoding");
 	headers.set("content-type", "text/html; charset=utf-8");
 	headers.set("content-security-policy", cspHeader(n));
-	headers.set("x-cache", cacheState);
-	return new Response(withNonce(html, n), { ...init, headers });
+	return new Response(withNonce(result.html, n), { ...init, headers });
 }
 
-export function createHandler(deps: HandlerDeps) {
-	return async (request: Request): Promise<Response> => {
-		const url = new URL(request.url);
-		const path = url.pathname;
+export function createHandler<Ctx = undefined>(deps: HandlerDeps<Ctx>) {
+	// Bumped by every purge: a render that began earlier must not repopulate.
+	let generation = 0;
+	const inflight = new Map<string, Promise<Rendered>>();
 
-		if (underPrefix(path, "/_internal")) {
+	const renderBuffered = async (request: Request, ctx: Ctx) =>
+		buffer(await deps.render(request, ctx));
+
+	return async (request: Request, ctx?: Ctx): Promise<Response> => {
+		const context = ctx as Ctx;
+		const url = new URL(request.url);
+		const segment = firstSegment(url.pathname);
+
+		if (segment === "_internal") {
 			if (
-				path === PURGE_PATH &&
+				url.pathname === PURGE_PATH &&
 				request.method === "POST" &&
 				tokenMatches(
 					request.headers.get("x-pranata-purge-token"),
 					deps.purgeToken,
 				)
 			) {
+				generation += 1;
+				inflight.clear();
 				deps.cache.purgeAll();
 				return new Response(null, { status: 204 });
 			}
 			return new Response("Not found", { status: 404 });
 		}
 
-		const cacheable = isCacheable(request, path);
-		const key = `${path}${url.search}`;
+		const cacheable =
+			request.method === "GET" &&
+			segment !== null &&
+			!PRIVATE_SEGMENTS.has(segment) &&
+			!SESSION_COOKIE.test(request.headers.get("cookie") ?? "");
 
-		if (cacheable) {
-			const hit = deps.cache.get(key);
-			if (hit !== undefined) {
-				return htmlResponse(hit, { status: 200 }, null, "HIT");
+		if (!cacheable) {
+			return toResponse(await renderBuffered(request, context), "BYPASS");
+		}
+
+		const key = `${url.pathname}${url.search}`;
+		const hit = deps.cache.get(key);
+		if (hit !== undefined) {
+			return toResponse(
+				{
+					status: 200,
+					statusText: "",
+					headers: new Headers(),
+					html: hit,
+					body: null,
+				},
+				"HIT",
+			);
+		}
+
+		// Single flight: concurrent misses for one key share a single render.
+		const joined = inflight.get(key);
+		if (joined) {
+			const shared = await joined;
+			if (shareable(shared)) {
+				return toResponse(shared, "MISS");
+			}
+			// An uncacheable render (cookie, private) is never shared.
+			return toResponse(await renderBuffered(request, context), "MISS");
+		}
+
+		const startedAt = generation;
+		const flight = renderBuffered(request, context);
+		inflight.set(key, flight);
+		try {
+			const result = await flight;
+			if (storable(result) && generation === startedAt && result.html) {
+				deps.cache.set(key, result.html);
+			}
+			return toResponse(result, "MISS");
+		} finally {
+			if (inflight.get(key) === flight) {
+				inflight.delete(key);
 			}
 		}
-
-		const response = await deps.render(request);
-		const type = response.headers.get("content-type") ?? "";
-		const state = cacheable ? "MISS" : "BYPASS";
-		if (!type.includes("text/html")) {
-			const headers = new Headers(response.headers);
-			headers.set("x-cache", state);
-			return new Response(response.body, {
-				status: response.status,
-				statusText: response.statusText,
-				headers,
-			});
-		}
-
-		const html = await response.text();
-		if (cacheable && response.status === 200) {
-			deps.cache.set(key, html);
-		}
-		return htmlResponse(
-			html,
-			{ status: response.status, statusText: response.statusText },
-			response.headers,
-			state,
-		);
 	};
 }
