@@ -1,6 +1,6 @@
 import { createRouter } from "@tanstack/react-router";
+import { NONCE_PLACEHOLDER } from "@/lib/nonce";
 import { routeTree } from "./routeTree.gen";
-import { NONCE_PLACEHOLDER } from "./server/csp";
 
 export function getRouter() {
 	return createRouter({

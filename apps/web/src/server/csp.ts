@@ -1,6 +1,4 @@
-// The SSR render writes this token wherever a nonce is needed; the server entry
-// swaps in a fresh nonce for every response, cached or not.
-export const NONCE_PLACEHOLDER = "__PRANATA_NONCE__";
+import { NONCE_PLACEHOLDER } from "@/lib/nonce";
 
 export function nonce(): string {
 	return Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString(
@@ -22,6 +20,14 @@ export function cspHeader(n: string): string {
 	].join("; ");
 }
 
+// Only the attributes Start fills with the placeholder are rewritten, so page
+// content that happens to contain the token is never touched (a nonce in text
+// would leak into the document, and an attacker could not predict it anyway).
+const NONCE_ATTR = new RegExp(
+	`(\\snonce="|<meta property="csp-nonce" content=")${NONCE_PLACEHOLDER}"`,
+	"g",
+);
+
 export function withNonce(html: string, n: string): string {
-	return html.replaceAll(NONCE_PLACEHOLDER, n);
+	return html.replace(NONCE_ATTR, (_m, lead: string) => `${lead}${n}"`);
 }

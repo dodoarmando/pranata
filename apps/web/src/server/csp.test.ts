@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@rstest/core";
-import { cspHeader, NONCE_PLACEHOLDER, nonce, withNonce } from "./csp";
+import { NONCE_PLACEHOLDER } from "@/lib/nonce";
+import { cspHeader, nonce, withNonce } from "./csp";
 
 describe("csp", () => {
 	it("contains nonce and forbids framing", () => {
@@ -21,5 +22,14 @@ describe("csp", () => {
 		const out = withNonce(html, "n1");
 		expect(out).not.toContain(NONCE_PLACEHOLDER);
 		expect(out.match(/nonce="n1"/g)).toHaveLength(2);
+	});
+
+	it("substitutes only nonce attributes, not page text", () => {
+		const html = `<meta property="csp-nonce" content="${NONCE_PLACEHOLDER}"/><script nonce="${NONCE_PLACEHOLDER}"></script><p>${NONCE_PLACEHOLDER}</p><p>nonce=&quot;${NONCE_PLACEHOLDER}&quot;</p>`;
+		const out = withNonce(html, "n1");
+		expect(out).toContain('<script nonce="n1">');
+		expect(out).toContain('content="n1"');
+		expect(out).toContain(`<p>${NONCE_PLACEHOLDER}</p>`);
+		expect(out).toContain(`&quot;${NONCE_PLACEHOLDER}&quot;`);
 	});
 });
