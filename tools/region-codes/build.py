@@ -21,6 +21,8 @@ def main(source: str, target: str) -> None:
         for line in handle:
             match = ROW.match(line)
             if match:
+                if match.group(1) in names:
+                    raise SystemExit(f"duplicate code {match.group(1)}")
                 names[match.group(1)] = match.group(2).replace("''", "'")
 
     out = io.StringIO()
