@@ -129,9 +129,10 @@ provision:
 check-village-data:
     tools/no-village-data.sh
 
-# Build container images (Task 13).
-images:
-    @echo "images: not implemented yet (Task 13)"
+# Build the api and web container images for linux/amd64 (podman).
+images tag="local":
+    podman build --platform linux/amd64 -f apps/api/Containerfile -t pranata-api:{{ tag }} .
+    podman build --platform linux/amd64 -f apps/web/Containerfile -t pranata-web:{{ tag }} .
 
 # Run end-to-end tests (Task 14).
 e2e:

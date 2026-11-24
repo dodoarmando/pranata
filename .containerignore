@@ -1,0 +1,25 @@
+# Build context filter for the container images (context is the repo root).
+.git/
+.github/
+.superpowers/
+.prototype/
+.claude/
+.vscode/
+.idea/
+docs/
+infra/
+target/
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.output/
+.vinxi/
+.tanstack/
+coverage/
+playwright-report/
+test-results/
+**/test-results/
+.env
+.env.*
+**/*.log

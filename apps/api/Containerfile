@@ -1,0 +1,22 @@
+# syntax=docker/dockerfile:1
+# Build context is the repository root:
+#   podman build --platform linux/amd64 -f apps/api/Containerfile -t pranata-api:local .
+
+FROM docker.io/library/rust:1.100-trixie AS build
+WORKDIR /src
+ENV SQLX_OFFLINE=true CARGO_TERM_COLOR=never
+COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
+COPY .sqlx ./.sqlx
+COPY apps/api ./apps/api
+# Cache mounts keep the registry and the incremental target dir between builds;
+# the binary is copied out because the target dir is not part of the layer.
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/src/target \
+    cargo build --release --locked -p pranata \
+    && install -D target/release/pranata /out/pranata
+
+FROM gcr.io/distroless/cc-debian13:nonroot
+COPY --from=build /out/pranata /pranata
+USER nonroot:nonroot
+ENTRYPOINT ["/pranata"]
+CMD ["serve"]

@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1
+# Build context is the repository root:
+#   podman build --platform linux/amd64 -f apps/web/Containerfile -t pranata-web:local .
+
+FROM docker.io/oven/bun:1.4 AS build
+WORKDIR /src
+# Manifests first so the install layer is cached until dependencies change.
+COPY package.json bun.lock ./
+COPY apps/web/package.json apps/web/package.json
+COPY tools tools
+RUN bun install --frozen-lockfile --filter @pranata/web
+COPY apps/web apps/web
+RUN cd apps/web && bun run build
+# The server bundle is self-contained; only the srvx launcher is needed at run time.
+RUN mkdir -p /out/node_modules && cp -rL apps/web/node_modules/srvx /out/node_modules/srvx
+
+FROM docker.io/oven/bun:1.4-distroless
+WORKDIR /app
+COPY --from=build --chown=65532:65532 /out/node_modules ./node_modules
+COPY --from=build --chown=65532:65532 /src/apps/web/dist/server ./dist/server
+COPY --from=build --chown=65532:65532 /src/apps/web/dist/client ./dist/client
+USER 65532:65532
+ENV PORT=3000 NODE_ENV=production
+EXPOSE 3000
+# srvx resolves -s relative to the server entry dir; bun runs the launcher directly (no node, no network).
+ENTRYPOINT ["/usr/local/bin/bun"]
+CMD ["node_modules/srvx/bin/srvx.mjs", "--prod", "-s", "../client", "dist/server/index.js"]
