@@ -599,3 +599,24 @@ async fn reupload_of_failed_asset_retries(pool: PgPool) {
         .unwrap();
     assert_eq!(assets, 1);
 }
+
+#[sqlx::test]
+async fn truncated_jpeg_is_failed(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    // A photo cut off by a dropped connection: the header and the first part
+    // of the pixel data arrived, the end-of-image marker did not.
+    let mut file = jpeg(400, 300);
+    file.truncate(file.len() / 3);
+    let created = h.upload("cut.jpg", &file, None).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.body);
+    h.run_jobs().await;
+    let asset = h.get(created.body["id"].as_str().unwrap()).await;
+    assert_eq!(asset.body["status"], "failed");
+    assert_eq!(asset.body["variants"], json!([]));
+
+    let error = pipeline::process_image(&file).unwrap_err();
+    assert!(
+        matches!(error, ApiError::Unprocessable("image_truncated")),
+        "{error:?}"
+    );
+}

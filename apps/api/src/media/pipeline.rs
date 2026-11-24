@@ -188,6 +188,13 @@ pub fn process_image(original: &[u8]) -> Result<Processed, ApiError> {
         .image_format()
         .ok_or(ApiError::Unsupported("unsupported_media_type"))?;
 
+    // Decoders fill in missing JPEG data silently; a photo cut off by a dropped
+    // connection must fail instead of becoming a half-grey image.
+    if inspected.format == Format::Jpeg && !jpeg_is_complete(original) {
+        tracing::warn!("rejecting a JPEG without an end-of-image marker (truncated upload)");
+        return Err(ApiError::Unprocessable("image_truncated"));
+    }
+
     // Step 3: decode with limits, then apply the EXIF orientation.
     let mut reader = ImageReader::with_format(Cursor::new(original), image_format)
         .into_decoder()
@@ -244,6 +251,42 @@ pub fn process_image(original: &[u8]) -> Result<Processed, ApiError> {
         height,
         variants,
     })
+}
+
+/// Whether a JPEG stream reaches its end-of-image marker. It walks the marker
+/// segments, so an `FF D9` inside an embedded thumbnail does not count, and
+/// data after the marker (motion photo videos, padding) is fine.
+fn jpeg_is_complete(bytes: &[u8]) -> bool {
+    let mut at = 2; // after the start-of-image marker
+    while at + 1 < bytes.len() {
+        if bytes[at] != 0xFF {
+            return false;
+        }
+        let marker = bytes[at + 1];
+        match marker {
+            0xFF => at += 1,               // fill byte
+            0xD9 => return true,           // end of image
+            0x01 | 0xD0..=0xD8 => at += 2, // markers without a length
+            _ => {
+                let Some(length) = bytes.get(at + 2..at + 4) else {
+                    return false;
+                };
+                at += 2 + usize::from(u16::from_be_bytes([length[0], length[1]]));
+                if marker == 0xDA {
+                    // Entropy-coded data: skip it up to the next real marker
+                    // (`FF 00` is a stuffed byte, `FF D0..D7` a restart).
+                    while at + 1 < bytes.len()
+                        && !(bytes[at] == 0xFF
+                            && bytes[at + 1] != 0x00
+                            && !(0xD0..=0xD7).contains(&bytes[at + 1]))
+                    {
+                        at += 1;
+                    }
+                }
+            }
+        }
+    }
+    false
 }
 
 fn scaled_height(width: u32, height: u32, target: u32) -> u32 {
@@ -327,6 +370,23 @@ mod tests {
         assert_eq!(Format::sniff(b"\0\0\0\x18ftypheic"), None);
         assert_eq!(Format::sniff(b"GIF89a"), None);
         assert_eq!(Format::sniff(b""), None);
+    }
+
+    #[test]
+    fn jpeg_completeness_follows_the_marker_structure() {
+        // SOI, APP0 (length 4), SOS (length 3), entropy data with a stuffed
+        // byte and a restart marker, EOI.
+        let whole = [
+            0xFF, 0xD8, 0xFF, 0xE0, 0, 4, 1, 2, 0xFF, 0xDA, 0, 3, 0, 0xAA, 0xFF, 0x00, 0xBB, 0xFF,
+            0xD0, 0xCC, 0xFF, 0xD9,
+        ];
+        assert!(jpeg_is_complete(&whole));
+        let mut padded = whole.to_vec();
+        padded.extend([0, 0, 0, b'f', b't', b'y', b'p']);
+        assert!(jpeg_is_complete(&padded));
+        assert!(!jpeg_is_complete(&whole[..whole.len() - 2]));
+        assert!(!jpeg_is_complete(&whole[..12]));
+        assert!(!jpeg_is_complete(&[0xFF, 0xD8]));
     }
 
     #[test]
