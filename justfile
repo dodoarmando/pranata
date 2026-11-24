@@ -48,17 +48,17 @@ check-web:
 check-contract:
     @echo "check-contract: not implemented yet (Task 10)"
 
-# Verify decision-to-test traceability (Task 2).
+# Verify every design decision is cited by a plan task, the roadmap or Not built.
 check-trace:
-    @echo "check-trace: not implemented yet (Task 2)"
+    bun tools/trace/trace.ts
 
 # Validate infrastructure files (Task 16).
 check-infra:
     @echo "check-infra: not implemented yet (Task 16)"
 
-# Run decision traceability in strict mode (Task 2).
+# Run decision traceability in strict mode (roadmap-only citations fail).
 check-trace-strict:
-    @echo "check-trace-strict: not implemented yet (Task 2)"
+    bun tools/trace/trace.ts --strict
 
 # Run API tests (Task 3).
 test-api:
