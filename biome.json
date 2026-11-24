@@ -47,7 +47,11 @@
 	],
 	"overrides": [
 		{
-			"includes": ["apps/web/src/routes/**", "!apps/web/src/routes/admin/**"],
+			"includes": [
+				"apps/web/src/routes/**",
+				"!apps/web/src/routes/admin/**",
+				"!apps/web/src/routes/admin.tsx"
+			],
 			"linter": {
 				"rules": {
 					"style": {
@@ -56,7 +60,22 @@
 							"options": {
 								"patterns": [
 									{
-										"group": ["@/admin/*", "@/routes/admin/*", "**/admin/*"],
+										"group": [
+											"@/admin",
+											"@/admin/**",
+											"@/routes/admin",
+											"@/routes/admin/**",
+											"./admin",
+											"./admin/**",
+											"../admin",
+											"../admin/**",
+											"../../admin",
+											"../../admin/**",
+											"../../../admin",
+											"../../../admin/**",
+											"../../../../admin",
+											"../../../../admin/**"
+										],
 										"message": "Public routes must not import admin modules (D-08)"
 									}
 								]
