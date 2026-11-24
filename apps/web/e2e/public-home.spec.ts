@@ -9,6 +9,11 @@ import {
 	VILLAGE_HEADING,
 } from "./stack";
 
+// D-06: the public site is built for a phone first, so every test here runs
+// at 390x844.
+const PHONE = { width: 390, height: 844 };
+test.use({ viewport: PHONE });
+
 const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];
 // size-limit counts 1 KB as 1000 bytes; use the same unit for both gates.
 const JS_BUDGET_BYTES = 120_000;
@@ -46,6 +51,7 @@ test("renders content without javascript", async ({ browser }) => {
 	const context = await browser.newContext({
 		javaScriptEnabled: false,
 		ignoreHTTPSErrors: true,
+		viewport: PHONE,
 	});
 	const page = await context.newPage();
 	await page.goto(ORIGIN);
