@@ -1,6 +1,6 @@
 mod common;
 
-use pranata::region_codes::{TimeZone, VillageCode, VillageCodeError, lookup};
+use pranata::region_codes::{self, TimeZone, VillageCode, VillageCodeError, lookup};
 
 fn code(s: &str) -> VillageCode {
     VillageCode::parse(s).expect("valid code")
@@ -45,6 +45,28 @@ fn lookup_maps_papua_to_wit() {
 #[test]
 fn lookup_returns_none_for_unknown_code() {
     assert!(lookup(&code("99.99.99.9999")).is_none());
+}
+
+/// Row count recorded in `data/SOURCE.md`; update both together.
+const EXPECTED_ROWS: usize = 83_762;
+
+#[test]
+fn bundled_dataset_is_well_formed() {
+    assert_eq!(region_codes::record_count(), EXPECTED_ROWS);
+    let source = include_str!("../data/SOURCE.md");
+    assert!(
+        source.contains("83,762 data rows"),
+        "SOURCE.md must state the row count"
+    );
+    for code in region_codes::codes() {
+        let bytes = code.as_str().as_bytes();
+        let shape_ok = bytes.len() == 13
+            && bytes.iter().enumerate().all(|(i, b)| match i {
+                2 | 5 | 8 => *b == b'.',
+                _ => b.is_ascii_digit(),
+            });
+        assert!(shape_ok, "malformed code {code}");
+    }
 }
 
 #[test]

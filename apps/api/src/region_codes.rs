@@ -50,6 +50,12 @@ impl VillageCode {
         )))
     }
 
+    /// The two digit province code.
+    #[must_use]
+    pub fn province_code(&self) -> &str {
+        self.0.get(..2).unwrap_or_default()
+    }
+
     /// The dotted form.
     #[must_use]
     pub fn as_str(&self) -> &str {
@@ -122,32 +128,48 @@ struct Row {
     province: String,
 }
 
-static TABLE: LazyLock<HashMap<String, RegionRecord>> = LazyLock::new(|| {
+// The bundled data is checked by the `bundled_dataset_is_well_formed` test
+// (row count, code shape, no duplicates), so the `expect`s below cannot fire
+// for a dataset that passed CI. Duplicate codes are detected here, not
+// overwritten.
+static TABLE: LazyLock<HashMap<VillageCode, RegionRecord>> = LazyLock::new(|| {
     let mut text = String::new();
     GzDecoder::new(DATA)
         .read_to_string(&mut text)
         .expect("bundled region codes are valid gzip");
-    csv::Reader::from_reader(text.as_bytes())
-        .deserialize::<Row>()
-        .map(|row| {
-            let row = row.expect("bundled region codes are valid csv");
-            let time_zone = TimeZone::from_province_code(&row.code[0..2]);
-            (
-                row.code,
-                RegionRecord {
-                    village: row.village,
-                    district: row.district,
-                    regency: row.regency,
-                    province: row.province,
-                    time_zone,
-                },
-            )
-        })
-        .collect()
+    let mut table = HashMap::new();
+    for row in csv::Reader::from_reader(text.as_bytes()).deserialize::<Row>() {
+        let row = row.expect("bundled region codes are valid csv");
+        let code = VillageCode::parse(&row.code).expect("bundled region code is well formed");
+        let record = RegionRecord {
+            village: row.village,
+            district: row.district,
+            regency: row.regency,
+            province: row.province,
+            time_zone: TimeZone::from_province_code(code.province_code()),
+        };
+        assert!(
+            table.insert(code, record).is_none(),
+            "duplicate bundled region code {}",
+            row.code
+        );
+    }
+    table
 });
+
+/// Number of villages in the bundled dataset.
+#[must_use]
+pub fn record_count() -> usize {
+    TABLE.len()
+}
+
+/// Every village code in the bundled dataset, in no particular order.
+pub fn codes() -> impl Iterator<Item = &'static VillageCode> {
+    TABLE.keys()
+}
 
 /// Look a village up in the bundled dataset.
 #[must_use]
 pub fn lookup(code: &VillageCode) -> Option<RegionRecord> {
-    TABLE.get(code.as_str()).cloned()
+    TABLE.get(code).cloned()
 }

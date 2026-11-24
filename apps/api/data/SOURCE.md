@@ -4,7 +4,9 @@
 names of its district, regency and province. Columns, in order:
 `code,village,district,regency,province`. `code` is the dotted 10-digit village
 code (`PP.KK.CC.VVVV`). Names are as published, so regencies keep their
-`Kabupaten` or `Kota` prefix. The file has 83,762 data rows plus the header.
+`Kabupaten` or `Kota` prefix. The file has 83,762 data rows plus the header;
+the `bundled_dataset_is_well_formed` test pins that count, so change both
+together.
 
 ## Source
 
