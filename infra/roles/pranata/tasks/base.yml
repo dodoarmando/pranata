@@ -37,10 +37,18 @@
 - name: Install the pinned restic release
   when: pranata_restic_installed.rc != 0 or (pranata_restic_installed.stdout.split()[1:2] | first | default('')) != pranata_restic_version
   block:
+    # A root-only directory, so no other user can swap the files between the
+    # checksum check and the install.
+    - name: Create a private directory for the download
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: pranata-restic.
+      register: pranata_restic_tmp
+
     - name: Download restic, checked against the pinned checksum
       ansible.builtin.get_url:
         url: "https://github.com/restic/restic/releases/download/v{{ pranata_restic_version }}/restic_{{ pranata_restic_version }}_linux_amd64.bz2"
-        dest: /var/tmp/pranata-restic.bz2
+        dest: "{{ pranata_restic_tmp.path }}/restic.bz2"
         checksum: "sha256:{{ pranata_restic_sha256 }}"
         owner: root
         group: root
@@ -48,13 +56,24 @@
 
     - name: Decompress restic
       ansible.builtin.command:
-        argv:
-          [bzip2, --decompress, --force, --keep, /var/tmp/pranata-restic.bz2]
-      changed_when: true
+        argv: [bzip2, --decompress, "{{ pranata_restic_tmp.path }}/restic.bz2"]
+        creates: "{{ pranata_restic_tmp.path }}/restic"
+
+    - name: Make the decompressed restic runnable
+      ansible.builtin.file:
+        path: "{{ pranata_restic_tmp.path }}/restic"
+        mode: "0700"
+
+    - name: Check the decompressed restic is the pinned version
+      ansible.builtin.command:
+        argv: ["{{ pranata_restic_tmp.path }}/restic", version]
+      register: pranata_restic_downloaded
+      changed_when: false
+      failed_when: (pranata_restic_downloaded.stdout.split()[1:2] | first | default('')) != pranata_restic_version
 
     - name: Put restic on the path
       ansible.builtin.copy:
-        src: /var/tmp/pranata-restic
+        src: "{{ pranata_restic_tmp.path }}/restic"
         remote_src: true
         dest: /usr/local/bin/restic
         owner: root
@@ -62,13 +81,11 @@
         mode: "0755"
 
   always:
-    - name: Remove the download
+    - name: Remove the download directory
       ansible.builtin.file:
-        path: "{{ item }}"
+        path: "{{ pranata_restic_tmp.path }}"
         state: absent
-      loop:
-        - /var/tmp/pranata-restic.bz2
-        - /var/tmp/pranata-restic
+      when: pranata_restic_tmp.path is defined
 
 - name: Enable automatic security updates
   ansible.builtin.copy:
