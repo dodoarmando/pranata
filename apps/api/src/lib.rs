@@ -1,6 +1,7 @@
 //! Pranata API: the only component with database access (D-10).
 
 pub mod audit;
+pub mod auth;
 pub mod config;
 pub mod db;
 pub mod error;
