@@ -620,7 +620,7 @@ Plans are named after their release. This plan is R0 (the walking skeleton). The
 
 ## Carry-over into R1 plans
 
-The final whole-branch review of R0 deferred these items. Each plan must pick up its group when it is written. Items are one line each, with their source.
+The final whole-branch review of R0 deferred these items, and each later plan adds here what it defers to another plan. Each plan must pick up its group when it is written. Items are one line each, with their source.
 
 ### Carry-over to the Access plan (R1-A)
 
@@ -638,6 +638,7 @@ The final whole-branch review of R0 deferred these items. Each plan must pick up
 - VillageProfile construction is duplicated (final review).
 - Dataset currency: the README says 2430 while the SQL header says 2138; verify against the official Kepmendagri (final review).
 - Large transparent PNGs become JPEGs with a black background (final review).
+- The Users screen has no "Perangkat desa" column linking a User to an Official, as the admin prototype shows; add it once Officials exist (R1-A plan, Task 10).
 
 ### Carry-over to the Website content plan (R1-C)
 
@@ -654,6 +655,8 @@ The final whole-branch review of R0 deferred these items. Each plan must pick up
 - An imperative upload that gets a 401 bypasses the central redirect (final review).
 - Weak-signal uploads have no timeout and show only a fake 45 % progress; use XHR progress plus a timeout (final review).
 - Session expiry loses edits; keep a local draft (final review).
+- D-31: deleting published content must require Sudo Mode through `AuthSession::require_sudo`, with a test per delete route (R1-A plan, Task 4).
+- The sign-in carousel shows built-in slides; switch it to photos from published Albums (R1-A plan, Task 15).
 
 ### Carry-over to the Public site plan (R1-D)
 
@@ -703,3 +706,4 @@ The final whole-branch review of R0 deferred these items. Each plan must pick up
 - Remove `release-as` from `release-please-config.json` after the 0.1.0 release (final fix wave).
 - Two HIGH findings with no fix in the api base image (libssl3t64, CVE-2026-107494 and CVE-2026-124709) are skipped by `just scan-images`; re-check them when the base image updates (final fix wave).
 - A job that exhausts its retries on a transient error leaves the raw upload on disk; only a permanent rejection deletes it (final fix wave).
+- Caddy runs with host networking and the api and web containers publish on 127.0.0.1 only (ADR 0009, R1-A plan, Task 6); cover this in the install guide, the stranger install test and the multi-Installation deploy (R1-A plan).
