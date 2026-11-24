@@ -74,6 +74,21 @@ check: check-api check-web check-trace check-village-data
 check-commits from="origin/main":
     bunx commitlint --from {{ from }} --to HEAD
 
+# Lint without a database: Biome, rustfmt, clippy on the offline sqlx data, village data.
+lint:
+    bunx biome ci
+    cargo fmt --all --check
+    SQLX_OFFLINE=true cargo clippy --workspace --all-targets --locked -- -D warnings
+    tools/no-village-data.sh
+
+# Verify the committed sqlx offline data matches the queries (needs a migrated database).
+check-sqlx:
+    cargo sqlx prepare --workspace --check -- --all-targets
+
+# Typecheck the web app.
+typecheck:
+    bun run --filter @pranata/web typecheck
+
 # Run API checks: format, clippy pedantic, sqlx offline data, tests.
 check-api:
     cargo fmt --all --check
@@ -129,10 +144,21 @@ provision:
 check-village-data:
     tools/no-village-data.sh
 
-# Build the api and web container images for linux/amd64 (podman).
+# Build the api and web images for linux/amd64 (podman). PRANATA_SKIP_IMAGES=1 reuses
+# loaded ones; PRANATA_IMAGE_SOURCE=<repo url> labels them so ghcr links them to the repo.
 images tag="local":
-    podman build --platform linux/amd64 -f apps/api/Containerfile -t pranata-api:{{ tag }} .
-    podman build --platform linux/amd64 -f apps/web/Containerfile -t pranata-web:{{ tag }} .
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ "${PRANATA_SKIP_IMAGES:-}" = "1" ]; then
+        echo "images: PRANATA_SKIP_IMAGES=1, reusing the images already in podman"
+        exit 0
+    fi
+    labels=()
+    if [ -n "${PRANATA_IMAGE_SOURCE:-}" ]; then
+        labels=(--label "org.opencontainers.image.source=$PRANATA_IMAGE_SOURCE")
+    fi
+    podman build --platform linux/amd64 "${labels[@]}" -f apps/api/Containerfile -t pranata-api:{{ tag }} .
+    podman build --platform linux/amd64 "${labels[@]}" -f apps/web/Containerfile -t pranata-web:{{ tag }} .
 
 # Run end-to-end tests against the production images in a resource-limited pod.
 e2e: images
