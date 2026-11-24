@@ -11,9 +11,9 @@ Network=pranata.network
 NetworkAlias=api
 EnvironmentFile=%h/.config/pranata/api.env
 Volume={{ pranata_media_dir }}:/media
-# The image has no curl, so the binary checks itself. Healthy means the
+# The image has no curl or shell, so the binary checks itself (exec form). Healthy means the
 # migrations ran and the api answers; start-up waits for it.
-HealthCmd=/pranata healthcheck
+HealthCmd=["/pranata", "healthcheck"]
 HealthInterval=5s
 HealthRetries=3
 HealthStartPeriod=90s
