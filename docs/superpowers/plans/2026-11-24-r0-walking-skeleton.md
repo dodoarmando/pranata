@@ -615,3 +615,91 @@ Each plan below is written with the writing-plans skill once R0's code exists, s
 | P6 Operations and release | N/N-1 migration compatibility test, multi-Installation deploy, monitoring docs, demo seed, the stranger install test, R1 release checklist with strict trace | D-50, D-51, D-52, D-53, D-54, D-56, D-01, D-46, D-55, D-10, D-15, D-16, D-36, D-37, D-40, D-41, D-42, D-43, D-44, D-45, D-47, D-48, D-49, D-59, D-60, D-13 |
 
 **Not built:** D-05 (WordPress import is a non-goal).
+
+---
+
+## Carry-over into R1 plans
+
+The final whole-branch review of R0 deferred these items. Each plan must pick up its group when it is written. Items are one line each, with their source.
+
+### Carry-over to the Access plan (P2)
+
+- `audit::fields_of` silently maps non-object values to an empty diff (final review).
+- An old session row survives re-login (final review).
+- Deactivated users can still redeem Access Links, and their other links stay valid (final review).
+- No concurrency test for double redemption of an Access Link (final review).
+- Malformed JSON gets a text/plain rejection instead of a problem document (final review).
+- A password over 128 characters is dummy-verified on the full input (final review).
+- There is no way to issue an Access Link for an existing user (final review).
+- Per-IP throttling sees a single IP behind rootless port forwarding; use pasta source-IP preservation or a trusted X-Forwarded-For from Caddy (final review).
+
+### Carry-over to the Village plan (P3)
+
+- VillageProfile construction is duplicated (final review).
+- Dataset currency: the README says 2430 while the SQL header says 2138; verify against the official Kepmendagri (final review).
+- Large transparent PNGs become JPEGs with a black background (final review).
+
+### Carry-over to the Website content plan (P4)
+
+- An orphan file is left when the upload transaction rolls back; add media garbage collection (final review).
+- ICC colour profiles are dropped (final review).
+- PDFs need public serving (final review).
+- Revisit the fixed 300 s job lease (final review).
+- `process_asset` ready and reject updates lack a `status = 'pending'` guard (final review).
+- There is no structural schema check for rich text (final review).
+- The YouTube anchor lacks a rel attribute (final review).
+- `is_media_url` accepts `..` (final review).
+- A no-op PUT writes an audit entry and purges the cache (final review).
+- Upload polling swallows network errors (final review).
+- An imperative upload that gets a 401 bypasses the central redirect (final review).
+- Weak-signal uploads have no timeout and show only a fake 45 % progress; use XHR progress plus a timeout (final review).
+- Session expiry loses edits; keep a local draft (final review).
+
+### Carry-over to the Public site plan (P5)
+
+- API down gives a 500 with the English Start error page; add stale-if-error and an Indonesian error page (final review).
+- The SSR fetch has no timeout; set 5 s (final review).
+- The purge e2e should assert `x-cache: HIT` before the save (final review).
+- The k6 scenario only exercises a warm cache; add misses and purges (final review).
+- Cache-busting query churn (final review).
+- A cache HIT drops the Link and Cache-Control headers (final review).
+- Facade: focus handling and modifier-click (final review).
+- Render the uppercase eyebrow via CSS (final review).
+- The 503 page lacks a skip link and header (final review).
+- No test for a throwing leader render (final review).
+- SSR cookie forwarding is needed once SSR is authenticated (final review).
+- The modulepreload count is not captured (final review).
+- The e2e tests depend on execution order (final review).
+
+### Carry-over to the Operations and release plan (P6)
+
+- The trace parser ignores `### Task N` without a colon, ignores fenced blocks, and reads D-1234 as D-123; fix this before `check-trace-strict` gates R1 (final review).
+- `migrate` and `village init` need unrelated config (final review).
+- `x-request-id` is not validated or bounded (final review).
+- The image has no numeric USER, no `EXPOSE 8080` and no OCI labels (final review).
+- The release workflow rebuilds images instead of publishing the ones CI tested (final review).
+- `.pranata-version` is never read, and there is no `just rollback` (final review).
+- The superuser password is passed via `Environment=` and derived from other secrets (final review).
+- psql passwords appear in argv (final review).
+- Restarts use loop-index logic (`results[3]`) (final review).
+- The sysctl tolerance is tied to the TLS mode (final review).
+- A single network is shared by db, web and caddy (final review).
+- Caddy needs hardening (final review).
+- `postgres:19` floats (final review).
+- No DNS pre-check before ACME (final review).
+- Some CI steps run outside `just` (final review).
+- Untested: the ssh happy path, the ROLLBACK FAILED rescue, the nft check in check-infra, and the 120 s TimeoutStartSec against long migrations (final review).
+- No retention test for the backups (final review).
+- The API serves with owner DB credentials; run `migrate` as ExecStartPre with the owner URL and give `serve` the app URL only (final review).
+- Docs nits for the stranger install test (final review):
+  - add a journalctl `_UID` fallback;
+  - note the Access Link appears inside the debug msg;
+  - mention the 10–128 character password rule;
+  - fix the adduser flag ambiguity;
+  - use `sudo -H`;
+  - explain the vault flag;
+  - list the sudo and python3 prerequisites;
+  - rehearse the disaster restore.
+- Remove `release-as` from `release-please-config.json` after the 0.1.0 release (final fix wave).
+- Two HIGH findings with no fix in the api base image (libssl3t64, CVE-2026-107494 and CVE-2026-124709) are skipped by `just scan-images`; re-check them when the base image updates (final fix wave).
+- A job that exhausts its retries on a transient error leaves the raw upload on disk; only a permanent rejection deletes it (final fix wave).
