@@ -1,0 +1,20 @@
+---
+# Sets pranata_running_release to the tag the api unit points at, or to an
+# empty string when the Installation has no unit yet.
+- name: Look for the api unit
+  ansible.builtin.stat:
+    path: "{{ pranata_home }}/.config/containers/systemd/pranata-api.container"
+  register: pranata_api_unit
+
+- name: Read the api unit
+  ansible.builtin.slurp:
+    src: "{{ pranata_home }}/.config/containers/systemd/pranata-api.container"
+  register: pranata_api_unit_content
+  when: pranata_api_unit.stat.exists
+
+- name: Work out the release that runs now
+  ansible.builtin.set_fact:
+    pranata_running_release: >-
+      {{ (pranata_api_unit_content.content | b64decode
+          | regex_search('(?m)^Image=\S*/pranata-api:(\S+)$', '\1') | first)
+         if pranata_api_unit.stat.exists else '' }}

@@ -39,6 +39,25 @@
     path: "/run/user/{{ pranata_uid }}/bus"
     timeout: 30
 
+# An existing Installation keeps the release it runs: only `just deploy` moves it.
+- name: Look up the release this Installation runs
+  ansible.builtin.import_tasks: current_release.yml
+
+- name: Keep the running release
+  ansible.builtin.set_fact:
+    pranata_release: "{{ pranata_running_release if pranata_running_release | length > 0 else pranata_version }}"
+
+- name: Warn when the inventory names another version
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: {{ inventory_hostname }} runs {{ pranata_running_release }} but the
+      inventory says pranata_version={{ pranata_version }}. Provision keeps
+      {{ pranata_running_release }}; run `just deploy {{ inventory_hostname }}
+      {{ pranata_version }}` to move it.
+  when:
+    - pranata_running_release | length > 0
+    - pranata_running_release != pranata_version
+
 - name: Create the configuration directories
   ansible.builtin.file:
     path: "{{ item }}"

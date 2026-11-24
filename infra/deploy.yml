@@ -18,19 +18,23 @@
         name: pranata
         tasks_from: user_env.yml
 
+    - name: Look up the release that runs now
+      ansible.builtin.import_role:
+        name: pranata
+        tasks_from: current_release.yml
+
+    - name: Refuse an Installation that was never provisioned
+      ansible.builtin.assert:
+        that: pranata_running_release | length > 0
+        fail_msg: "{{ inventory_hostname }} has no pranata-api unit; run just provision first."
+        quiet: true
+
+    - name: Remember the version to return to
+      ansible.builtin.set_fact:
+        pranata_previous: "{{ pranata_running_release }}"
+
     - name: Deploy with a rollback on failure
       block:
-        - name: Read the unit that runs now
-          ansible.builtin.slurp:
-            src: "{{ pranata_home }}/.config/containers/systemd/pranata-api.container"
-          register: pranata_current_unit
-
-        - name: Work out the version that runs now
-          ansible.builtin.set_fact:
-            pranata_previous: >-
-              {{ (pranata_current_unit.content | b64decode)
-                 | regex_search('(?m)^Image=.*/pranata-api:(\S+)$', '\1') | first }}
-
         - name: Record the current version
           ansible.builtin.copy:
             dest: "{{ pranata_home }}/.pranata-version"
