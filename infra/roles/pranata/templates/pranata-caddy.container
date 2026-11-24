@@ -1,6 +1,7 @@
 # Managed by Ansible.
 [Unit]
 Description=Pranata Caddy
+Wants=pranata-api.service pranata-web.service
 After=pranata-api.service pranata-web.service
 
 [Container]
@@ -17,6 +18,7 @@ Volume=pranata-caddy-config:/config
 
 [Service]
 Restart=always
+RestartSec=3
 TimeoutStartSec=120
 
 [Install]

@@ -1,8 +1,16 @@
-# Disposable Debian 13 with systemd, to run infra/provision.yml against.
-# `just infra-test` runs it with --privileged --systemd=always.
-FROM docker.io/library/debian:13
-
+# Two targets on Debian 13, the production target:
+#   quadlet  Podman only, to dry-run the Quadlet units (`just check-infra`).
+#   (final)  systemd, to run infra/provision.yml against (`just infra-test`,
+#            with --privileged --systemd=always).
+FROM docker.io/library/debian:13 AS base
 ENV container=podman DEBIAN_FRONTEND=noninteractive
+
+FROM base AS quadlet
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends podman \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM base
 RUN apt-get update \
     && apt-get install -y --no-install-recommends systemd systemd-sysv dbus sudo python3 \
        ca-certificates iproute2 procps kmod \

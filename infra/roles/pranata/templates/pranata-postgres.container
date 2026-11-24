@@ -13,6 +13,7 @@ Volume=pranata-pgdata:/var/lib/postgresql
 HealthCmd=pg_isready -U postgres -d pranata
 HealthInterval=5s
 HealthRetries=12
+Notify=healthy
 
 [Service]
 Restart=always

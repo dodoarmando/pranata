@@ -1,6 +1,8 @@
 # Managed by Ansible.
 [Unit]
 Description=Pranata web
+Wants=pranata-api.service
+After=pranata-api.service
 
 [Container]
 Image={{ pranata_image_registry }}/pranata-web:{{ pranata_release }}
@@ -14,6 +16,7 @@ DropCapability=ALL
 
 [Service]
 Restart=always
+RestartSec=3
 TimeoutStartSec=120
 
 [Install]

@@ -273,22 +273,22 @@
   changed_when: false
   no_log: true
 
-- name: Start the web server
-  ansible.builtin.systemd:
-    name: pranata-web.service
-    state: started
-    scope: user
-  register: pranata_web_started
-  become: true
-  become_user: "{{ pranata_user }}"
-  environment: "{{ pranata_user_env }}"
-
 - name: Start the api
   ansible.builtin.systemd:
     name: pranata-api.service
     state: started
     scope: user
   register: pranata_api_started
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+
+- name: Start the web server
+  ansible.builtin.systemd:
+    name: pranata-web.service
+    state: started
+    scope: user
+  register: pranata_web_started
   become: true
   become_user: "{{ pranata_user }}"
   environment: "{{ pranata_user_env }}"

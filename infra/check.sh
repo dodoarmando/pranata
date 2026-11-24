@@ -38,15 +38,13 @@ mkdir -p "$work/units"
 for unit in pranata.network pranata-postgres.container pranata-api.container pranata-web.container pranata-caddy.container; do
     render "$unit" "$work/units/$unit"
 done
-quadlet=""
-for candidate in /usr/libexec/podman/quadlet /usr/lib/podman/quadlet /usr/lib/systemd/system-generators/podman-system-generator; do
-    if [ -x "$candidate" ]; then quadlet="$candidate"; break; fi
-done
-if [ -z "$quadlet" ]; then
-    echo "check-infra: podman's quadlet generator is not installed" >&2
-    exit 1
-fi
-QUADLET_UNIT_DIRS="$work/units" "$quadlet" -dryrun -user >"$work/dryrun.txt"
+# Quadlet differs between Podman versions, so the dry-run uses the Podman of
+# Debian 13, the production target, not whatever the runner has installed.
+podman build --quiet --target quadlet -f infra/test/Containerfile -t localhost/pranata-infra-quadlet:latest infra/test >/dev/null
+podman run --rm --volume "$work/units:/units:ro,z" localhost/pranata-infra-quadlet:latest sh -c '
+    quadlet=$(ls /usr/lib/podman/quadlet /usr/libexec/podman/quadlet 2>/dev/null | head -n 1)
+    podman --version >&2
+    QUADLET_UNIT_DIRS=/units "$quadlet" -dryrun -user' >"$work/dryrun.txt"
 cat "$work/dryrun.txt"
 for service in pranata-postgres pranata-api pranata-web pranata-caddy pranata-network; do
     grep -q "^---$service.service---" "$work/dryrun.txt" || { echo "check-infra: Quadlet generated no $service.service" >&2; exit 1; }
