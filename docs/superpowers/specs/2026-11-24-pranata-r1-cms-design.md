@@ -37,7 +37,6 @@ The archive is input, not inheritance. Its glossary and ADRs were reviewed; what
 - Population records, letters, online letter requests, complaints (R2–R4).
 - Importing content from WordPress. Old content stays where it is; the village re-enters what it wants. Pranata gets a new domain.
 - Email sending of any kind.
-- Interactive maps.
 - Multi-tenancy or a shared hosting mode.
 - Scheduled publishing, comments, newsletters.
 
@@ -115,6 +114,7 @@ Every decision has an ID. The implementation plan must reference each ID from at
 **D-03 R1 scope is the CMS.** In R1:
 - Setup wizard; access, roles and audit.
 - Village: profile (identity, overview text, facts, Vision and Mission with RPJMDes period), region tree, government (Positions, Tenures, Officials), Institutions, Indeks Desa Editions.
+- Village map: office location and Landmarks (D-57).
 - Website: Home Hero, Head's Welcome, News Posts, Announcements, Events, Pages, Albums, Important Contacts, Partners, Transparency Documents, APBDes Summaries, Quick Links, Categories.
 - All public pages of the prototype except population data: home, profile, history and other Pages, Vision and Mission, region and map, government (including past village heads from Tenure history), APBDes, Indeks Desa, news list and detail, announcements, events, gallery and album, documents, contacts, search results, 404.
 - Accessibility panel, SEO (sitemap, RSS, Open Graph), update and rollback, backups, monitoring, demo seed.
@@ -296,7 +296,15 @@ Every decision has an ID. The implementation plan must reference each ID from at
 
 **D-56 Demo seed.** `just seed demo` fills an empty Installation with synthetic content for Desa Sidomukti (real village identity from the region dataset; invented people, news and figures). The seed is never run automatically in production. *Check:* test that the seed runs on an empty database and refuses a non-empty one.
 
-**D-57 R1 map.** The region page shows an uploaded official map image with facts (area, elevation, distance to the district office, office coordinates, borders). An interactive map is R4. *Check:* e2e.
+**D-57 Village map on OpenStreetMap.**
+- The region page and the home page region section show an interactive Leaflet map with the village office pin, the Village's Landmarks, and the village boundary when a boundary is available (GeoJSON uploaded by an Administrator or taken from an open boundary dataset).
+- The page also lists facts: area, elevation, distance to the district office, office coordinates and borders.
+- The map loads only when the visitor taps it or scrolls to it, behind a static placeholder, so it adds nothing to the initial JavaScript budget (D-08) and makes no third-party request before interaction (D-20).
+- The tile source is a Village Setting (OpenStreetMap by default; a satellite source may be configured). Attribution is always shown.
+- A "Petunjuk arah" button opens directions to the office in the visitor's own map app (Google Maps URL with coordinates). The contact page's "Buka di peta" uses the same link.
+- The admin has a "Peta" screen: click the map to set the office location, and add, edit, deactivate or order Landmarks (name, category, coordinates).
+
+*Check:* e2e (map loads on interaction only, directions link has the right coordinates); Lighthouse unaffected.
 
 **D-58 Home page sections.** In order:
 1. Hero with search and Quick Links.
@@ -331,7 +339,7 @@ A section with no content is hidden, never shown empty. *Check:* e2e on a fresh 
 | **R1 CMS** | D-01 … D-60 | Sidomukti is live on Pranata and has left WordPress; D-54 verified |
 | **R2 Population** | Resident, Family, Population Event, Baseline import (Prodeskel / OpenSID formats), frozen Monthly Recap, registers B.1–B.4, Temporary Stay, Retention Schedule and Destruction, encryption-at-rest decision, public population section | — |
 | **R3 Letters** | Letter Types and Layouts, Service Letters (Typst + QR verification), Recorded Letters, yearly Letter Number sequence, Outgoing Letter Agenda, public verification page | — |
-| **R4 Resident services** | Online Letter Requests, Complaints, APBDes import from Siskeudes, interactive map, optional email | — |
+| **R4 Resident services** | Online Letter Requests, Complaints, APBDes import from Siskeudes, optional email | — |
 
 R2 and R3 are separate because letters depend on stable Resident data.
 
@@ -357,6 +365,7 @@ Renovate keeps these current. The plan re-checks each version against its regist
 | Build / unit test | Rsbuild / Rstest (fallback: Vite 8.3 / Vitest 5.1) | 2.3.3 / 0.12.6 |
 | Styling | Tailwind CSS / shadcn (Base UI) / Base UI / lucide-react | 4.3.5 / 4.23.0 / 1.9.0 / 1.78.0 |
 | Rich text | Tiptap | 3.35.0 |
+| Map | Leaflet (loaded on demand) | 1.9.4 |
 | API client | Orval | 8.49.0 |
 | Lint | Biome | 2.6.8 |
 | E2E / a11y / perf | Playwright / axe-core / Lighthouse CI / size-limit / k6 | 1.65.1 / 4.14.0 / 0.16.1 / 14.3.0 / 2.4.0 |
@@ -387,7 +396,7 @@ The maintainer did not discuss these points directly. They are the author's prop
 
 - D-08 budget numbers, D-31's 10-minute window, D-51 retention counts, D-16 size limits.
 - D-04: the "Layanan Desa" button shown only when an external URL is set.
-- D-57: the uploaded map image for R1.
+- D-57: OpenStreetMap via Leaflet chosen by the maintainer; the configurable tile source and the boundary sources are the author's proposal.
 - D-58: the order of home page sections, taken from the prototype.
 - D-23: no revisions; direct, live edits by publishers; contributors limited to their own unpublished items; status-less content needs `content.publish`.
 - D-27/D-33: the new `budget.manage` Permission.

@@ -70,6 +70,10 @@ _Avoid_: Organisation, lembaga (in code)
 The ministry's score, status and dimension scores for the Village for one data-collection year, on either the Indeks Desa scale (0–100) or the older IDM scale (0–1).
 _Avoid_: Ranking, IDM score (for current editions)
 
+**Landmark**:
+A place of public interest shown on the village map, such as a school, health post, mosque or field, with a name, category and coordinates; deactivated, never deleted, once published.
+_Avoid_: POI, place, marker, titik penting (in code)
+
 ### Website
 
 **Draft**:
