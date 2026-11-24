@@ -52,6 +52,9 @@ pranata_health_timeout: 120
 # only protects the cluster inside the pranata network.
 pranata_db_superuser_password: "{{ (pranata_db_owner_password ~ pranata_purge_token) | hash('sha256') }}"
 
+# The SSH port the firewall keeps open; follows the inventory's ansible_port.
+pranata_ssh_port: "{{ ansible_port | default(22) }}"
+
 # Ports published by Caddy on the host.
 pranata_http_port: 80
 pranata_https_port: 443

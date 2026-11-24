@@ -1,6 +1,10 @@
 # Managed by Ansible. The routes match infra/dev/Caddyfile.
 {
 	admin off
+	# Only 443/tcp is opened in the firewall, so do not advertise HTTP/3.
+	servers {
+		protocols h1 h2
+	}
 }
 
 {{ pranata_domain }} {

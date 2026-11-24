@@ -4,10 +4,11 @@
     name: ssh
     state: reloaded
 
+# The ruleset file starts with `flush ruleset`, so a reload swaps it atomically.
 - name: Reload nftables
   ansible.builtin.service:
     name: nftables
-    state: restarted
+    state: reloaded
 
 - name: Reload user systemd units
   ansible.builtin.systemd:

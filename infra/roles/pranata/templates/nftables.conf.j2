@@ -8,9 +8,9 @@ table inet filter {
 		iif lo accept
 		ct state established,related accept
 		ct state invalid drop
-		ip protocol icmp accept
-		ip6 nexthdr icmpv6 accept
-		tcp dport { 22, {{ pranata_http_port }}, {{ pranata_https_port }} } accept
+		meta l4proto icmp accept
+		meta l4proto ipv6-icmp accept
+		tcp dport { {{ pranata_ssh_port }}, {{ pranata_http_port }}, {{ pranata_https_port }} } accept
 	}
 	chain forward {
 		type filter hook forward priority filter; policy drop;
