@@ -11,6 +11,7 @@ pub mod jobs;
 pub mod media;
 pub mod openapi;
 pub mod region_codes;
+pub mod rich_text;
 pub mod village;
 
 use std::sync::Arc;
