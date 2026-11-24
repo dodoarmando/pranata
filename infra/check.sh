@@ -9,10 +9,10 @@ export ANSIBLE_CONFIG="$root/infra/ansible.cfg"
 cd "$root"
 
 echo "check-infra: ansible-lint"
-ansible-lint --offline -c infra/.ansible-lint infra/provision.yml infra/roles
+ansible-lint --offline -c infra/.ansible-lint infra/provision.yml infra/deploy.yml infra/roles
 
 echo "check-infra: syntax"
-for playbook in provision; do
+for playbook in provision deploy; do
     ansible-playbook --syntax-check -i localhost, "infra/$playbook.yml"
 done
 

@@ -1,0 +1,77 @@
+---
+# Point the api and web units at `pranata_release`, restart them (the api runs
+# the migrations when it starts) and wait until the new version answers.
+- name: Render the api and web units for the release
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "{{ pranata_home }}/.config/containers/systemd/{{ item }}"
+    owner: "{{ pranata_user }}"
+    group: "{{ pranata_user }}"
+    mode: "0600"
+  loop:
+    - pranata-api.container
+    - pranata-web.container
+
+- name: Reload the units
+  ansible.builtin.systemd:
+    daemon_reload: true
+    scope: user
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+
+- name: Pull the images for the release
+  ansible.builtin.command:
+    argv:
+      [
+        podman,
+        pull,
+        --quiet,
+        "{{ pranata_image_registry }}/{{ item }}:{{ pranata_release }}",
+      ]
+  loop:
+    - pranata-api
+    - pranata-web
+  when: pranata_pull_images | bool
+  changed_when: false
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+
+- name: Restart the api, which runs the migrations
+  ansible.builtin.systemd:
+    name: pranata-api.service
+    state: restarted
+    scope: user
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+
+- name: Restart the web server
+  ansible.builtin.systemd:
+    name: pranata-web.service
+    state: restarted
+    scope: user
+  become: true
+  become_user: "{{ pranata_user }}"
+  environment: "{{ pranata_user_env }}"
+
+- name: Wait for the release to report its version
+  ansible.builtin.command:
+    argv:
+      - curl
+      - --fail
+      - --silent
+      - --insecure
+      - --max-time
+      - "5"
+      - --resolve
+      - "{{ pranata_domain }}:{{ pranata_https_port }}:127.0.0.1"
+      - "https://{{ pranata_domain }}:{{ pranata_https_port }}/api/healthz"
+  register: pranata_health
+  changed_when: false
+  retries: "{{ (pranata_health_timeout | int / 2) | round(0, 'ceil') | int }}"
+  delay: 2
+  until: >-
+    pranata_health.rc == 0 and
+    pranata_health.stdout is regex('"version"\s*:\s*"' ~ (pranata_release | regex_escape) ~ '"')

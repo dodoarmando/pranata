@@ -1,0 +1,61 @@
+---
+# Moves Installations to `pranata_version` (-e pranata_version=x.y.z). A failed
+# health check rolls the host back to the version it ran before.
+- name: Deploy a Pranata version
+  hosts: all
+  become: true
+  # One host at a time: a bad release stops after the first failure.
+  serial: 1
+  tasks:
+    - name: Check the version is given
+      ansible.builtin.assert:
+        that: pranata_version | default('') | length > 0
+        fail_msg: Pass the version with -e pranata_version=x.y.z
+        quiet: true
+
+    - name: Learn the user's runtime directory
+      ansible.builtin.import_role:
+        name: pranata
+        tasks_from: user_env.yml
+
+    - name: Deploy with a rollback on failure
+      block:
+        - name: Read the unit that runs now
+          ansible.builtin.slurp:
+            src: "{{ pranata_home }}/.config/containers/systemd/pranata-api.container"
+          register: pranata_current_unit
+
+        - name: Work out the version that runs now
+          ansible.builtin.set_fact:
+            pranata_previous: >-
+              {{ (pranata_current_unit.content | b64decode)
+                 | regex_search('(?m)^Image=.*/pranata-api:(\S+)$', '\1') | first }}
+
+        - name: Record the current version
+          ansible.builtin.copy:
+            dest: "{{ pranata_home }}/.pranata-version"
+            content: "{{ pranata_previous }}\n"
+            owner: "{{ pranata_user }}"
+            group: "{{ pranata_user }}"
+            mode: "0644"
+
+        - name: Move to the new version
+          ansible.builtin.include_role:
+            name: pranata
+            tasks_from: release.yml
+          vars:
+            pranata_release: "{{ pranata_version }}"
+      rescue:
+        - name: Roll back to the previous version
+          ansible.builtin.include_role:
+            name: pranata
+            tasks_from: release.yml
+          vars:
+            pranata_release: "{{ pranata_previous }}"
+          when: pranata_previous is defined
+
+        - name: Report the failed deploy
+          ansible.builtin.fail:
+            msg: >-
+              Deploying {{ pranata_version }} failed its health check;
+              rolled back to {{ pranata_previous | default('(unknown, nothing recorded)') }}.

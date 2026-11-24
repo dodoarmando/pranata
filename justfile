@@ -163,6 +163,11 @@ provision host: infra-tools
     PATH="{{ justfile_directory() }}/target/infra/bin:$PATH" ANSIBLE_CONFIG="{{ justfile_directory() }}/infra/ansible.cfg" \
         ansible-playbook -i "${PRANATA_INVENTORY:?set PRANATA_INVENTORY to your inventory file}" infra/provision.yml -l {{ host }}
 
+# Deploy a version to one Installation (or `all`); a failed health check rolls it back.
+deploy host version: infra-tools
+    PATH="{{ justfile_directory() }}/target/infra/bin:$PATH" ANSIBLE_CONFIG="{{ justfile_directory() }}/infra/ansible.cfg" \
+        ansible-playbook -i "${PRANATA_INVENTORY:?set PRANATA_INVENTORY to your inventory file}" infra/deploy.yml -l {{ host }} -e pranata_version={{ version }}
+
 # Fail when real village data leaks outside allowed paths.
 check-village-data:
     tools/no-village-data.sh
