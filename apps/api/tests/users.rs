@@ -742,8 +742,11 @@ async fn non_admin_cannot_take_over_a_user_with_more_permissions(pool: PgPool) {
         h.post(&session, sekdes, "deactivate").await,
         h.patch(&session, sekdes, json!({"role_id": managers.0}))
             .await,
+        h.patch(&session, sekdes, json!({"display_name": "Sekdes"}))
+            .await,
+        h.post(&session, sekdes, "reactivate").await,
     ] {
-        assert_problem(&reply, StatusCode::FORBIDDEN, "permission_not_held");
+        assert_problem(&reply, StatusCode::FORBIDDEN, "stronger_user");
     }
     assert_eq!(h.user_changes().await, 0);
 }
@@ -889,4 +892,86 @@ async fn invalid_requests_are_422_and_unknown_users_404(pool: PgPool) {
     ] {
         assert_problem(&reply, StatusCode::NOT_FOUND, "user_not_found");
     }
+}
+
+#[sqlx::test]
+async fn only_a_real_change_is_written(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let (_, session) = h.admin("admin").await;
+    let writer = h.role("Penulis", &["content.write"]).await;
+    let publisher = h.role("Penerbit", &["content.publish"]).await;
+    let budi = h.user("budi", writer).await;
+
+    let same = h
+        .patch(
+            &session,
+            budi,
+            json!({"display_name": "budi", "role_id": writer.0}),
+        )
+        .await;
+    assert_eq!(same.status, StatusCode::OK, "{}", same.body);
+    assert_eq!(h.user_changes().await, 0);
+
+    let moved = h
+        .patch(&session, budi, json!({"role_id": publisher.0}))
+        .await;
+    assert_eq!(moved.status, StatusCode::OK, "{}", moved.body);
+    assert_eq!(moved.body["role"]["id"], json!(publisher.0));
+    assert_eq!(h.user_changes().await, 1);
+}
+
+/// Wait until a connection to this test's database waits for a row lock.
+async fn wait_for_a_lock_wait(pool: &PgPool) {
+    for _ in 0..500 {
+        let waiting = sqlx::query_scalar!(
+            r#"SELECT count(*) AS "count!" FROM pg_stat_activity
+               WHERE datname = current_database() AND wait_event_type = 'Lock'"#
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap();
+        if waiting > 0 {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    panic!("no request waited for the lock");
+}
+
+#[sqlx::test]
+async fn a_role_deleted_under_a_user_write_is_not_found(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let (_, session) = h.admin("admin").await;
+    let writer = h.role("Penulis", &["content.write"]).await;
+    let budi = h.user("budi", writer).await;
+    let expected = json!([{"field": "role_id", "code": "role_not_found"}]);
+
+    // The request reads the Role, then its write waits on the deleting
+    // transaction's row lock and fails on the foreign key once it commits.
+    for write in ["create", "update"] {
+        let doomed = h.role(&format!("Sementara {write}"), &[]).await;
+        let mut deleting = h.pool.begin().await.unwrap();
+        sqlx::query!("DELETE FROM roles WHERE id = $1", doomed.0)
+            .execute(&mut *deleting)
+            .await
+            .unwrap();
+        let request = async {
+            if write == "create" {
+                h.create_user(&session, "siti", doomed).await
+            } else {
+                h.patch(&session, budi, json!({"role_id": doomed.0})).await
+            }
+        };
+        let (reply, ()) = tokio::join!(request, async {
+            wait_for_a_lock_wait(&h.pool).await;
+            deleting.commit().await.unwrap();
+        });
+        assert_problem(
+            &reply,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "validation_failed",
+        );
+        assert_eq!(reply.body["errors"], expected, "{write}");
+    }
+    assert_eq!(h.user_changes().await, 0);
 }

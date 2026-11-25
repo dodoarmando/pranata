@@ -2,6 +2,7 @@
 //! and mirrored by a check constraint on `role_permissions`; a Role is a named
 //! set of them, and the Administrator Role holds every one by definition.
 
+pub mod roles;
 pub mod users;
 
 use std::str::FromStr;
@@ -181,12 +182,39 @@ pub async fn load_role(
     Ok(Some((role, permissions)))
 }
 
-/// The escalation rules (D-33) for an action of `actor` on something that
-/// holds `target_role`: a User who holds it, or a User or Role it is being
-/// assigned to. An Administrator may act on anything. Anyone else may not
-/// touch the Administrator Role or its holders, and may only act on a Role
-/// whose Permissions they all hold, so they can never hand out, or take
-/// over an account with, more than they have.
+/// How far a non-Administrator's reach falls short of a target Role.
+enum Shortfall {
+    /// The target is the Administrator Role.
+    Administrator,
+    /// The target grants a Permission the actor lacks.
+    Permission,
+}
+
+/// Whether `actor` may act on something holding a Role: an Administrator may
+/// act on anything; anyone else not on the Administrator Role, and only on a
+/// Role whose Permissions they all hold.
+fn shortfall(
+    actor: &CurrentUser,
+    target_is_administrator: bool,
+    target_permissions: &[Permission],
+) -> Option<Shortfall> {
+    if actor.role.is_administrator {
+        None
+    } else if target_is_administrator {
+        Some(Shortfall::Administrator)
+    } else if target_permissions
+        .iter()
+        .all(|permission| actor.permissions.contains(permission))
+    {
+        None
+    } else {
+        Some(Shortfall::Permission)
+    }
+}
+
+/// The escalation rules (D-33) for handing out `target_role`: assigning it to
+/// a User, or putting `target_permissions` into a Role. A non-Administrator
+/// can never hand out more than they have.
 ///
 /// # Errors
 /// 403 `administrator_only` when the target is the Administrator Role and the
@@ -197,19 +225,43 @@ pub fn can_manage(
     target_role: &RoleRef,
     target_permissions: &[Permission],
 ) -> Result<(), ApiError> {
-    if actor.role.is_administrator {
-        return Ok(());
+    match shortfall(actor, target_role.is_administrator, target_permissions) {
+        None => Ok(()),
+        Some(Shortfall::Administrator) => Err(ApiError::Forbidden("administrator_only")),
+        Some(Shortfall::Permission) => Err(ApiError::Forbidden("permission_not_held")),
     }
-    if target_role.is_administrator {
-        return Err(ApiError::Forbidden("administrator_only"));
+}
+
+/// The escalation rules (D-33) for putting `permissions` into a Role (never
+/// the Administrator Role, which nobody edits).
+///
+/// # Errors
+/// 403 `permission_not_held` when a non-Administrator lacks one of them.
+pub fn can_grant(actor: &CurrentUser, permissions: &[Permission]) -> Result<(), ApiError> {
+    match shortfall(actor, false, permissions) {
+        None => Ok(()),
+        Some(_) => Err(ApiError::Forbidden("permission_not_held")),
     }
-    if target_permissions
-        .iter()
-        .all(|permission| actor.permissions.contains(permission))
-    {
-        Ok(())
-    } else {
-        Err(ApiError::Forbidden("permission_not_held"))
+}
+
+/// The escalation rules (D-33) for acting on a User who holds `target_role`.
+/// A non-Administrator may not act on an Administrator, nor on a User whose
+/// Permissions reach beyond their own: they could take over that account
+/// (with an Access Link) or strip it of what they cannot grant back.
+///
+/// # Errors
+/// 403 `administrator_only` when the User is an Administrator and the actor
+/// is not; 403 `stronger_user` when the User holds a Permission the actor
+/// lacks.
+pub fn can_manage_user(
+    actor: &CurrentUser,
+    target_role: &RoleRef,
+    target_permissions: &[Permission],
+) -> Result<(), ApiError> {
+    match shortfall(actor, target_role.is_administrator, target_permissions) {
+        None => Ok(()),
+        Some(Shortfall::Administrator) => Err(ApiError::Forbidden("administrator_only")),
+        Some(Shortfall::Permission) => Err(ApiError::Forbidden("stronger_user")),
     }
 }
 
@@ -295,6 +347,31 @@ mod tests {
                 &[Permission::ContentWrite, Permission::VillageManage]
             )),
             Some("permission_not_held")
+        );
+    }
+
+    #[test]
+    fn a_stronger_user_is_named_as_such() {
+        let manager = actor(false, &[Permission::UserManage]);
+        assert_eq!(
+            code(&can_manage_user(
+                &manager,
+                &role(false),
+                &[Permission::UserManage, Permission::VillageManage]
+            )),
+            Some("stronger_user")
+        );
+        assert_eq!(
+            code(&can_manage_user(&manager, &role(true), &[])),
+            Some("administrator_only")
+        );
+        assert_eq!(
+            code(&can_manage_user(
+                &manager,
+                &role(false),
+                &[Permission::UserManage]
+            )),
+            None
         );
     }
 }

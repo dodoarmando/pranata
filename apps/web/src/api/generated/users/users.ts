@@ -286,7 +286,8 @@ export const useCreateUser = <TError = ErrorType<Problem>,
 /**
  * # Errors
  * 403 `permission_denied`, `sudo_required`, `administrator_only`,
- * `permission_not_held` or `own_role`; 422 `validation_failed`; 404
+ * `permission_not_held`, `stronger_user` or `own_role`; 422
+ * `validation_failed`; 404
  * `user_not_found`; 409 `last_administrator`.
  * @summary Change a User's display name or Role. The username never changes.
  */
@@ -343,7 +344,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     /**
  * # Errors
  * 403 `permission_denied`, `sudo_required`, `administrator_only`,
- * `permission_not_held` or `own_role`; 422 `validation_failed`; 404
+ * `permission_not_held`, `stronger_user` or `own_role`; 422
+ * `validation_failed`; 404
  * `user_not_found`; 409 `last_administrator`.
  * @summary Change a User's display name or Role. The username never changes.
  */
@@ -368,7 +370,7 @@ export const useUpdateUser = <TError = ErrorType<Problem>,
 /**
  * # Errors
  * 403 `permission_denied`, `sudo_required`, `administrator_only` or
- * `permission_not_held`; 404 `user_not_found`; 409 `user_inactive`.
+ * `stronger_user`; 404 `user_not_found`; 409 `user_inactive`.
  * @summary Issue a new Access Link for a User. Their earlier unused links stop
 working. The link is shown only in this response.
  */
@@ -424,7 +426,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     /**
  * # Errors
  * 403 `permission_denied`, `sudo_required`, `administrator_only` or
- * `permission_not_held`; 404 `user_not_found`; 409 `user_inactive`.
+ * `stronger_user`; 404 `user_not_found`; 409 `user_inactive`.
  * @summary Issue a new Access Link for a User. Their earlier unused links stop
 working. The link is shown only in this response.
  */
@@ -449,7 +451,7 @@ export const useIssueAccessLink = <TError = ErrorType<Problem>,
 /**
  * # Errors
  * 403 `permission_denied`, `sudo_required`, `administrator_only` or
- * `permission_not_held`; 404 `user_not_found`; 409 `cannot_deactivate_self`
+ * `stronger_user`; 404 `user_not_found`; 409 `cannot_deactivate_self`
  * or `last_administrator`.
  * @summary Deactivate a User: their sessions end and their unused Access Links stop
 working. Users are never deleted, and the username is never reused.
@@ -506,7 +508,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     /**
  * # Errors
  * 403 `permission_denied`, `sudo_required`, `administrator_only` or
- * `permission_not_held`; 404 `user_not_found`; 409 `cannot_deactivate_self`
+ * `stronger_user`; 404 `user_not_found`; 409 `cannot_deactivate_self`
  * or `last_administrator`.
  * @summary Deactivate a User: their sessions end and their unused Access Links stop
 working. Users are never deleted, and the username is never reused.
@@ -532,7 +534,7 @@ export const useDeactivateUser = <TError = ErrorType<Problem>,
 /**
  * # Errors
  * 403 `permission_denied`, `sudo_required`, `administrator_only` or
- * `permission_not_held`; 404 `user_not_found`.
+ * `stronger_user`; 404 `user_not_found`.
  * @summary Reactivate a User. They keep their password and Passkeys.
  */
 export const reactivateUser = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<UserSummary> => {
@@ -587,7 +589,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     /**
  * # Errors
  * 403 `permission_denied`, `sudo_required`, `administrator_only` or
- * `permission_not_held`; 404 `user_not_found`.
+ * `stronger_user`; 404 `user_not_found`.
  * @summary Reactivate a User. They keep their password and Passkeys.
  */
 export const useReactivateUser = <TError = ErrorType<Problem>,

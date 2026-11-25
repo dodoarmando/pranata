@@ -2,7 +2,8 @@
 //! reactivate Users, and issue Access Links. Users are never deleted.
 //!
 //! Every write checks, in this order: the escalation rules
-//! ([`super::can_manage`]), request validation, then the domain rules. The
+//! ([`super::can_manage`] for the Role handed out, [`super::can_manage_user`]
+//! for the User acted on), request validation, then the domain rules. The
 //! caller has already checked `user.manage` and Sudo Mode.
 //!
 //! Lock order. A transaction here that locks several rows takes them in this
@@ -22,7 +23,7 @@ use time::OffsetDateTime;
 use url::Url;
 use utoipa::ToSchema;
 
-use super::{Permission, RoleRef, can_manage};
+use super::{Permission, RoleRef, can_manage, can_manage_user};
 use crate::{
     ApiError, FieldError,
     audit::{self, AuditAction, NewAuditEntry},
@@ -202,7 +203,7 @@ struct Target {
 
 impl Target {
     fn check_actor(&self, actor: &CurrentUser) -> Result<(), ApiError> {
-        can_manage(actor, &self.role, &self.permissions)
+        can_manage_user(actor, &self.role, &self.permissions)
     }
 }
 
@@ -281,6 +282,29 @@ fn not_found() -> ApiError {
     ApiError::NotFound("user_not_found")
 }
 
+fn role_not_found() -> FieldError {
+    FieldError {
+        field: "role_id".to_owned(),
+        code: "role_not_found".to_owned(),
+    }
+}
+
+/// A write that names a Role deleted after the Role was read fails on the
+/// foreign key of `users.role_id`: answer as if the Role never existed.
+fn role_vanished(error: ApiError) -> ApiError {
+    let vanished = matches!(&error, ApiError::Internal(error) if error
+    .downcast_ref::<sqlx::Error>()
+    .and_then(sqlx::Error::as_database_error)
+    .is_some_and(|error| {
+        error.is_foreign_key_violation() && error.constraint() == Some("users_role_id_fkey")
+    }));
+    if vanished {
+        ApiError::Validation(vec![role_not_found()])
+    } else {
+        error
+    }
+}
+
 /// Create a User with no password and their first Access Link.
 ///
 /// # Errors
@@ -312,10 +336,7 @@ pub async fn create(
         });
     }
     if role.is_none() {
-        errors.push(FieldError {
-            field: "role_id".to_owned(),
-            code: "role_not_found".to_owned(),
-        });
+        errors.push(role_not_found());
     }
     if !errors.is_empty() {
         return Err(ApiError::Validation(errors));
@@ -329,7 +350,8 @@ pub async fn create(
         Some(actor.id),
         now,
     )
-    .await?;
+    .await
+    .map_err(role_vanished)?;
     let user = summary(&mut *db.acquire().await?, created.id).await?;
     let link = IssuedLink {
         token: created.access_link_token,
@@ -348,7 +370,8 @@ struct Audited<'a> {
 /// Change a User's display name or Role.
 ///
 /// # Errors
-/// 403 `administrator_only`, `permission_not_held` or `own_role`; 422
+/// 403 `administrator_only`, `permission_not_held` (the new Role),
+/// `stronger_user` (the User) or `own_role`; 422
 /// `validation_failed` (fields `display_name`, `role_id`); 404
 /// `user_not_found`; 409 `last_administrator`.
 pub async fn update(
@@ -390,10 +413,7 @@ pub async fn update(
         });
     }
     if matches!(new_role, Some(None)) {
-        errors.push(FieldError {
-            field: "role_id".to_owned(),
-            code: "role_not_found".to_owned(),
-        });
+        errors.push(role_not_found());
     }
     if !errors.is_empty() {
         return Err(ApiError::Validation(errors));
@@ -409,17 +429,20 @@ pub async fn update(
     }
 
     let display_name = display_name.unwrap_or(&target.display_name);
-    let changes = audit::diff(
-        &Audited {
-            display_name: &target.display_name,
-            role: &target.role.name,
-        },
-        &Audited {
-            display_name,
-            role: &role.name,
-        },
-    );
-    if !changes.is_empty() {
+    // Decide on the id, not the name: the two Role names were read by
+    // different statements, and a rename in between could make a real change
+    // look like none. The names only describe the change in the Audit Entry.
+    if display_name != target.display_name || role.id != target.role.id {
+        let changes = audit::diff(
+            &Audited {
+                display_name: &target.display_name,
+                role: &target.role.name,
+            },
+            &Audited {
+                display_name,
+                role: &role.name,
+            },
+        );
         sqlx::query!(
             "UPDATE users SET display_name = $2, role_id = $3 WHERE id = $1",
             id.0,
@@ -427,7 +450,8 @@ pub async fn update(
             role.id.0,
         )
         .execute(&mut *tx)
-        .await?;
+        .await
+        .map_err(|error| role_vanished(error.into()))?;
         audit::record(
             &mut tx,
             NewAuditEntry {
@@ -450,7 +474,7 @@ pub async fn update(
 /// Deactivating an inactive User changes nothing.
 ///
 /// # Errors
-/// 403 `administrator_only` or `permission_not_held`; 404 `user_not_found`;
+/// 403 `administrator_only` or `stronger_user`; 404 `user_not_found`;
 /// 409 `cannot_deactivate_self` or `last_administrator`.
 pub async fn deactivate(
     db: &PgPool,
@@ -498,7 +522,7 @@ pub async fn deactivate(
 /// sign in at once. Reactivating an active User changes nothing.
 ///
 /// # Errors
-/// 403 `administrator_only` or `permission_not_held`; 404 `user_not_found`.
+/// 403 `administrator_only` or `stronger_user`; 404 `user_not_found`.
 pub async fn reactivate(
     db: &PgPool,
     actor: &CurrentUser,
@@ -537,7 +561,7 @@ pub async fn reactivate(
 /// Issue a new Access Link for a User, revoking their earlier unused ones.
 ///
 /// # Errors
-/// 403 `administrator_only` or `permission_not_held`; 404 `user_not_found`;
+/// 403 `administrator_only` or `stronger_user`; 404 `user_not_found`;
 /// 409 `user_inactive`.
 pub async fn issue_access_link(
     db: &PgPool,

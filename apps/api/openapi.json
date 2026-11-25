@@ -183,6 +183,361 @@
 				]
 			}
 		},
+		"/api/admin/roles": {
+			"get": {
+				"tags": ["roles"],
+				"summary": "Every Role: the Administrator Role first, then the others by name.",
+				"description": "# Errors\n403 `permission_denied` without `role.manage` or `user.manage`.",
+				"operationId": "listRoles",
+				"responses": {
+					"200": {
+						"description": "Every Role",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/RoleDetail"
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "The Role lacks both role.manage and user.manage (code permission_denied)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			},
+			"post": {
+				"tags": ["roles"],
+				"summary": "Create a Role from the catalogue of Permissions.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required` or `permission_not_held`; 422\n`validation_failed`; 409 `role_name_taken`.",
+				"operationId": "createRole",
+				"parameters": [
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/RoleRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"201": {
+						"description": "The new Role",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RoleDetail"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Body is not valid JSON or names a Permission outside the catalogue (code invalid_json)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "The Role lacks role.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the Role would grant a Permission this User lacks (code permission_not_held)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Another Role has the name, ignoring case (code role_name_taken)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"415": {
+						"description": "Request is not marked as JSON (code json_required)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Invalid fields (code validation_failed; field code name_length)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
+		"/api/admin/roles/{id}": {
+			"put": {
+				"tags": ["roles"],
+				"summary": "Rename a Role or replace its Permissions. Its holders get the new\nPermissions on their next request.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `own_role`,\n`administrator_only` or `permission_not_held`; 422 `validation_failed`;\n404 `role_not_found`; 409 `role_builtin` or `role_name_taken`.",
+				"operationId": "updateRole",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"description": "Role id",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"format": "uuid"
+						}
+					},
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/RoleRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "The edited Role",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RoleDetail"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Body is not valid JSON or names a Permission outside the catalogue (code invalid_json)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "The Role lacks role.manage (code permission_denied), Sudo Mode is closed (code sudo_required), it is the Role this User holds (code own_role), or the Role grants or would grant a Permission this User lacks (codes administrator_only, permission_not_held)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No such Role (code role_not_found)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "The Administrator Role cannot change (code role_builtin), or another Role has the name, ignoring case (code role_name_taken)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"415": {
+						"description": "Request is not marked as JSON (code json_required)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Invalid fields (code validation_failed; field code name_length)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			},
+			"delete": {
+				"tags": ["roles"],
+				"summary": "Delete a Role that no User holds, active or not.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `own_role`,\n`administrator_only` or `permission_not_held`; 404 `role_not_found`; 409\n`role_builtin` or `role_in_use`.",
+				"operationId": "deleteRole",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"description": "Role id",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"format": "uuid"
+						}
+					},
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "The Role is deleted"
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "The Role lacks role.manage (code permission_denied), Sudo Mode is closed (code sudo_required), it is the Role this User holds (code own_role), or the Role grants a Permission this User lacks (codes administrator_only, permission_not_held)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No such Role (code role_not_found)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "The Administrator Role cannot be deleted (code role_builtin), or a User holds the Role, active or not (code role_in_use)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
 		"/api/admin/users": {
 			"get": {
 				"tags": ["users"],
@@ -339,7 +694,7 @@
 			"patch": {
 				"tags": ["users"],
 				"summary": "Change a User's display name or Role. The username never changes.",
-				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only`,\n`permission_not_held` or `own_role`; 422 `validation_failed`; 404\n`user_not_found`; 409 `last_administrator`.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only`,\n`permission_not_held`, `stronger_user` or `own_role`; 422\n`validation_failed`; 404\n`user_not_found`; 409 `last_administrator`.",
 				"operationId": "updateUser",
 				"parameters": [
 					{
@@ -404,7 +759,7 @@
 						}
 					},
 					"403": {
-						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), the User or the new Role is out of reach (codes administrator_only, permission_not_held), or the User is changing their own Role (code own_role)",
+						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), the new Role may not be assigned by this User (codes administrator_only, permission_not_held), the User is out of reach (codes administrator_only, stronger_user), or the User is changing their own Role (code own_role)",
 						"content": {
 							"application/problem+json": {
 								"schema": {
@@ -465,7 +820,7 @@
 			"post": {
 				"tags": ["users"],
 				"summary": "Issue a new Access Link for a User. Their earlier unused links stop\nworking. The link is shown only in this response.",
-				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`permission_not_held`; 404 `user_not_found`; 409 `user_inactive`.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`stronger_user`; 404 `user_not_found`; 409 `user_inactive`.",
 				"operationId": "issueAccessLink",
 				"parameters": [
 					{
@@ -510,7 +865,7 @@
 						}
 					},
 					"403": {
-						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, permission_not_held)",
+						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, stronger_user)",
 						"content": {
 							"application/problem+json": {
 								"schema": {
@@ -551,7 +906,7 @@
 			"post": {
 				"tags": ["users"],
 				"summary": "Deactivate a User: their sessions end and their unused Access Links stop\nworking. Users are never deleted, and the username is never reused.",
-				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`permission_not_held`; 404 `user_not_found`; 409 `cannot_deactivate_self`\nor `last_administrator`.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`stronger_user`; 404 `user_not_found`; 409 `cannot_deactivate_self`\nor `last_administrator`.",
 				"operationId": "deactivateUser",
 				"parameters": [
 					{
@@ -596,7 +951,7 @@
 						}
 					},
 					"403": {
-						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, permission_not_held)",
+						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, stronger_user)",
 						"content": {
 							"application/problem+json": {
 								"schema": {
@@ -637,7 +992,7 @@
 			"post": {
 				"tags": ["users"],
 				"summary": "Reactivate a User. They keep their password and Passkeys.",
-				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`permission_not_held`; 404 `user_not_found`.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`stronger_user`; 404 `user_not_found`.",
 				"operationId": "reactivateUser",
 				"parameters": [
 					{
@@ -682,7 +1037,7 @@
 						}
 					},
 					"403": {
-						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, permission_not_held)",
+						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, stronger_user)",
 						"content": {
 							"application/problem+json": {
 								"schema": {
@@ -1549,6 +1904,41 @@
 					}
 				}
 			},
+			"RoleDetail": {
+				"type": "object",
+				"description": "A Role as the Roles screen lists it.",
+				"required": [
+					"id",
+					"name",
+					"is_administrator",
+					"permissions",
+					"user_count"
+				],
+				"properties": {
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"is_administrator": {
+						"type": "boolean"
+					},
+					"name": {
+						"type": "string"
+					},
+					"permissions": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/Permission"
+						},
+						"description": "What the Role grants, in catalogue order: every Permission for the\nAdministrator Role."
+					},
+					"user_count": {
+						"type": "integer",
+						"format": "int64",
+						"description": "How many active Users hold the Role."
+					}
+				}
+			},
 			"RoleRef": {
 				"type": "object",
 				"description": "The Role a User holds, as shown to clients.",
@@ -1563,6 +1953,24 @@
 					},
 					"name": {
 						"type": "string"
+					}
+				}
+			},
+			"RoleRequest": {
+				"type": "object",
+				"description": "What an editor fills in to create or edit a Role.",
+				"required": ["name", "permissions"],
+				"properties": {
+					"name": {
+						"type": "string",
+						"description": "Trimmed; 1 to 50 characters, unique ignoring case."
+					},
+					"permissions": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/Permission"
+						},
+						"description": "A set: duplicates collapse."
 					}
 				}
 			},

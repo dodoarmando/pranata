@@ -3,6 +3,7 @@ pub mod client_ip;
 pub mod health;
 pub mod json;
 pub mod request_id;
+pub mod roles;
 pub mod security_headers;
 pub mod users;
 pub mod village;
@@ -31,6 +32,7 @@ pub fn api_router(limiter: &client_ip::AuthLimiter) -> OpenApiRouter<AppState> {
         health::router()
             .merge(village::router())
             .merge(users::router())
+            .merge(roles::router())
             .merge(auth::router())
             .merge(auth::unauthenticated_router().layer(client_ip::auth_limit_layer(limiter)))
             .merge(crate::media::router()),
