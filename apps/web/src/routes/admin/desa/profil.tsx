@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { RequirePermission } from "@/admin/require-permission";
 import { ApiError } from "@/api/fetcher";
 import type { MediaRef, Profile } from "@/api/generated/model";
 import {
@@ -26,7 +27,11 @@ import { asDoc, isEmptyDoc, type RichTextDoc } from "@/lib/rich-text";
 
 export const Route = createFileRoute("/admin/desa/profil")({
 	head: () => ({ meta: [{ title: "Profil desa · Admin Pranata" }] }),
-	component: ProfilePage,
+	component: () => (
+		<RequirePermission permission="village.manage">
+			<ProfilePage />
+		</RequirePermission>
+	),
 });
 
 function ProfilePage() {
