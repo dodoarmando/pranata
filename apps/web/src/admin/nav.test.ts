@@ -15,9 +15,12 @@ const ALL: Permission[] = [
 describe("visibleNav", () => {
 	it("shows only the groups that have an enabled item", () => {
 		const groups = visibleNav(ALL);
-		expect(groups.map((g) => g.label)).toEqual(["Desa"]);
+		expect(groups.map((g) => g.label)).toEqual(["Desa", "Sistem"]);
 		expect(groups[0]?.items).toEqual([
 			{ label: "Profil desa", to: "/admin/desa/profil" },
+		]);
+		expect(groups[1]?.items).toEqual([
+			{ label: "Pengguna", to: "/admin/sistem/pengguna" },
 		]);
 	});
 
