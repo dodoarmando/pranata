@@ -135,7 +135,7 @@ up() {
     check_no_foreign
     down >/dev/null
     mkdir -p "$out_dir"
-    rm -f "$out_dir/access-link.txt"
+    rm -f "$out_dir/access-link.txt" "$out_dir/access-link-users.txt"
 
     podman pod create --name "$pod" --label "$owner_label" --cpus=2 --memory=2g \
         -p "127.0.0.1:$port:443" >/dev/null
@@ -158,6 +158,9 @@ up() {
     if [ "$variant" = "main" ]; then
         api_cli village init --code "$village_code"
         api_cli user create-admin e2e --name "Admin E2E" >"$out_dir/access-link.txt"
+        # A second Administrator for the Users spec, so that spec does not depend
+        # on the profile spec having redeemed the first link.
+        api_cli user create-admin akses --name "Admin Akses" >"$out_dir/access-link-users.txt"
     fi
 
     podman run -d --pod "$pod" --label "$owner_label" --name "$pod-api" "${api_env[@]}" \

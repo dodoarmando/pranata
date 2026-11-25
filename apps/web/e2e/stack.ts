@@ -23,6 +23,17 @@ export function accessLink(): string {
 	).trim();
 }
 
+// A second Administrator, kept for the Users spec; its link is still unused.
+export const USERS_ADMIN_USERNAME = "akses";
+export const USERS_ADMIN_PASSWORD = "akses-password-123";
+
+export function usersAdminAccessLink(): string {
+	return readFileSync(
+		resolve(repoRoot, "target/e2e/access-link-users.txt"),
+		"utf8",
+	).trim();
+}
+
 export function stackScript(action: "up" | "down", noInit = false): void {
 	const args = [resolve(repoRoot, "infra/dev/stack.sh"), action];
 	if (noInit) args.push("--no-init");
