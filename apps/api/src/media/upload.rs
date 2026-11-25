@@ -5,6 +5,7 @@ use axum::{
     extract::{
         DefaultBodyLimit, Multipart, Path, State,
         multipart::{MultipartError, MultipartRejection},
+        rejection::PathRejection,
     },
     http::StatusCode,
 };
@@ -371,9 +372,13 @@ fn created(field: &str, after: Value) -> FieldChange {
 pub async fn get_media(
     State(state): State<AppState>,
     user: CurrentUser,
-    Path(id): Path<Uuid>,
+    id: Result<Path<Uuid>, PathRejection>,
 ) -> Result<Json<MediaAsset>, ApiError> {
     user.require_any(&MEDIA_PERMISSIONS)?;
+    // A malformed id names no asset.
+    let Ok(Path(id)) = id else {
+        return Err(ApiError::NotFound("media_not_found"));
+    };
     load(&state.db, id)
         .await?
         .map(Json)
