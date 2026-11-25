@@ -249,3 +249,31 @@ async fn sudo_needs_a_session(pool: PgPool) {
     assert_eq!(reply.status, StatusCode::UNAUTHORIZED);
     assert_eq!(reply.body["code"], "unauthenticated");
 }
+
+/// Every route that needs Sudo Mode. `{id}` stands for any id: Sudo Mode is
+/// checked before the target is looked up.
+const SUDO_ROUTES: &[(Method, &str)] = &[
+    (Method::POST, "/api/admin/users"),
+    (Method::PATCH, "/api/admin/users/{id}"),
+    (Method::POST, "/api/admin/users/{id}/deactivate"),
+    (Method::POST, "/api/admin/users/{id}/reactivate"),
+    (Method::POST, "/api/admin/users/{id}/access-links"),
+];
+
+#[sqlx::test]
+async fn write_routes_need_sudo(pool: PgPool) {
+    let h = Harness::new(pool);
+    let user = h.seed_user().await;
+    let signed = h.sign_in().await;
+    h.clock.advance(Duration::minutes(11));
+
+    let routes: Vec<(Method, String)> = SUDO_ROUTES
+        .iter()
+        .map(|(method, uri)| (method.clone(), uri.replace("{id}", &user.0.to_string())))
+        .collect();
+    let routes: Vec<(Method, &str)> = routes
+        .iter()
+        .map(|(method, uri)| (method.clone(), uri.as_str()))
+        .collect();
+    common::assert_needs_sudo(&h.app, &signed.token, &signed.csrf, &routes).await;
+}

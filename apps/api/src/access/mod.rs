@@ -2,6 +2,8 @@
 //! and mirrored by a check constraint on `role_permissions`; a Role is a named
 //! set of them, and the Administrator Role holds every one by definition.
 
+pub mod users;
+
 use std::str::FromStr;
 
 use anyhow::Context;
@@ -9,7 +11,11 @@ use serde::{Deserialize, Serialize};
 use sqlx::{PgConnection, PgPool};
 use utoipa::ToSchema;
 
-use crate::ids::{RoleId, UserId};
+use crate::{
+    ApiError,
+    auth::CurrentUser,
+    ids::{RoleId, UserId},
+};
 
 /// One thing a User may be allowed to do.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
@@ -141,6 +147,72 @@ pub async fn load_for_user(
     Ok((role, permissions))
 }
 
+/// Load a Role and the Permissions it grants, or `None` when no Role has
+/// that id.
+///
+/// # Errors
+/// Fails when the query fails.
+pub async fn load_role(
+    conn: &mut PgConnection,
+    id: RoleId,
+) -> anyhow::Result<Option<(RoleRef, Vec<Permission>)>> {
+    let Some(row) = sqlx::query!(
+        r#"SELECT r.id AS "id: RoleId", r.name, r.is_administrator,
+                  COALESCE(array_agg(rp.permission) FILTER (WHERE rp.permission IS NOT NULL), '{}')
+                      AS "permissions!: Vec<String>"
+           FROM roles r
+           LEFT JOIN role_permissions rp ON rp.role_id = r.id
+           WHERE r.id = $1
+           GROUP BY r.id"#,
+        id.0,
+    )
+    .fetch_optional(conn)
+    .await
+    .context("loading a role")?
+    else {
+        return Ok(None);
+    };
+    let permissions = granted(row.is_administrator, &row.permissions)?;
+    let role = RoleRef {
+        id: row.id,
+        name: row.name,
+        is_administrator: row.is_administrator,
+    };
+    Ok(Some((role, permissions)))
+}
+
+/// The escalation rules (D-33) for an action of `actor` on something that
+/// holds `target_role`: a User who holds it, or a User or Role it is being
+/// assigned to. An Administrator may act on anything. Anyone else may not
+/// touch the Administrator Role or its holders, and may only act on a Role
+/// whose Permissions they all hold, so they can never hand out, or take
+/// over an account with, more than they have.
+///
+/// # Errors
+/// 403 `administrator_only` when the target is the Administrator Role and the
+/// actor is not an Administrator; 403 `permission_not_held` when the target
+/// grants a Permission the actor lacks.
+pub fn can_manage(
+    actor: &CurrentUser,
+    target_role: &RoleRef,
+    target_permissions: &[Permission],
+) -> Result<(), ApiError> {
+    if actor.role.is_administrator {
+        return Ok(());
+    }
+    if target_role.is_administrator {
+        return Err(ApiError::Forbidden("administrator_only"));
+    }
+    if target_permissions
+        .iter()
+        .all(|permission| actor.permissions.contains(permission))
+    {
+        Ok(())
+    } else {
+        Err(ApiError::Forbidden("permission_not_held"))
+    }
+}
+
 /// The id of the built-in Administrator Role.
 ///
 /// # Errors
@@ -150,4 +222,79 @@ pub async fn administrator_role(db: &PgPool) -> anyhow::Result<RoleId> {
         .fetch_one(db)
         .await
         .context("finding the Administrator Role")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn role(is_administrator: bool) -> RoleRef {
+        RoleRef {
+            id: RoleId(uuid::Uuid::nil()),
+            name: "Peran".into(),
+            is_administrator,
+        }
+    }
+
+    fn actor(is_administrator: bool, permissions: &[Permission]) -> CurrentUser {
+        CurrentUser {
+            id: UserId(uuid::Uuid::nil()),
+            username: "budi".into(),
+            display_name: "Budi".into(),
+            role: role(is_administrator),
+            permissions: permissions.to_vec(),
+        }
+    }
+
+    fn code(result: &Result<(), ApiError>) -> Option<&'static str> {
+        match *result {
+            Ok(()) => None,
+            Err(ApiError::Forbidden(code)) => Some(code),
+            Err(ref other) => panic!("unexpected error {other:?}"),
+        }
+    }
+
+    #[test]
+    fn administrators_manage_everything() {
+        let admin = actor(true, &Permission::ALL);
+        assert_eq!(
+            code(&can_manage(&admin, &role(true), &Permission::ALL)),
+            None
+        );
+        assert_eq!(
+            code(&can_manage(&admin, &role(false), &Permission::ALL)),
+            None
+        );
+    }
+
+    #[test]
+    fn others_never_touch_the_administrator_role() {
+        let manager = actor(false, &Permission::ALL);
+        assert_eq!(
+            code(&can_manage(&manager, &role(true), &[])),
+            Some("administrator_only")
+        );
+    }
+
+    #[test]
+    fn others_act_only_within_their_permissions() {
+        let manager = actor(false, &[Permission::UserManage, Permission::ContentWrite]);
+        assert_eq!(
+            code(&can_manage(
+                &manager,
+                &role(false),
+                &[Permission::ContentWrite]
+            )),
+            None
+        );
+        assert_eq!(code(&can_manage(&manager, &role(false), &[])), None);
+        assert_eq!(
+            code(&can_manage(
+                &manager,
+                &role(false),
+                &[Permission::ContentWrite, Permission::VillageManage]
+            )),
+            Some("permission_not_held")
+        );
+    }
 }

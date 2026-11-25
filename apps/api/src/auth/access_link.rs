@@ -4,6 +4,7 @@
 use anyhow::Context;
 use sqlx::{PgConnection, PgPool};
 use time::{Duration, OffsetDateTime};
+use url::Url;
 
 use super::{
     hash_token,
@@ -18,6 +19,14 @@ use crate::{
 
 /// How long a new Access Link stays valid.
 pub const LIFETIME: Duration = Duration::hours(24);
+
+/// The URL that hands `token` over: `{origin}/akses#{token}`. The token sits
+/// in the fragment, so the browser never sends it to a server.
+#[must_use]
+pub fn url(origin: &Url, token: &str) -> String {
+    let origin = origin.as_str().trim_end_matches('/');
+    format!("{origin}/akses#{token}")
+}
 
 /// Revoke the unused Access Links of `user` and return how many were revoked.
 /// A User has at most one live link, and deactivation revokes the last one.

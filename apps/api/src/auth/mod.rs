@@ -98,7 +98,7 @@ pub(crate) fn hash_token(token: &str) -> Vec<u8> {
 }
 
 /// Lower-case and trim a username, then check it against the stored format.
-fn normalise_username(raw: &str) -> Result<String, ApiError> {
+pub(crate) fn normalise_username(raw: &str) -> Result<String, ApiError> {
     let username = raw.trim().to_lowercase();
     let mut chars = username.chars();
     let valid = (3..=64).contains(&username.len())
@@ -152,7 +152,7 @@ pub async fn create_user_with_access_link(
     .fetch_optional(&mut *tx)
     .await?
     .ok_or(ApiError::Conflict("username_taken"))?;
-    let token = access_link::create(&mut tx, id, None, now).await?;
+    let token = access_link::create(&mut tx, id, created_by, now).await?;
     audit::record(
         &mut tx,
         NewAuditEntry {

@@ -121,8 +121,10 @@ async fn create_admin(username: &str, name: &str) -> Result<()> {
                 pranata::ApiError::Internal(error) => error,
                 other => anyhow::anyhow!("{other}"),
             })?;
-    let origin = config.public_origin.as_str().trim_end_matches('/');
-    println!("{origin}/akses#{}", created.access_link_token);
+    println!(
+        "{}",
+        auth::access_link::url(&config.public_origin, &created.access_link_token)
+    );
     Ok(())
 }
 

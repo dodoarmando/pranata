@@ -183,6 +183,532 @@
 				]
 			}
 		},
+		"/api/admin/users": {
+			"get": {
+				"tags": ["users"],
+				"summary": "Every User: active ones first, then by display name.",
+				"description": "# Errors\n403 `permission_denied` without `user.manage`.",
+				"operationId": "listUsers",
+				"responses": {
+					"200": {
+						"description": "Every User",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/UserSummary"
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "The Role lacks user.manage (code permission_denied)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			},
+			"post": {
+				"tags": ["users"],
+				"summary": "Add a User without a password and return their first Access Link. The link\nis shown only in this response.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`permission_not_held`; 422 `validation_failed`; 409 `username_taken`.",
+				"operationId": "createUser",
+				"parameters": [
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateUserRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"201": {
+						"description": "The new User and their Access Link (not cached)",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CreatedUser"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Body is not valid JSON (code invalid_json)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the Role may not be assigned by this User (codes administrator_only, permission_not_held)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "The username is taken, also by a deactivated User (code username_taken)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"415": {
+						"description": "Request is not marked as JSON (code json_required)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Invalid fields (code validation_failed; field codes username_invalid, required, role_not_found)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
+		"/api/admin/users/{id}": {
+			"patch": {
+				"tags": ["users"],
+				"summary": "Change a User's display name or Role. The username never changes.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only`,\n`permission_not_held` or `own_role`; 422 `validation_failed`; 404\n`user_not_found`; 409 `last_administrator`.",
+				"operationId": "updateUser",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"description": "User id",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"format": "uuid"
+						}
+					},
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateUserRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "The edited User",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/UserSummary"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Body is not valid JSON or has unknown fields such as username (code invalid_json)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), the User or the new Role is out of reach (codes administrator_only, permission_not_held), or the User is changing their own Role (code own_role)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No such User (code user_not_found)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "No other active Administrator who can sign in would remain (code last_administrator)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"415": {
+						"description": "Request is not marked as JSON (code json_required)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Invalid fields (code validation_failed; field codes required, role_not_found)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
+		"/api/admin/users/{id}/access-links": {
+			"post": {
+				"tags": ["users"],
+				"summary": "Issue a new Access Link for a User. Their earlier unused links stop\nworking. The link is shown only in this response.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`permission_not_held`; 404 `user_not_found`; 409 `user_inactive`.",
+				"operationId": "issueAccessLink",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"description": "User id",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"format": "uuid"
+						}
+					},
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"201": {
+						"description": "The new Access Link (not cached)",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AccessLinkIssued"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, permission_not_held)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No such User (code user_not_found)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "The User is deactivated (code user_inactive)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
+		"/api/admin/users/{id}/deactivate": {
+			"post": {
+				"tags": ["users"],
+				"summary": "Deactivate a User: their sessions end and their unused Access Links stop\nworking. Users are never deleted, and the username is never reused.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`permission_not_held`; 404 `user_not_found`; 409 `cannot_deactivate_self`\nor `last_administrator`.",
+				"operationId": "deactivateUser",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"description": "User id",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"format": "uuid"
+						}
+					},
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The deactivated User",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/UserSummary"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, permission_not_held)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No such User (code user_not_found)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "The User is the one signed in (code cannot_deactivate_self), or no other active Administrator who can sign in would remain (code last_administrator)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
+		"/api/admin/users/{id}/reactivate": {
+			"post": {
+				"tags": ["users"],
+				"summary": "Reactivate a User. They keep their password and Passkeys.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`permission_not_held`; 404 `user_not_found`.",
+				"operationId": "reactivateUser",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"description": "User id",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"format": "uuid"
+						}
+					},
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The reactivated User",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/UserSummary"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, permission_not_held)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No such User (code user_not_found)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
 		"/api/admin/village/profile": {
 			"get": {
 				"tags": ["village"],
@@ -729,6 +1255,52 @@
 	},
 	"components": {
 		"schemas": {
+			"AccessLinkIssued": {
+				"type": "object",
+				"description": "A new Access Link, shown once. Only the hash of its token is stored.",
+				"required": ["url", "expires_at"],
+				"properties": {
+					"expires_at": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"url": {
+						"type": "string",
+						"description": "`{origin}/akses#{token}`: open it to set a password."
+					}
+				}
+			},
+			"CreateUserRequest": {
+				"type": "object",
+				"description": "What an Administrator fills in to add a User.",
+				"required": ["username", "display_name", "role_id"],
+				"properties": {
+					"display_name": {
+						"type": "string"
+					},
+					"role_id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"username": {
+						"type": "string",
+						"description": "Lower-cased and trimmed; it can never change or be reused."
+					}
+				}
+			},
+			"CreatedUser": {
+				"type": "object",
+				"description": "A created User and their first Access Link.",
+				"required": ["user", "access_link"],
+				"properties": {
+					"access_link": {
+						"$ref": "#/components/schemas/AccessLinkIssued"
+					},
+					"user": {
+						"$ref": "#/components/schemas/UserSummary"
+					}
+				}
+			},
 			"CurrentUser": {
 				"type": "object",
 				"description": "The signed-in User, as an axum extractor. A missing or expired session\nanswers 401 `unauthenticated`.",
@@ -1021,6 +1593,20 @@
 					}
 				}
 			},
+			"UpdateUserRequest": {
+				"type": "object",
+				"description": "An edit of a User. A missing field stays as it is. The username never\nchanges, so a `username` field is rejected.",
+				"properties": {
+					"display_name": {
+						"type": ["string", "null"]
+					},
+					"role_id": {
+						"type": ["string", "null"],
+						"format": "uuid"
+					}
+				},
+				"additionalProperties": false
+			},
 			"UploadForm": {
 				"type": "object",
 				"description": "The multipart form of an upload.",
@@ -1034,6 +1620,51 @@
 					"kind": {
 						"type": ["string", "null"],
 						"description": "`image` (default) or `document`."
+					}
+				}
+			},
+			"UserSummary": {
+				"type": "object",
+				"description": "A User as the Users screen lists them.",
+				"required": [
+					"id",
+					"username",
+					"display_name",
+					"role",
+					"is_active",
+					"has_password",
+					"passkey_count",
+					"created_at"
+				],
+				"properties": {
+					"created_at": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"display_name": {
+						"type": "string"
+					},
+					"has_password": {
+						"type": "boolean",
+						"description": "Whether the User has set a password, by redeeming an Access Link."
+					},
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"is_active": {
+						"type": "boolean"
+					},
+					"passkey_count": {
+						"type": "integer",
+						"format": "int64",
+						"description": "How many Passkeys the User registered."
+					},
+					"role": {
+						"$ref": "#/components/schemas/RoleRef"
+					},
+					"username": {
+						"type": "string"
 					}
 				}
 			},

@@ -105,7 +105,7 @@ impl std::fmt::Debug for SessionInfo {
     }
 }
 
-fn no_store() -> AppendHeaders<[(header::HeaderName, HeaderValue); 1]> {
+pub(crate) fn no_store() -> AppendHeaders<[(header::HeaderName, HeaderValue); 1]> {
     AppendHeaders([(header::CACHE_CONTROL, HeaderValue::from_static("no-store"))])
 }
 
