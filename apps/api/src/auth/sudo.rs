@@ -1,10 +1,15 @@
 //! Sudo Mode (D-31): sensitive actions need a password confirmation made
 //! within the last [`SUDO_WINDOW`].
 
+use anyhow::Context;
+use sqlx::PgConnection;
 use time::{Duration, OffsetDateTime};
 
 use super::session::AuthSession;
-use crate::ApiError;
+use crate::{
+    ApiError,
+    audit::{self, AuditAction, NewAuditEntry},
+};
 
 /// How long a password confirmation keeps Sudo Mode open.
 pub const SUDO_WINDOW: Duration = Duration::minutes(10);
@@ -28,6 +33,40 @@ impl AuthSession {
             .map(|_| ())
             .ok_or(ApiError::Forbidden("sudo_required"))
     }
+}
+
+/// Open the Sudo window of `session` at `now`, after the User proved who they
+/// are, and record how (`summary`) in the audit log.
+///
+/// # Errors
+/// Fails when the update or the insert fails.
+pub(crate) async fn reopen(
+    conn: &mut PgConnection,
+    session: &AuthSession,
+    now: OffsetDateTime,
+    summary: String,
+) -> anyhow::Result<()> {
+    sqlx::query!(
+        "UPDATE sessions SET reauthenticated_at = $2 WHERE token_hash = $1",
+        session.token_hash,
+        now,
+    )
+    .execute(&mut *conn)
+    .await
+    .context("reopening the sudo window")?;
+    audit::record(
+        conn,
+        NewAuditEntry {
+            actor: Some(session.user.id),
+            action: AuditAction::Reauthenticate,
+            object_type: "user",
+            object_id: session.user.id.0.to_string(),
+            summary,
+            changes: Vec::new(),
+        },
+    )
+    .await?;
+    Ok(())
 }
 
 #[cfg(test)]

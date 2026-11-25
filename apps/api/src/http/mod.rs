@@ -3,6 +3,7 @@ pub mod auth;
 pub mod client_ip;
 pub mod health;
 pub mod json;
+pub mod passkeys;
 pub mod request_id;
 pub mod roles;
 pub mod security_headers;
@@ -36,6 +37,7 @@ pub fn api_router(limiter: &client_ip::AuthLimiter) -> OpenApiRouter<AppState> {
             .merge(users::router())
             .merge(roles::router())
             .merge(auth::router())
+            .merge(passkeys::router())
             .merge(auth::unauthenticated_router().layer(client_ip::auth_limit_layer(limiter)))
             .merge(crate::media::router()),
     )

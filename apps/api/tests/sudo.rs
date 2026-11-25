@@ -261,6 +261,9 @@ const SUDO_ROUTES: &[(Method, &str)] = &[
     (Method::POST, "/api/admin/roles"),
     (Method::PUT, "/api/admin/roles/{id}"),
     (Method::DELETE, "/api/admin/roles/{id}"),
+    (Method::POST, "/api/auth/passkeys/registration/start"),
+    (Method::DELETE, "/api/auth/passkeys/{id}"),
+    (Method::DELETE, "/api/admin/users/{id}/passkeys"),
 ];
 
 #[sqlx::test]

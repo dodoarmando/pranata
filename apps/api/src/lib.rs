@@ -40,6 +40,8 @@ pub struct AppState {
     pub storage: Arc<dyn media::Storage>,
     /// Signals the web server to drop its cached public pages.
     pub purger: cache_purge::Purger,
+    /// The WebAuthn Relying Party for Passkeys, from the public origin.
+    pub webauthn: Arc<webauthn_rs::Webauthn>,
 }
 
 /// Build the full router, mounted under `/api`, with its own per-IP limiter.

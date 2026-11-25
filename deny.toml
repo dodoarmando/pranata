@@ -6,6 +6,13 @@ all-features = true
 [advisories]
 version = 2
 yanked = "deny"
+ignore = [
+    # Marvin Attack: RSA private-key operations leak timing. webauthn-rs pulls
+    # in rsa 0.10.0-rc (through crypto-glue), which the advisory still matches
+    # because a release candidate sorts before 0.10.0. Pranata only verifies
+    # RSA signatures of Passkeys and never decrypts or signs with a private key.
+    { id = "RUSTSEC-2023-0071", reason = "Pranata only verifies RSA signatures and never decrypts with a private key" },
+]
 
 [licenses]
 version = 2

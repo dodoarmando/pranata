@@ -3,6 +3,7 @@
 
 pub mod access_link;
 pub mod csrf;
+pub mod passkey;
 pub mod password;
 pub mod session;
 pub mod sudo;
@@ -63,6 +64,14 @@ impl CurrentUser {
             Err(ApiError::Forbidden("permission_denied"))
         }
     }
+}
+
+/// A User whose credential (password or Passkey) was just verified.
+#[derive(Debug, Clone)]
+pub struct Identified {
+    pub id: UserId,
+    pub username: String,
+    pub display_name: String,
 }
 
 /// A freshly created User and the Access Link that lets them set a password.

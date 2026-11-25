@@ -2,6 +2,7 @@ export * from './audit/audit';
 export * from './auth/auth';
 export * from './media/media';
 export * from './ops/ops';
+export * from './passkeys/passkeys';
 export * from './public/public';
 export * from './roles/roles';
 export * from './users/users';

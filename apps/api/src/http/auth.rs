@@ -5,6 +5,7 @@ use axum::{
     response::{AppendHeaders, IntoResponse},
 };
 use serde::{Deserialize, Serialize};
+use sqlx::PgConnection;
 use time::OffsetDateTime;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -13,13 +14,13 @@ use crate::{
     ApiError, AppState, access,
     audit::{self, AuditAction, NewAuditEntry},
     auth::{
-        self, CurrentUser, access_link, password,
+        self, CurrentUser, Identified, access_link, password,
         session::{self, AuthSession},
-        sudo::SUDO_WINDOW,
+        sudo::{self, SUDO_WINDOW},
         throttle,
     },
     error::Problem,
-    http::json::ApiJson,
+    http::{json::ApiJson, passkeys},
     ids::UserId,
 };
 
@@ -139,7 +140,7 @@ pub async fn login(
     State(state): State<AppState>,
     headers: HeaderMap,
     ApiJson(request): ApiJson<LoginRequest>,
-) -> Result<impl IntoResponse, ApiError> {
+) -> Result<SignedIn, ApiError> {
     let invalid = ApiError::Unauthorized("invalid_credentials");
     let username = request.username.trim().to_lowercase();
     // Before argon2: a locked account costs nothing to refuse.
@@ -172,45 +173,82 @@ pub async fn login(
     let now = state.clock.now();
     let mut tx = state.db.begin().await?;
     throttle::clear(&mut tx, &account.username).await?;
-    // Signing in again replaces the session this browser already holds.
-    if let Some(old) = session::token_from_headers(&headers) {
-        session::delete(&mut tx, &auth::hash_token(&old)).await?;
+    let summary = format!("{} signed in", account.username);
+    let user = Identified {
+        id: account.id,
+        username: account.username,
+        display_name: account.display_name,
+    };
+    let signed_in = begin_session(&mut tx, &headers, user, request.remember, now, summary).await?;
+    tx.commit().await?;
+    Ok(signed_in)
+}
+
+/// A session just opened by a sign-in, ready to answer with.
+pub struct SignedIn {
+    token: String,
+    remember: bool,
+    body: SessionInfo,
+}
+
+impl IntoResponse for SignedIn {
+    fn into_response(self) -> axum::response::Response {
+        (
+            AppendHeaders([(
+                header::SET_COOKIE,
+                session::cookie_value(&self.token, self.remember),
+            )]),
+            no_store(),
+            Json(self.body),
+        )
+            .into_response()
     }
-    let new = session::create(&mut tx, account.id, request.remember, now).await?;
-    let (role, permissions) = access::load_for_user(&mut tx, account.id).await?;
+}
+
+/// What every sign-in does once the credential checked out, in the caller's
+/// transaction: replace the session this browser already holds with a new
+/// one (in Sudo Mode) and record `summary` as a sign-in.
+pub(crate) async fn begin_session(
+    conn: &mut PgConnection,
+    headers: &HeaderMap,
+    user: Identified,
+    remember: bool,
+    now: OffsetDateTime,
+    summary: String,
+) -> Result<SignedIn, ApiError> {
+    if let Some(old) = session::token_from_headers(headers) {
+        session::delete(conn, &auth::hash_token(&old)).await?;
+    }
+    let new = session::create(conn, user.id, remember, now).await?;
+    let (role, permissions) = access::load_for_user(conn, user.id).await?;
     audit::record(
-        &mut tx,
+        conn,
         NewAuditEntry {
-            actor: Some(account.id),
+            actor: Some(user.id),
             action: AuditAction::SignIn,
             object_type: "user",
-            object_id: account.id.0.to_string(),
-            summary: format!("{} signed in", account.username),
+            object_id: user.id.0.to_string(),
+            summary,
             changes: Vec::new(),
         },
     )
     .await?;
-    tx.commit().await?;
-
     let body = SessionInfo {
         user: CurrentUser {
-            id: account.id,
-            username: account.username,
-            display_name: account.display_name,
+            id: user.id,
+            username: user.username,
+            display_name: user.display_name,
             role,
             permissions,
         },
         csrf_token: new.csrf_token,
         sudo_until: Some(now + SUDO_WINDOW),
     };
-    Ok((
-        AppendHeaders([(
-            header::SET_COOKIE,
-            session::cookie_value(&new.token, request.remember),
-        )]),
-        no_store(),
-        Json(body),
-    ))
+    Ok(SignedIn {
+        token: new.token,
+        remember,
+        body,
+    })
 }
 
 /// End the current session.
@@ -326,25 +364,12 @@ pub async fn confirm_sudo(
         return Err(ApiError::Unauthorized("invalid_credentials"));
     }
 
-    let now = state.clock.now();
     let mut tx = state.db.begin().await?;
-    sqlx::query!(
-        "UPDATE sessions SET reauthenticated_at = $2 WHERE token_hash = $1",
-        session.token_hash,
-        now,
-    )
-    .execute(&mut *tx)
-    .await?;
-    audit::record(
+    sudo::reopen(
         &mut tx,
-        NewAuditEntry {
-            actor: Some(session.user.id),
-            action: AuditAction::Reauthenticate,
-            object_type: "user",
-            object_id: session.user.id.0.to_string(),
-            summary: format!("{} confirmed their password", session.user.username),
-            changes: Vec::new(),
-        },
+        &session,
+        state.clock.now(),
+        format!("{} confirmed their password", session.user.username),
     )
     .await?;
     tx.commit().await?;
@@ -395,11 +420,14 @@ pub fn router() -> OpenApiRouter<AppState> {
 }
 
 /// The unauthenticated POSTs. `http::api_router` puts the per-IP limit on
-/// this router; passkey sign-in joins it later.
+/// this router. Passkey sign-in is here too, but not the per-account
+/// password throttle: that counts wrong passwords only.
 pub fn unauthenticated_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(login))
         .routes(routes!(set_password_with_access_link))
+        .routes(routes!(passkeys::start_passkey_sign_in))
+        .routes(routes!(passkeys::finish_passkey_sign_in))
 }
 
 #[cfg(test)]

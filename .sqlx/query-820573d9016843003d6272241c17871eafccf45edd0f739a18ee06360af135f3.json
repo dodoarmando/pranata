@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id AS \"id: UserId\", password_hash IS NOT NULL AS \"has_credential!\"\n           FROM users\n           WHERE is_active AND role_id = (SELECT id FROM roles WHERE is_administrator)\n           ORDER BY id\n           FOR NO KEY UPDATE",
+  "query": "SELECT u.id AS \"id: UserId\",\n                  (u.password_hash IS NOT NULL\n                   OR EXISTS (SELECT 1 FROM passkeys p WHERE p.user_id = u.id)) AS \"has_credential!\"\n           FROM users u\n           WHERE u.id = ANY($1)\n           ORDER BY u.id",
   "describe": {
     "columns": [
       {
@@ -22,12 +22,14 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "UuidArray"
+      ]
     },
     "nullable": [
       false,
       null
     ]
   },
-  "hash": "9e4a9c6930cede8d9629b3e80f1f1e8289ee6912d0ffe85a43cbdc54bd7d7ff3"
+  "hash": "820573d9016843003d6272241c17871eafccf45edd0f739a18ee06360af135f3"
 }

@@ -1210,6 +1210,85 @@
 				]
 			}
 		},
+		"/api/admin/users/{id}/passkeys": {
+			"delete": {
+				"tags": ["users"],
+				"summary": "Remove every Passkey of a User, after an account takeover for example:\na Passkey an attacker registered must not outlive a new Access Link.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`stronger_user`; 404 `user_not_found`; 409 `last_administrator`.",
+				"operationId": "removeUserPasskeys",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"description": "User id",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"format": "uuid"
+						}
+					},
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "The User has no Passkeys any more"
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, stronger_user)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No such User (code user_not_found)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "The Passkeys are the only way left for the last Administrator who can sign in (code last_administrator)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
 		"/api/admin/users/{id}/reactivate": {
 			"post": {
 				"tags": ["users"],
@@ -1661,6 +1740,405 @@
 				]
 			}
 		},
+		"/api/auth/passkey-login/finish": {
+			"post": {
+				"tags": ["auth"],
+				"summary": "Finish a sign-in with a Passkey. Like `login`, it sets the session cookie.",
+				"description": "# Errors\n401 `passkey_failed`; 410 `passkey_challenge_expired`; 429\n`too_many_requests`.",
+				"operationId": "finishPasskeySignIn",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/FinishPasskeySignInRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Signed in; the session cookie is set",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionInfo"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Body is not valid JSON (code invalid_json)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unknown credential, deactivated User or a response that does not verify (code passkey_failed)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"410": {
+						"description": "The challenge is unknown, used or expired, or belongs to another ceremony (code passkey_challenge_expired)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"415": {
+						"description": "Request is not marked as JSON (code json_required)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Too many requests from this address (code too_many_requests); Retry-After gives the seconds to wait",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/auth/passkey-login/start": {
+			"post": {
+				"tags": ["auth"],
+				"summary": "Start a sign-in with a Passkey, without a username.",
+				"description": "# Errors\n429 `too_many_requests`.",
+				"operationId": "startPasskeySignIn",
+				"responses": {
+					"200": {
+						"description": "The challenge and the options for navigator.credentials.get() (not cached)",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PasskeyChallenge"
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Too many requests from this address (code too_many_requests); Retry-After gives the seconds to wait",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/auth/passkeys": {
+			"get": {
+				"tags": ["passkeys"],
+				"summary": "The signed-in User's Passkeys, oldest first.",
+				"description": "# Errors\n401 `unauthenticated`.",
+				"operationId": "listPasskeys",
+				"responses": {
+					"200": {
+						"description": "The signed-in User's Passkeys",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/PasskeySummary"
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
+		"/api/auth/passkeys/registration/finish": {
+			"post": {
+				"tags": ["passkeys"],
+				"summary": "Finish registering a Passkey and store it under a name.",
+				"description": "# Errors\n401 `unauthenticated` or `passkey_failed`; 403 `csrf_mismatch`; 410\n`passkey_challenge_expired`; 422 `validation_failed`; 409 `passkey_exists`.",
+				"operationId": "finishPasskeyRegistration",
+				"parameters": [
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/FinishPasskeyRegistrationRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"201": {
+						"description": "The new Passkey",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PasskeySummary"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Body is not valid JSON (code invalid_json)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated) or the credential does not verify (code passkey_failed)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Missing or wrong CSRF token (code csrf_mismatch)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "The credential is registered already (code passkey_exists)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"410": {
+						"description": "The challenge is unknown, used or expired, or belongs to another ceremony or User (code passkey_challenge_expired)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"415": {
+						"description": "Request is not marked as JSON (code json_required)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Invalid fields (code validation_failed; field code name_length)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
+		"/api/auth/passkeys/registration/start": {
+			"post": {
+				"tags": ["passkeys"],
+				"summary": "Start registering a Passkey for the signed-in User.",
+				"description": "# Errors\n401 `unauthenticated`; 403 `csrf_mismatch` or `sudo_required`.",
+				"operationId": "startPasskeyRegistration",
+				"parameters": [
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The challenge and the options for navigator.credentials.create() (not cached)",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PasskeyChallenge"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Missing or wrong CSRF token (code csrf_mismatch) or Sudo Mode is closed (code sudo_required)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
+		"/api/auth/passkeys/{id}": {
+			"delete": {
+				"tags": ["passkeys"],
+				"summary": "Delete one of the signed-in User's Passkeys.",
+				"description": "# Errors\n401 `unauthenticated`; 403 `csrf_mismatch` or `sudo_required`; 404\n`passkey_not_found`; 409 `last_administrator`.",
+				"operationId": "deletePasskey",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"description": "Passkey id",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"format": "uuid"
+						}
+					},
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "The Passkey is deleted"
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Missing or wrong CSRF token (code csrf_mismatch) or Sudo Mode is closed (code sudo_required)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "The signed-in User has no such Passkey (code passkey_not_found)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "It is the only way left for the last Administrator who can sign in (code last_administrator)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
 		"/api/auth/sudo": {
 			"post": {
 				"tags": ["auth"],
@@ -1734,6 +2212,161 @@
 					},
 					"429": {
 						"description": "Too many failed attempts for this account (code too_many_attempts); Retry-After gives the seconds to wait",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
+		"/api/auth/sudo/passkey/finish": {
+			"post": {
+				"tags": ["auth"],
+				"summary": "Finish confirming Sudo Mode with a Passkey: the window opens for 10\nminutes.",
+				"description": "# Errors\n401 `unauthenticated` or `passkey_failed`; 403 `csrf_mismatch`; 410\n`passkey_challenge_expired`.",
+				"operationId": "finishPasskeySudo",
+				"parameters": [
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/FinishPasskeySudoRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"204": {
+						"description": "Confirmed; Sudo Mode is open for 10 minutes"
+					},
+					"400": {
+						"description": "Body is not valid JSON (code invalid_json)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated), or not one of the User's Passkeys or a response that does not verify (code passkey_failed)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Missing or wrong CSRF token (code csrf_mismatch)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"410": {
+						"description": "The challenge is unknown, used or expired, or belongs to another ceremony or User (code passkey_challenge_expired)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"415": {
+						"description": "Request is not marked as JSON (code json_required)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
+		"/api/auth/sudo/passkey/start": {
+			"post": {
+				"tags": ["auth"],
+				"summary": "Start confirming Sudo Mode with one of the signed-in User's Passkeys.",
+				"description": "# Errors\n401 `unauthenticated`; 403 `csrf_mismatch`; 404 `passkey_not_found`.",
+				"operationId": "startPasskeySudo",
+				"parameters": [
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The challenge and the options for navigator.credentials.get() (not cached)",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PasskeyChallenge"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Missing or wrong CSRF token (code csrf_mismatch)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "The signed-in User has no Passkey (code passkey_not_found)",
 						"content": {
 							"application/problem+json": {
 								"schema": {
@@ -2016,6 +2649,59 @@
 					}
 				}
 			},
+			"FinishPasskeyRegistrationRequest": {
+				"type": "object",
+				"description": "The answer to a registration challenge.",
+				"required": ["challenge_id", "name", "credential"],
+				"properties": {
+					"challenge_id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"credential": {
+						"type": "object",
+						"description": "The `PublicKeyCredential` from `navigator.credentials.create()`, as\nJSON with binary fields in base64url."
+					},
+					"name": {
+						"type": "string",
+						"description": "1 to 50 characters after trimming, e.g. the device it lives on."
+					}
+				}
+			},
+			"FinishPasskeySignInRequest": {
+				"type": "object",
+				"description": "The answer to a sign-in challenge.",
+				"required": ["challenge_id", "credential"],
+				"properties": {
+					"challenge_id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"credential": {
+						"type": "object",
+						"description": "The `PublicKeyCredential` from `navigator.credentials.get()`, as JSON\nwith binary fields in base64url."
+					},
+					"remember": {
+						"type": "boolean",
+						"description": "Keep the session for 30 days instead of until the browser closes."
+					}
+				}
+			},
+			"FinishPasskeySudoRequest": {
+				"type": "object",
+				"description": "The answer to a Sudo challenge.",
+				"required": ["challenge_id", "credential"],
+				"properties": {
+					"challenge_id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"credential": {
+						"type": "object",
+						"description": "The `PublicKeyCredential` from `navigator.credentials.get()`, as JSON\nwith binary fields in base64url."
+					}
+				}
+			},
 			"Health": {
 				"type": "object",
 				"required": ["status", "version"],
@@ -2111,6 +2797,45 @@
 					"width": {
 						"type": "integer",
 						"format": "int32"
+					}
+				}
+			},
+			"PasskeyChallenge": {
+				"type": "object",
+				"description": "The start of a ceremony: what to send back with the finish, and the\noptions to hand to the browser's WebAuthn API.",
+				"required": ["challenge_id", "options"],
+				"properties": {
+					"challenge_id": {
+						"type": "string",
+						"format": "uuid",
+						"description": "Valid for five minutes, for one finish."
+					},
+					"options": {
+						"type": "object",
+						"description": "`CredentialCreationOptions` (registration) or\n`CredentialRequestOptions` (sign-in, Sudo Mode), binary fields as\nbase64url."
+					}
+				}
+			},
+			"PasskeySummary": {
+				"type": "object",
+				"description": "A Passkey as its owner sees it.",
+				"required": ["id", "name", "created_at"],
+				"properties": {
+					"created_at": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"last_used_at": {
+						"type": ["string", "null"],
+						"format": "date-time",
+						"description": "The last sign-in or Sudo confirmation with it; null when never used."
+					},
+					"name": {
+						"type": "string"
 					}
 				}
 			},
