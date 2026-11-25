@@ -86,13 +86,15 @@ pub async fn record(conn: &mut PgConnection, entry: NewAuditEntry<'_>) -> Result
 fn fields_of<T: Serialize>(value: &T) -> Map<String, Value> {
     match serde_json::to_value(value) {
         Ok(Value::Object(map)) => map,
-        _ => Map::new(),
+        Ok(other) => Map::from_iter([("value".to_owned(), other)]),
+        Err(_) => Map::new(),
     }
 }
 
 /// Compare the top-level fields of two serializable objects and return the
 /// ones that differ, sorted by field name. A field missing on one side counts
-/// as `null` there.
+/// as `null` there. A value that is not an object counts as one field named
+/// `value`.
 #[must_use]
 pub fn diff<T: Serialize>(before: &T, after: &T) -> Vec<FieldChange> {
     let (before, after) = (fields_of(before), fields_of(after));
@@ -109,4 +111,24 @@ pub fn diff<T: Serialize>(before: &T, after: &T) -> Vec<FieldChange> {
             })
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn diff_of_non_objects_uses_a_value_field() {
+        assert_eq!(
+            diff(&"a", &"b"),
+            vec![FieldChange {
+                field: "value".into(),
+                before: json!("a"),
+                after: json!("b"),
+            }]
+        );
+        assert_eq!(diff(&1, &1), Vec::new());
+    }
 }
