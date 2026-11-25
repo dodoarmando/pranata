@@ -246,7 +246,7 @@ function UserRow({
 				</Badge>
 			</TableCell>
 			<TableCell>
-				<Badge variant={user.is_active ? "outline" : "secondary"}>
+				<Badge variant={user.is_active ? "outline" : "destructive"}>
 					{user.is_active ? "Aktif" : "Nonaktif"}
 				</Badge>
 			</TableCell>
