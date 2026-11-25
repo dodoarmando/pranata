@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.0](https://github.com/dodoarmando/pranata/compare/v0.1.0...v0.2.0) (2026-11-25)
+
+
+### Features
+
+* **infra:** add dev recipes to initialise the village and create an admin ([629c65e](https://github.com/dodoarmando/pranata/commit/629c65ef9bf07b076a22c93e02a684b4a58f45c2))
+* **tools:** read roadmap rows named after their release ([5bb0018](https://github.com/dodoarmando/pranata/commit/5bb00188e68ad0fd5c563b06fb064eaab2c1a9ce))
+
+
+### Bug Fixes
+
+* **infra:** reach the web dev server over localhost for cache purges ([8e955b0](https://github.com/dodoarmando/pranata/commit/8e955b087d9cb911fc3a35c7492443c333fa9a3f))
+* **web:** keep the access link token when strict mode reruns the effect ([8ffc7af](https://github.com/dodoarmando/pranata/commit/8ffc7af43d000e5649b87bc0222fc5c3d9176e2b))
+* **web:** serve media variants from the dev server ([3649e0e](https://github.com/dodoarmando/pranata/commit/3649e0eb06bc0713e2a1342d78e21ea8f46d7fe1))
+
 ## [0.1.0](https://github.com/dodoarmando/pranata/compare/v0.1.0...v0.1.0) (2026-11-24)
 
 
