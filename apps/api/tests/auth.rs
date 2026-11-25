@@ -848,3 +848,28 @@ async fn new_link_revokes_the_previous_one(pool: PgPool) {
     let new = h.redeem(&second, "a brand new password").await;
     assert_eq!(new.status, StatusCode::NO_CONTENT);
 }
+#[sqlx::test]
+async fn relogin_replaces_the_old_session(pool: PgPool) {
+    let h = Harness::new(pool);
+    h.seed_user("budi").await;
+    let first = token_of(&h.login("budi", PASSWORD, false).await);
+
+    let request = Request::builder()
+        .method(Method::POST)
+        .uri("/api/auth/login")
+        .header(header::CONTENT_TYPE, "application/json")
+        .header(header::COOKIE, format!("pranata_session={first}"))
+        .body(Body::from(
+            json!({"username": "budi", "password": PASSWORD}).to_string(),
+        ))
+        .unwrap();
+    let response = h.app.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+
+    assert_eq!(h.me(&first).await.status, StatusCode::UNAUTHORIZED);
+    let count = sqlx::query_scalar!(r#"SELECT count(*) AS "count!" FROM sessions"#)
+        .fetch_one(&h.pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 1);
+}

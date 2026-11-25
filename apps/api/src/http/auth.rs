@@ -1,7 +1,7 @@
 use axum::{
     Json,
     extract::State,
-    http::{HeaderValue, StatusCode, header},
+    http::{HeaderMap, HeaderValue, StatusCode, header},
     response::{AppendHeaders, IntoResponse},
 };
 use serde::{Deserialize, Serialize};
@@ -12,7 +12,7 @@ use crate::{
     ApiError, AppState,
     audit::{self, AuditAction, NewAuditEntry},
     auth::{
-        CurrentUser, access_link, password,
+        self, CurrentUser, access_link, password,
         session::{self, AuthSession},
     },
     error::Problem,
@@ -106,6 +106,7 @@ struct Account {
 )]
 pub async fn login(
     State(state): State<AppState>,
+    headers: HeaderMap,
     ApiJson(request): ApiJson<LoginRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     let invalid = ApiError::Unauthorized("invalid_credentials");
@@ -134,6 +135,10 @@ pub async fn login(
 
     let now = state.clock.now();
     let mut tx = state.db.begin().await?;
+    // Signing in again replaces the session this browser already holds.
+    if let Some(old) = session::token_from_headers(&headers) {
+        session::delete(&mut tx, &auth::hash_token(&old)).await?;
+    }
     let new = session::create(&mut tx, account.id, request.remember, now).await?;
     audit::record(
         &mut tx,
