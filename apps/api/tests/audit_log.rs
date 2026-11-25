@@ -243,6 +243,25 @@ async fn malformed_cursor_is_422(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn out_of_range_cursor_is_422(pool: PgPool) {
+    use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+    let h = Harness::new(pool).await;
+    let session = h.reader().await;
+    let id = uuid::Uuid::nil();
+    for nanos in ["-300000000000000000000", "-1", "300000000000000000000000"] {
+        let cursor = URL_SAFE_NO_PAD.encode(format!("{nanos}.{id}"));
+        let reply = h
+            .get(&format!("/api/admin/audit?before={cursor}"), &session)
+            .await;
+        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{nanos}");
+        assert_eq!(
+            reply.json()["errors"],
+            json!([{"field": "before", "code": "invalid"}])
+        );
+    }
+}
+
+#[sqlx::test]
 async fn filters_by_actor_action_and_village_dates(pool: PgPool) {
     let h = Harness::new(pool).await;
     let session = h.reader().await;

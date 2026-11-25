@@ -144,8 +144,15 @@ impl AuditCursor {
         let bytes = URL_SAFE_NO_PAD.decode(text).ok()?;
         let text = String::from_utf8(bytes).ok()?;
         let (nanos, id) = text.split_once('.')?;
+        // Only instants the log can hold: `timestamptz` reaches back much
+        // further than `OffsetDateTime` but a client has no reason to ask for
+        // anything before the epoch, and the database would reject some.
+        let nanos: i128 = nanos.parse().ok()?;
+        if nanos < 0 {
+            return None;
+        }
         Some(Self {
-            at: OffsetDateTime::from_unix_timestamp_nanos(nanos.parse().ok()?).ok()?,
+            at: OffsetDateTime::from_unix_timestamp_nanos(nanos).ok()?,
             id: AuditEntryId(Uuid::parse_str(id).ok()?),
         })
     }
@@ -287,6 +294,14 @@ mod tests {
         assert_eq!(AuditCursor::decode(&cursor.encode()), Some(cursor));
         assert_eq!(AuditCursor::decode("not a cursor"), None);
         assert_eq!(AuditCursor::decode(&URL_SAFE_NO_PAD.encode("1.x")), None);
+        let id = Uuid::nil();
+        // Well-formed, but before 1970 and beyond year 9999.
+        for nanos in ["-1", "-300000000000000000000", "300000000000000000000000"] {
+            let text = URL_SAFE_NO_PAD.encode(format!("{nanos}.{id}"));
+            assert_eq!(AuditCursor::decode(&text), None, "{nanos}");
+        }
+        let epoch = URL_SAFE_NO_PAD.encode(format!("0.{id}"));
+        assert!(AuditCursor::decode(&epoch).is_some());
     }
 
     #[test]
