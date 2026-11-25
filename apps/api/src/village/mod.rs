@@ -177,3 +177,19 @@ pub async fn get(pool: &PgPool) -> anyhow::Result<Option<VillageProfile>> {
         hero: row.hero_asset_id.and_then(|id| images.get(&id).cloned()),
     }))
 }
+
+/// The Village's time zone, WIB before `init`.
+///
+/// # Errors
+/// Fails when the query fails or the stored time zone is unknown.
+pub async fn time_zone(pool: &PgPool) -> anyhow::Result<TimeZone> {
+    let name = sqlx::query_scalar!("SELECT time_zone FROM village WHERE id = 1")
+        .fetch_optional(pool)
+        .await
+        .context("reading village time zone")?;
+    match name {
+        None => Ok(TimeZone::Wib),
+        Some(name) => TimeZone::from_iana_name(&name)
+            .with_context(|| format!("unknown stored time zone {name}")),
+    }
+}

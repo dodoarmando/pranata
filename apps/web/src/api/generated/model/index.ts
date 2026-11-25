@@ -7,11 +7,17 @@
  */
 
 export * from './accessLinkIssued';
+export * from './actorRef';
+export * from './auditPage';
+export * from './auditRow';
 export * from './createdUser';
 export * from './createUserRequest';
 export * from './currentUser';
+export * from './exportAuditEntriesParams';
+export * from './fieldChange';
 export * from './fieldError';
 export * from './health';
+export * from './listAuditEntriesParams';
 export * from './loginRequest';
 export * from './mediaAsset';
 export * from './mediaRef';

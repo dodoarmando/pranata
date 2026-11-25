@@ -1,3 +1,4 @@
+export * from './audit/audit';
 export * from './auth/auth';
 export * from './media/media';
 export * from './ops/ops';

@@ -8,6 +8,7 @@ use std::sync::LazyLock;
 
 use flate2::read::GzDecoder;
 use serde::Deserialize;
+use time::UtcOffset;
 
 static DATA: &[u8] = include_bytes!("../data/region-codes.csv.gz");
 
@@ -97,6 +98,20 @@ impl TimeZone {
             Self::Wib => "Asia/Jakarta",
             Self::Wita => "Asia/Makassar",
             Self::Wit => "Asia/Jayapura",
+        }
+    }
+
+    /// The fixed offset from UTC. Indonesia has no daylight saving.
+    #[must_use]
+    pub const fn utc_offset(self) -> UtcOffset {
+        let hours = match self {
+            Self::Wib => 7,
+            Self::Wita => 8,
+            Self::Wit => 9,
+        };
+        match UtcOffset::from_hms(hours, 0, 0) {
+            Ok(offset) => offset,
+            Err(_) => UtcOffset::UTC,
         }
     }
 
