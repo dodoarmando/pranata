@@ -84,8 +84,8 @@ export const getSetPasswordWithAccessLinkUrl = () => {
 
 /**
  * # Errors
- * 404 `access_link_not_found`, 410 `access_link_used` or
- * `access_link_expired`, 422 `password_length`.
+ * 404 `access_link_not_found`, 410 `access_link_used`,
+ * `access_link_revoked` or `access_link_expired`, 422 `password_length`.
  * @summary Set a password with an Access Link. The link works once.
  */
 export const setPasswordWithAccessLink = async (redeemAccessLinkRequest: RedeemAccessLinkRequest, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
@@ -139,8 +139,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     /**
  * # Errors
- * 404 `access_link_not_found`, 410 `access_link_used` or
- * `access_link_expired`, 422 `password_length`.
+ * 404 `access_link_not_found`, 410 `access_link_used`,
+ * `access_link_revoked` or `access_link_expired`, 422 `password_length`.
  * @summary Set a password with an Access Link. The link works once.
  */
 export const useSetPasswordWithAccessLink = <TError = ErrorType<Problem>,

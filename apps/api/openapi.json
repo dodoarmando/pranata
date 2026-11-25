@@ -315,7 +315,7 @@
 			"post": {
 				"tags": ["auth"],
 				"summary": "Set a password with an Access Link. The link works once.",
-				"description": "# Errors\n404 `access_link_not_found`, 410 `access_link_used` or\n`access_link_expired`, 422 `password_length`.",
+				"description": "# Errors\n404 `access_link_not_found`, 410 `access_link_used`,\n`access_link_revoked` or `access_link_expired`, 422 `password_length`.",
 				"operationId": "setPasswordWithAccessLink",
 				"requestBody": {
 					"content": {
@@ -342,7 +342,7 @@
 						}
 					},
 					"410": {
-						"description": "Link used or expired (codes access_link_used, access_link_expired)",
+						"description": "Link used or expired (codes access_link_used, access_link_revoked, access_link_expired)",
 						"content": {
 							"application/problem+json": {
 								"schema": {

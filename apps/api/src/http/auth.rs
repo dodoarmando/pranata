@@ -1,7 +1,7 @@
 use axum::{
     Json,
     extract::State,
-    http::{HeaderValue, StatusCode, header},
+    http::{HeaderMap, HeaderValue, StatusCode, header},
     response::{AppendHeaders, IntoResponse},
 };
 use serde::{Deserialize, Serialize};
@@ -12,7 +12,7 @@ use crate::{
     ApiError, AppState,
     audit::{self, AuditAction, NewAuditEntry},
     auth::{
-        CurrentUser, access_link, password,
+        self, CurrentUser, access_link, password,
         session::{self, AuthSession},
     },
     error::Problem,
@@ -20,8 +20,16 @@ use crate::{
     ids::UserId,
 };
 
-/// Longest password sign-in will hash. Anything longer cannot be valid.
-const MAX_SIGN_IN_PASSWORD: usize = password::MAX_LENGTH;
+/// What sign-in verifies for `password`. A password longer than
+/// [`password::MAX_LENGTH`] cannot be valid, so a fixed placeholder takes its
+/// place: the run still costs one argon2 verification, but never on attacker-sized input.
+fn verification_input(password: &str) -> &str {
+    if password.chars().count() > password::MAX_LENGTH {
+        ""
+    } else {
+        password
+    }
+}
 
 #[derive(Deserialize, ToSchema)]
 pub struct LoginRequest {
@@ -106,6 +114,7 @@ struct Account {
 )]
 pub async fn login(
     State(state): State<AppState>,
+    headers: HeaderMap,
     ApiJson(request): ApiJson<LoginRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     let invalid = ApiError::Unauthorized("invalid_credentials");
@@ -120,20 +129,26 @@ pub async fn login(
     .await?;
 
     // Every failure path costs one argon2 run (the dummy hash stands in for
-    // a missing or unusable one), so timing does not tell an unknown user
+    // a missing or unusable one, a fixed placeholder for an overlong password), so timing does not tell an unknown user
     // from a wrong password. Runs are bounded by the hash limiter.
     let hash = account
         .as_ref()
         .filter(|account| account.is_active)
-        .and_then(|account| account.password_hash.clone())
-        .filter(|_| request.password.chars().count() <= MAX_SIGN_IN_PASSWORD);
-    let verified = state.hasher.verify(request.password, hash).await?;
+        .and_then(|account| account.password_hash.clone());
+    let verified = state
+        .hasher
+        .verify(verification_input(&request.password).to_owned(), hash)
+        .await?;
     let Some(account) = account.filter(|_| verified) else {
         return Err(invalid);
     };
 
     let now = state.clock.now();
     let mut tx = state.db.begin().await?;
+    // Signing in again replaces the session this browser already holds.
+    if let Some(old) = session::token_from_headers(&headers) {
+        session::delete(&mut tx, &auth::hash_token(&old)).await?;
+    }
     let new = session::create(&mut tx, account.id, request.remember, now).await?;
     audit::record(
         &mut tx,
@@ -237,8 +252,8 @@ pub async fn get_me(session: AuthSession) -> impl IntoResponse {
 /// Set a password with an Access Link. The link works once.
 ///
 /// # Errors
-/// 404 `access_link_not_found`, 410 `access_link_used` or
-/// `access_link_expired`, 422 `password_length`.
+/// 404 `access_link_not_found`, 410 `access_link_used`,
+/// `access_link_revoked` or `access_link_expired`, 422 `password_length`.
 #[utoipa::path(
     post,
     path = "/auth/access-links/redeem",
@@ -248,7 +263,7 @@ pub async fn get_me(session: AuthSession) -> impl IntoResponse {
     responses(
         (status = 204, description = "Password set; the link is used up"),
         (status = 404, description = "Unknown link (code access_link_not_found)", body = Problem, content_type = "application/problem+json"),
-        (status = 410, description = "Link used or expired (codes access_link_used, access_link_expired)", body = Problem, content_type = "application/problem+json"),
+        (status = 410, description = "Link used or expired (codes access_link_used, access_link_revoked, access_link_expired)", body = Problem, content_type = "application/problem+json"),
         (status = 415, description = "Request is not marked as JSON (code json_required)", body = Problem, content_type = "application/problem+json"),
         (status = 422, description = "Password length rule broken (code password_length)", body = Problem, content_type = "application/problem+json"),
     )
@@ -274,4 +289,21 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(logout))
         .routes(routes!(get_me))
         .routes(routes!(set_password_with_access_link))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn verification_input_keeps_passwords_up_to_the_limit() {
+        let at_limit = "é".repeat(password::MAX_LENGTH);
+        assert_eq!(verification_input(&at_limit), at_limit);
+    }
+
+    #[test]
+    fn verification_input_replaces_longer_passwords_with_a_placeholder() {
+        let over_limit = "é".repeat(password::MAX_LENGTH + 1);
+        assert_eq!(verification_input(&over_limit), "");
+    }
 }
