@@ -78,10 +78,12 @@ impl Harness {
         let state = test_state(pool.clone());
         let app = pranata::app(state.clone());
         let hash = auth::password::hash_password(PASSWORD).unwrap();
+        let role = common::administrator_role(&pool).await;
         sqlx::query!(
-            "INSERT INTO users (username, display_name, password_hash)
-             VALUES ('budi', 'Budi Santoso', $1)",
-            hash
+            "INSERT INTO users (username, display_name, password_hash, role_id)
+             VALUES ('budi', 'Budi Santoso', $1, $2)",
+            hash,
+            role.0
         )
         .execute(&pool)
         .await

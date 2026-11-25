@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT s.csrf_token, s.remember, s.last_seen_at, s.expires_at,\n                  u.id AS \"user_id: UserId\", u.username, u.display_name\n           FROM sessions s JOIN users u ON u.id = s.user_id\n           WHERE s.token_hash = $1 AND u.is_active",
+  "query": "SELECT s.csrf_token, s.remember, s.last_seen_at, s.expires_at,\n                  u.id AS \"user_id: UserId\", u.username, u.display_name,\n                  r.id AS \"role_id: RoleId\", r.name AS role_name, r.is_administrator,\n                  COALESCE(array_agg(rp.permission) FILTER (WHERE rp.permission IS NOT NULL), '{}')\n                      AS \"permissions!: Vec<String>\"\n           FROM sessions s\n           JOIN users u ON u.id = s.user_id\n           JOIN roles r ON r.id = u.role_id\n           LEFT JOIN role_permissions rp ON rp.role_id = r.id\n           WHERE s.token_hash = $1 AND u.is_active\n           GROUP BY s.token_hash, u.id, r.id",
   "describe": {
     "columns": [
       {
@@ -79,6 +79,45 @@
             "name": "display_name"
           }
         }
+      },
+      {
+        "ordinal": 7,
+        "name": "role_id: RoleId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "roles",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "role_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "roles",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "is_administrator",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "roles",
+            "name": "is_administrator"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "permissions!: Vec<String>",
+        "type_info": "TextArray",
+        "origin": "Expression"
       }
     ],
     "parameters": {
@@ -93,8 +132,12 @@
       false,
       false,
       false,
-      false
+      false,
+      false,
+      false,
+      false,
+      null
     ]
   },
-  "hash": "184de0215c5dbd33d4949e826d99356248c7aa76588298f19d25c0fa062494a1"
+  "hash": "e7ccdae55e69b1f6b190a32e9d804ae4f7c68ce01785ed25ab6cbe657462a2d3"
 }

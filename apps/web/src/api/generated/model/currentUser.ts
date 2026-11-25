@@ -5,6 +5,8 @@
  * Village website and administration API.
  * OpenAPI spec version: 0.1.0
  */
+import type { Permission } from './permission';
+import type { RoleRef } from './roleRef';
 
 /**
  * The signed-in User, as an axum extractor. A missing or expired session
@@ -13,5 +15,8 @@
 export interface CurrentUser {
   display_name: string;
   id: string;
+  /** What the Role grants, in catalogue order. */
+  permissions: Permission[];
+  role: RoleRef;
   username: string;
 }

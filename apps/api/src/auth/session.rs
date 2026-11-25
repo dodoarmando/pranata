@@ -12,7 +12,11 @@ use sqlx::{PgConnection, PgPool};
 use time::{Duration, OffsetDateTime};
 
 use super::{CurrentUser, hash_token, random_token};
-use crate::{ApiError, AppState, ids::UserId};
+use crate::{
+    ApiError, AppState,
+    access::{self, RoleRef},
+    ids::{RoleId, UserId},
+};
 
 /// Name of the session cookie.
 pub const COOKIE_NAME: &str = "pranata_session";
@@ -141,9 +145,16 @@ async fn find(
     let token_hash = hash_token(token);
     let Some(row) = sqlx::query!(
         r#"SELECT s.csrf_token, s.remember, s.last_seen_at, s.expires_at,
-                  u.id AS "user_id: UserId", u.username, u.display_name
-           FROM sessions s JOIN users u ON u.id = s.user_id
-           WHERE s.token_hash = $1 AND u.is_active"#,
+                  u.id AS "user_id: UserId", u.username, u.display_name,
+                  r.id AS "role_id: RoleId", r.name AS role_name, r.is_administrator,
+                  COALESCE(array_agg(rp.permission) FILTER (WHERE rp.permission IS NOT NULL), '{}')
+                      AS "permissions!: Vec<String>"
+           FROM sessions s
+           JOIN users u ON u.id = s.user_id
+           JOIN roles r ON r.id = u.role_id
+           LEFT JOIN role_permissions rp ON rp.role_id = r.id
+           WHERE s.token_hash = $1 AND u.is_active
+           GROUP BY s.token_hash, u.id, r.id"#,
         token_hash,
     )
     .fetch_optional(db)
@@ -169,11 +180,18 @@ async fn find(
         .await
         .context("renewing session")?;
     }
+    let permissions = access::granted(row.is_administrator, &row.permissions)?;
     let session = AuthSession {
         user: CurrentUser {
             id: row.user_id,
             username: row.username,
             display_name: row.display_name,
+            role: RoleRef {
+                id: row.role_id,
+                name: row.role_name,
+                is_administrator: row.is_administrator,
+            },
+            permissions,
         },
         csrf_token: row.csrf_token,
         token_hash,
@@ -289,6 +307,7 @@ fn from_extensions(parts: &Parts) -> Result<AuthSession, ApiError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::access::Permission;
 
     #[test]
     fn auth_session_debug_hides_tokens() {
@@ -297,6 +316,12 @@ mod tests {
                 id: UserId(uuid::Uuid::nil()),
                 username: "budi".into(),
                 display_name: "Budi".into(),
+                role: RoleRef {
+                    id: RoleId(uuid::Uuid::nil()),
+                    name: "Administrator".into(),
+                    is_administrator: true,
+                },
+                permissions: vec![Permission::VillageManage],
             },
             csrf_token: "csrf-secret".into(),
             token_hash: vec![1, 2, 3, 4],

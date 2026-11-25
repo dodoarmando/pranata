@@ -4,7 +4,7 @@ use pranata::auth::session::{SessionClock, SystemClock};
 use pranata::media::LocalStorage;
 use pranata::region_codes::VillageCode;
 use pranata::village::{self, InitError};
-use pranata::{AppState, Config, HashLimiter, auth, db, jobs, openapi};
+use pranata::{AppState, Config, HashLimiter, access, auth, db, jobs, openapi};
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::{EnvFilter, fmt};
@@ -112,12 +112,14 @@ async fn create_admin(username: &str, name: &str) -> Result<()> {
     let config = Config::from_env().context("loading configuration")?;
     // Users are an application concern, so this uses the app role's URL.
     let pool = db::connect(&config.database_url).await?;
-    let created = auth::create_user_with_access_link(&pool, username, name, SystemClock.now())
-        .await
-        .map_err(|error| match error {
-            pranata::ApiError::Internal(error) => error,
-            other => anyhow::anyhow!("{other}"),
-        })?;
+    let role = access::administrator_role(&pool).await?;
+    let created =
+        auth::create_user_with_access_link(&pool, username, name, role, None, SystemClock.now())
+            .await
+            .map_err(|error| match error {
+                pranata::ApiError::Internal(error) => error,
+                other => anyhow::anyhow!("{other}"),
+            })?;
     let origin = config.public_origin.as_str().trim_end_matches('/');
     println!("{origin}/akses#{}", created.access_link_token);
     Ok(())

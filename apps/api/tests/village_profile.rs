@@ -41,10 +41,12 @@ impl Harness {
             .unwrap();
         let app = pranata::app(state.clone());
         let hash = auth::password::hash_password(PASSWORD).unwrap();
+        let role = common::administrator_role(&pool).await;
         let user_id = sqlx::query_scalar!(
-            "INSERT INTO users (username, display_name, password_hash)
-             VALUES ('budi', 'Budi Santoso', $1) RETURNING id",
-            hash
+            "INSERT INTO users (username, display_name, password_hash, role_id)
+             VALUES ('budi', 'Budi Santoso', $1, $2) RETURNING id",
+            hash,
+            role.0
         )
         .fetch_one(&pool)
         .await

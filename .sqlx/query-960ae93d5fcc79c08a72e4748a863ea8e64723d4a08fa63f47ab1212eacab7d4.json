@@ -1,15 +1,15 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO users (username, display_name) VALUES ('petugas', 'Petugas')\n           RETURNING id AS \"id: UserId\"",
+  "query": "SELECT id AS \"id: RoleId\" FROM roles WHERE is_administrator",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "id: UserId",
+        "name": "id: RoleId",
         "type_info": "Uuid",
         "origin": {
           "Table": {
-            "table": "users",
+            "table": "roles",
             "name": "id"
           }
         }
@@ -22,5 +22,5 @@
       false
     ]
   },
-  "hash": "64c5baa0d5119308152c90a058274cce2a31fd994027759122453eefaf43fc12"
+  "hash": "960ae93d5fcc79c08a72e4748a863ea8e64723d4a08fa63f47ab1212eacab7d4"
 }

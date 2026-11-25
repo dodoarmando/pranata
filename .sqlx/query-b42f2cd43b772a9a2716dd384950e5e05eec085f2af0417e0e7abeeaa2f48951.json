@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO roles (name, is_administrator) VALUES ('Kedua', true)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "b42f2cd43b772a9a2716dd384950e5e05eec085f2af0417e0e7abeeaa2f48951"
+}
