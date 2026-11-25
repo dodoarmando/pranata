@@ -2,7 +2,8 @@
 //! reactivate Users, and issue Access Links. Users are never deleted.
 //!
 //! Every write checks, in this order: the escalation rules
-//! ([`super::can_manage`]), request validation, then the domain rules. The
+//! ([`super::can_manage`] for the Role handed out, [`super::can_manage_user`]
+//! for the User acted on), request validation, then the domain rules. The
 //! caller has already checked `user.manage` and Sudo Mode.
 //!
 //! Lock order. A transaction here that locks several rows takes them in this
@@ -22,7 +23,7 @@ use time::OffsetDateTime;
 use url::Url;
 use utoipa::ToSchema;
 
-use super::{Permission, RoleRef, can_manage};
+use super::{Permission, RoleRef, can_manage, can_manage_user};
 use crate::{
     ApiError, FieldError,
     audit::{self, AuditAction, NewAuditEntry},
@@ -202,7 +203,7 @@ struct Target {
 
 impl Target {
     fn check_actor(&self, actor: &CurrentUser) -> Result<(), ApiError> {
-        can_manage(actor, &self.role, &self.permissions)
+        can_manage_user(actor, &self.role, &self.permissions)
     }
 }
 
@@ -348,7 +349,8 @@ struct Audited<'a> {
 /// Change a User's display name or Role.
 ///
 /// # Errors
-/// 403 `administrator_only`, `permission_not_held` or `own_role`; 422
+/// 403 `administrator_only`, `permission_not_held` (the new Role),
+/// `stronger_user` (the User) or `own_role`; 422
 /// `validation_failed` (fields `display_name`, `role_id`); 404
 /// `user_not_found`; 409 `last_administrator`.
 pub async fn update(
@@ -450,7 +452,7 @@ pub async fn update(
 /// Deactivating an inactive User changes nothing.
 ///
 /// # Errors
-/// 403 `administrator_only` or `permission_not_held`; 404 `user_not_found`;
+/// 403 `administrator_only` or `stronger_user`; 404 `user_not_found`;
 /// 409 `cannot_deactivate_self` or `last_administrator`.
 pub async fn deactivate(
     db: &PgPool,
@@ -498,7 +500,7 @@ pub async fn deactivate(
 /// sign in at once. Reactivating an active User changes nothing.
 ///
 /// # Errors
-/// 403 `administrator_only` or `permission_not_held`; 404 `user_not_found`.
+/// 403 `administrator_only` or `stronger_user`; 404 `user_not_found`.
 pub async fn reactivate(
     db: &PgPool,
     actor: &CurrentUser,
@@ -537,7 +539,7 @@ pub async fn reactivate(
 /// Issue a new Access Link for a User, revoking their earlier unused ones.
 ///
 /// # Errors
-/// 403 `administrator_only` or `permission_not_held`; 404 `user_not_found`;
+/// 403 `administrator_only` or `stronger_user`; 404 `user_not_found`;
 /// 409 `user_inactive`.
 pub async fn issue_access_link(
     db: &PgPool,

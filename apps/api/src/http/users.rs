@@ -104,7 +104,8 @@ pub async fn create_user(
 ///
 /// # Errors
 /// 403 `permission_denied`, `sudo_required`, `administrator_only`,
-/// `permission_not_held` or `own_role`; 422 `validation_failed`; 404
+/// `permission_not_held`, `stronger_user` or `own_role`; 422
+/// `validation_failed`; 404
 /// `user_not_found`; 409 `last_administrator`.
 #[utoipa::path(
     patch,
@@ -121,7 +122,7 @@ pub async fn create_user(
         (status = 200, description = "The edited User", body = UserSummary),
         (status = 400, description = "Body is not valid JSON or has unknown fields such as username (code invalid_json)", body = Problem, content_type = "application/problem+json"),
         (status = 401, description = "Not signed in (code unauthenticated)", body = Problem, content_type = "application/problem+json"),
-        (status = 403, description = "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), the User or the new Role is out of reach (codes administrator_only, permission_not_held), or the User is changing their own Role (code own_role)", body = Problem, content_type = "application/problem+json"),
+        (status = 403, description = "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), the new Role may not be assigned by this User (codes administrator_only, permission_not_held), the User is out of reach (codes administrator_only, stronger_user), or the User is changing their own Role (code own_role)", body = Problem, content_type = "application/problem+json"),
         (status = 404, description = "No such User (code user_not_found)", body = Problem, content_type = "application/problem+json"),
         (status = 409, description = "No other active Administrator who can sign in would remain (code last_administrator)", body = Problem, content_type = "application/problem+json"),
         (status = 415, description = "Request is not marked as JSON (code json_required)", body = Problem, content_type = "application/problem+json"),
@@ -147,7 +148,7 @@ pub async fn update_user(
 ///
 /// # Errors
 /// 403 `permission_denied`, `sudo_required`, `administrator_only` or
-/// `permission_not_held`; 404 `user_not_found`; 409 `cannot_deactivate_self`
+/// `stronger_user`; 404 `user_not_found`; 409 `cannot_deactivate_self`
 /// or `last_administrator`.
 #[utoipa::path(
     post,
@@ -162,7 +163,7 @@ pub async fn update_user(
     responses(
         (status = 200, description = "The deactivated User", body = UserSummary),
         (status = 401, description = "Not signed in (code unauthenticated)", body = Problem, content_type = "application/problem+json"),
-        (status = 403, description = "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, permission_not_held)", body = Problem, content_type = "application/problem+json"),
+        (status = 403, description = "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, stronger_user)", body = Problem, content_type = "application/problem+json"),
         (status = 404, description = "No such User (code user_not_found)", body = Problem, content_type = "application/problem+json"),
         (status = 409, description = "The User is the one signed in (code cannot_deactivate_self), or no other active Administrator who can sign in would remain (code last_administrator)", body = Problem, content_type = "application/problem+json"),
     )
@@ -183,7 +184,7 @@ pub async fn deactivate_user(
 ///
 /// # Errors
 /// 403 `permission_denied`, `sudo_required`, `administrator_only` or
-/// `permission_not_held`; 404 `user_not_found`.
+/// `stronger_user`; 404 `user_not_found`.
 #[utoipa::path(
     post,
     path = "/admin/users/{id}/reactivate",
@@ -197,7 +198,7 @@ pub async fn deactivate_user(
     responses(
         (status = 200, description = "The reactivated User", body = UserSummary),
         (status = 401, description = "Not signed in (code unauthenticated)", body = Problem, content_type = "application/problem+json"),
-        (status = 403, description = "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, permission_not_held)", body = Problem, content_type = "application/problem+json"),
+        (status = 403, description = "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, stronger_user)", body = Problem, content_type = "application/problem+json"),
         (status = 404, description = "No such User (code user_not_found)", body = Problem, content_type = "application/problem+json"),
     )
 )]
@@ -216,7 +217,7 @@ pub async fn reactivate_user(
 ///
 /// # Errors
 /// 403 `permission_denied`, `sudo_required`, `administrator_only` or
-/// `permission_not_held`; 404 `user_not_found`; 409 `user_inactive`.
+/// `stronger_user`; 404 `user_not_found`; 409 `user_inactive`.
 #[utoipa::path(
     post,
     path = "/admin/users/{id}/access-links",
@@ -230,7 +231,7 @@ pub async fn reactivate_user(
     responses(
         (status = 201, description = "The new Access Link (not cached)", body = AccessLinkIssued),
         (status = 401, description = "Not signed in (code unauthenticated)", body = Problem, content_type = "application/problem+json"),
-        (status = 403, description = "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, permission_not_held)", body = Problem, content_type = "application/problem+json"),
+        (status = 403, description = "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, stronger_user)", body = Problem, content_type = "application/problem+json"),
         (status = 404, description = "No such User (code user_not_found)", body = Problem, content_type = "application/problem+json"),
         (status = 409, description = "The User is deactivated (code user_inactive)", body = Problem, content_type = "application/problem+json"),
     )

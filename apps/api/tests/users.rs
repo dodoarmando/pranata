@@ -742,8 +742,11 @@ async fn non_admin_cannot_take_over_a_user_with_more_permissions(pool: PgPool) {
         h.post(&session, sekdes, "deactivate").await,
         h.patch(&session, sekdes, json!({"role_id": managers.0}))
             .await,
+        h.patch(&session, sekdes, json!({"display_name": "Sekdes"}))
+            .await,
+        h.post(&session, sekdes, "reactivate").await,
     ] {
-        assert_problem(&reply, StatusCode::FORBIDDEN, "permission_not_held");
+        assert_problem(&reply, StatusCode::FORBIDDEN, "stronger_user");
     }
     assert_eq!(h.user_changes().await, 0);
 }

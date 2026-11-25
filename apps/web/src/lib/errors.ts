@@ -52,6 +52,8 @@ const MESSAGES: Record<string, string> = {
 	own_role: "Anda tidak dapat mengubah peran Anda sendiri.",
 	permission_not_held:
 		"Anda hanya dapat memberikan hak akses yang Anda miliki.",
+	stronger_user:
+		"Anda tidak dapat mengubah pengguna yang hak aksesnya lebih luas dari Anda.",
 	user_not_found: "Pengguna tidak ditemukan.",
 	role_not_found: "Peran tidak ditemukan.",
 	last_administrator: "Harus ada minimal satu Administrator aktif.",

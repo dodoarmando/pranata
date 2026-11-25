@@ -339,7 +339,7 @@
 			"patch": {
 				"tags": ["users"],
 				"summary": "Change a User's display name or Role. The username never changes.",
-				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only`,\n`permission_not_held` or `own_role`; 422 `validation_failed`; 404\n`user_not_found`; 409 `last_administrator`.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only`,\n`permission_not_held`, `stronger_user` or `own_role`; 422\n`validation_failed`; 404\n`user_not_found`; 409 `last_administrator`.",
 				"operationId": "updateUser",
 				"parameters": [
 					{
@@ -404,7 +404,7 @@
 						}
 					},
 					"403": {
-						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), the User or the new Role is out of reach (codes administrator_only, permission_not_held), or the User is changing their own Role (code own_role)",
+						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), the new Role may not be assigned by this User (codes administrator_only, permission_not_held), the User is out of reach (codes administrator_only, stronger_user), or the User is changing their own Role (code own_role)",
 						"content": {
 							"application/problem+json": {
 								"schema": {
@@ -465,7 +465,7 @@
 			"post": {
 				"tags": ["users"],
 				"summary": "Issue a new Access Link for a User. Their earlier unused links stop\nworking. The link is shown only in this response.",
-				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`permission_not_held`; 404 `user_not_found`; 409 `user_inactive`.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`stronger_user`; 404 `user_not_found`; 409 `user_inactive`.",
 				"operationId": "issueAccessLink",
 				"parameters": [
 					{
@@ -510,7 +510,7 @@
 						}
 					},
 					"403": {
-						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, permission_not_held)",
+						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, stronger_user)",
 						"content": {
 							"application/problem+json": {
 								"schema": {
@@ -551,7 +551,7 @@
 			"post": {
 				"tags": ["users"],
 				"summary": "Deactivate a User: their sessions end and their unused Access Links stop\nworking. Users are never deleted, and the username is never reused.",
-				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`permission_not_held`; 404 `user_not_found`; 409 `cannot_deactivate_self`\nor `last_administrator`.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`stronger_user`; 404 `user_not_found`; 409 `cannot_deactivate_self`\nor `last_administrator`.",
 				"operationId": "deactivateUser",
 				"parameters": [
 					{
@@ -596,7 +596,7 @@
 						}
 					},
 					"403": {
-						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, permission_not_held)",
+						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, stronger_user)",
 						"content": {
 							"application/problem+json": {
 								"schema": {
@@ -637,7 +637,7 @@
 			"post": {
 				"tags": ["users"],
 				"summary": "Reactivate a User. They keep their password and Passkeys.",
-				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`permission_not_held`; 404 `user_not_found`.",
+				"description": "# Errors\n403 `permission_denied`, `sudo_required`, `administrator_only` or\n`stronger_user`; 404 `user_not_found`.",
 				"operationId": "reactivateUser",
 				"parameters": [
 					{
@@ -682,7 +682,7 @@
 						}
 					},
 					"403": {
-						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, permission_not_held)",
+						"description": "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, stronger_user)",
 						"content": {
 							"application/problem+json": {
 								"schema": {
