@@ -400,6 +400,16 @@
 								}
 							}
 						}
+					},
+					"429": {
+						"description": "Too many requests from this address (code too_many_requests); Retry-After gives the seconds to wait",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
 					}
 				}
 			}
@@ -452,7 +462,7 @@
 						}
 					},
 					"429": {
-						"description": "Too many failed attempts for this account (code too_many_attempts); Retry-After gives the seconds to wait",
+						"description": "Too many failed attempts for this account (code too_many_attempts) or too many requests from this address (code too_many_requests); Retry-After gives the seconds to wait",
 						"content": {
 							"application/problem+json": {
 								"schema": {

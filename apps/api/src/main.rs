@@ -1,11 +1,12 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use pranata::auth::session::{SessionClock, SystemClock};
+use pranata::http::client_ip;
 use pranata::media::LocalStorage;
 use pranata::region_codes::VillageCode;
 use pranata::village::{self, InitError};
 use pranata::{AppState, Config, HashLimiter, access, auth, db, jobs, openapi};
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::{EnvFilter, fmt};
 
@@ -156,19 +157,39 @@ async fn serve() -> Result<()> {
     // Exactly one worker; it stops with the server and finishes its current job.
     let shutdown = CancellationToken::new();
     let worker = tokio::spawn(jobs::run_worker(state.clone(), shutdown.clone()));
-    let served = axum::serve(listener, pranata::app(state))
-        .with_graceful_shutdown({
-            let shutdown = shutdown.clone();
-            async move {
-                shutdown_signal().await;
-                shutdown.cancel();
-            }
-        })
-        .await
-        .context("serving");
+    let limiter = client_ip::auth_limiter();
+    let pruner = tokio::spawn(prune_limiter(limiter.clone(), shutdown.clone()));
+    // Connect info gives the limiter the peer address when no proxy header is set.
+    let served = axum::serve(
+        listener,
+        pranata::app_with_limiter(state, &limiter)
+            .into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown({
+        let shutdown = shutdown.clone();
+        async move {
+            shutdown_signal().await;
+            shutdown.cancel();
+        }
+    })
+    .await
+    .context("serving");
     shutdown.cancel();
     worker.await.context("waiting for the job worker")?;
+    pruner.await.context("waiting for the limiter pruner")?;
     served
+}
+
+/// Drop rate-limit entries that have refilled completely, so the map of
+/// client addresses does not grow without bound.
+async fn prune_limiter(limiter: client_ip::AuthLimiter, shutdown: CancellationToken) {
+    let mut tick = tokio::time::interval(Duration::from_secs(60));
+    loop {
+        tokio::select! {
+            () = shutdown.cancelled() => return,
+            _ = tick.tick() => limiter.limiter().retain_recent(),
+        }
+    }
 }
 
 async fn shutdown_signal() {

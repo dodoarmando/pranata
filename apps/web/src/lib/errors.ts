@@ -15,6 +15,7 @@ const MESSAGES: Record<string, string> = {
 	json_required: UNREADABLE,
 	invalid_credentials: "Nama pengguna atau kata sandi salah.",
 	too_many_attempts: TOO_MANY,
+	too_many_requests: TOO_MANY,
 	access_link_used: LINK_INVALID,
 	access_link_revoked: LINK_INVALID,
 	access_link_expired: LINK_INVALID,

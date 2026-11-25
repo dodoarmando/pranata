@@ -257,3 +257,44 @@ async fn malformed_usernames_are_not_recorded(pool: PgPool) {
     assert_eq!(reply.body["code"], "invalid_credentials");
     assert_eq!(h.failures().await, 0);
 }
+
+#[sqlx::test]
+async fn ip_limit_applies_across_usernames(pool: PgPool) {
+    let h = Harness::new(pool);
+    // The first 20 requests drain the bucket with the cheapest unauthenticated
+    // call (an unknown Access Link answers 404 without any argon2 run). A
+    // password sign-in costs an argon2 run each, and in a debug build twenty
+    // of them can outlast the 3-second refill, which would make this flaky.
+    for n in 0..20 {
+        let reply = h
+            .send(
+                "/api/auth/access-links/redeem",
+                Some("203.0.113.7"),
+                None,
+                json!({"token": format!("unknown-{n}"), "password": "a brand new password"}),
+            )
+            .await;
+        assert_eq!(reply.status, StatusCode::NOT_FOUND, "request {n}");
+    }
+    let limited = h
+        .send(
+            "/api/auth/login",
+            Some("203.0.113.7"),
+            None,
+            json!({"username": "someone-else", "password": "wrong password"}),
+        )
+        .await;
+    assert_eq!(limited.status, StatusCode::TOO_MANY_REQUESTS);
+    assert_eq!(limited.body["code"], "too_many_requests");
+    assert!(limited.retry_after.is_some());
+
+    let other = h
+        .send(
+            "/api/auth/login",
+            Some("203.0.113.8"),
+            None,
+            json!({"username": "someone-else", "password": "wrong password"}),
+        )
+        .await;
+    assert_ne!(other.status, StatusCode::TOO_MANY_REQUESTS);
+}

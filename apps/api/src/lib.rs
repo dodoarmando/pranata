@@ -42,7 +42,13 @@ pub struct AppState {
     pub purger: cache_purge::Purger,
 }
 
-/// Build the full router, mounted under `/api`.
+/// Build the full router, mounted under `/api`, with its own per-IP limiter.
 pub fn app(state: AppState) -> Router {
-    http::router(state)
+    app_with_limiter(state, &http::client_ip::auth_limiter())
+}
+
+/// Like [`app`], with a limiter the caller keeps: the server prunes its
+/// stale entries in the background.
+pub fn app_with_limiter(state: AppState, limiter: &http::client_ip::AuthLimiter) -> Router {
+    http::router(state, limiter)
 }

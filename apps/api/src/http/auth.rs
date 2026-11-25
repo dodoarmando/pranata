@@ -132,7 +132,7 @@ struct Account {
         (status = 200, description = "Signed in; the session cookie is set", body = SessionInfo),
         (status = 400, description = "Body is not valid JSON (code invalid_json)", body = Problem, content_type = "application/problem+json"),
         (status = 401, description = "Wrong username or password (code invalid_credentials)", body = Problem, content_type = "application/problem+json"),
-        (status = 429, description = "Too many failed attempts for this account (code too_many_attempts); Retry-After gives the seconds to wait", body = Problem, content_type = "application/problem+json"),
+        (status = 429, description = "Too many failed attempts for this account (code too_many_attempts) or too many requests from this address (code too_many_requests); Retry-After gives the seconds to wait", body = Problem, content_type = "application/problem+json"),
     )
 )]
 pub async fn login(
@@ -368,6 +368,7 @@ pub async fn confirm_sudo(
         (status = 410, description = "Link used or expired (codes access_link_used, access_link_revoked, access_link_expired)", body = Problem, content_type = "application/problem+json"),
         (status = 415, description = "Request is not marked as JSON (code json_required)", body = Problem, content_type = "application/problem+json"),
         (status = 422, description = "Password length rule broken (code password_length)", body = Problem, content_type = "application/problem+json"),
+        (status = 429, description = "Too many requests from this address (code too_many_requests); Retry-After gives the seconds to wait", body = Problem, content_type = "application/problem+json"),
     )
 )]
 pub async fn set_password_with_access_link(
@@ -385,12 +386,19 @@ pub async fn set_password_with_access_link(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Routes that need a session.
 pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
-        .routes(routes!(login))
         .routes(routes!(logout))
         .routes(routes!(get_me))
         .routes(routes!(confirm_sudo))
+}
+
+/// The unauthenticated POSTs. `http::api_router` puts the per-IP limit on
+/// this router; passkey sign-in joins it later.
+pub fn unauthenticated_router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(login))
         .routes(routes!(set_password_with_access_link))
 }
 
