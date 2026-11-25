@@ -873,3 +873,15 @@ async fn relogin_replaces_the_old_session(pool: PgPool) {
         .unwrap();
     assert_eq!(count, 1);
 }
+#[sqlx::test]
+async fn overlong_password_is_rejected_like_a_wrong_one(pool: PgPool) {
+    let h = Harness::new(pool);
+    h.seed_user("budi").await;
+
+    let wrong = h.login("budi", "not the password", false).await;
+    let overlong = h.login("budi", &"a".repeat(10_000), false).await;
+    assert_eq!(overlong.status, StatusCode::UNAUTHORIZED);
+    assert_eq!(overlong.body, wrong.body);
+    assert_eq!(overlong.body["code"], "invalid_credentials");
+    assert!(overlong.headers.get(header::SET_COOKIE).is_none());
+}
