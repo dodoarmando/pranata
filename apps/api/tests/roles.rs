@@ -426,24 +426,6 @@ async fn role_in_use_cannot_be_deleted(pool: PgPool) {
     assert_eq!(h.role_changes().await, 0);
 }
 
-/// Wait until a connection to this test's database waits for a row lock.
-async fn wait_for_a_lock_wait(pool: &PgPool) {
-    for _ in 0..500 {
-        let waiting = sqlx::query_scalar!(
-            r#"SELECT count(*) AS "count!" FROM pg_stat_activity
-               WHERE datname = current_database() AND wait_event_type = 'Lock'"#
-        )
-        .fetch_one(pool)
-        .await
-        .unwrap();
-        if waiting > 0 {
-            return;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-    }
-    panic!("no request waited for the lock");
-}
-
 #[sqlx::test]
 async fn delete_waits_for_a_user_who_is_taking_the_role(pool: PgPool) {
     let h = Harness::new(pool).await;
@@ -461,7 +443,7 @@ async fn delete_waits_for_a_user_who_is_taking_the_role(pool: PgPool) {
     .await
     .unwrap();
     let (reply, ()) = tokio::join!(h.delete(&session, writers), async {
-        wait_for_a_lock_wait(&h.pool).await;
+        common::wait_for_a_lock_wait(&h.pool).await;
         assigning.commit().await.unwrap();
     });
     assert_problem(&reply, StatusCode::CONFLICT, "role_in_use");

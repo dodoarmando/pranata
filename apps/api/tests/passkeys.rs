@@ -1007,24 +1007,6 @@ async fn user_summary_counts_passkeys(pool: PgPool) {
     assert_eq!(listed.body[0]["passkey_count"], 1);
 }
 
-/// Wait until `count` connections to this test's database wait for a lock.
-async fn wait_for_lock_waits(pool: &PgPool, count: i64) {
-    for _ in 0..500 {
-        let waiting = sqlx::query_scalar!(
-            r#"SELECT count(*) AS "count!" FROM pg_stat_activity
-               WHERE datname = current_database() AND wait_event_type = 'Lock'"#
-        )
-        .fetch_one(pool)
-        .await
-        .unwrap();
-        if waiting >= count {
-            return;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-    }
-    panic!("fewer than {count} requests waited for a lock");
-}
-
 /// Andi and Budi demote each other at the same time while `holder` keeps
 /// Dewi's row locked; once both requests wait for it, `holder` commits.
 /// Holding the lock makes both requests read their sessions (as
@@ -1045,23 +1027,11 @@ async fn demote_each_other(
         h.call(Method::PATCH, &b_uri, a_session, Some(demote.clone())),
         h.call(Method::PATCH, &a_uri, b_session, Some(demote.clone())),
         async {
-            wait_for_lock_waits(&h.pool, 2).await;
+            common::wait_for_lock_waits(&h.pool, 2).await;
             holder.commit().await.unwrap();
         },
     );
     (first, second)
-}
-
-async fn lock_user(h: &Harness, user: UserId) -> sqlx::Transaction<'static, sqlx::Postgres> {
-    let mut holder = h.pool.begin().await.unwrap();
-    sqlx::query!(
-        "SELECT id FROM users WHERE id = $1 FOR NO KEY UPDATE",
-        user.0
-    )
-    .fetch_one(&mut *holder)
-    .await
-    .unwrap();
-    holder
 }
 
 #[sqlx::test]
@@ -1073,7 +1043,7 @@ async fn passkey_only_administrator_counts(pool: PgPool) {
     let mut key = Authenticator::new();
     h.add_passkey(&dewi_session, &mut key).await;
 
-    let holder = lock_user(&h, dewi).await;
+    let holder = common::lock_user(&h.pool, dewi).await;
     let (first, second) = demote_each_other(&h, &andi, &budi, holder).await;
     assert_eq!(first.status, StatusCode::OK, "{}", first.body);
     assert_eq!(second.status, StatusCode::OK, "{}", second.body);
@@ -1090,7 +1060,7 @@ async fn a_passkey_removed_during_a_demotion_no_longer_counts(pool: PgPool) {
 
     // Like every removal, this one locks Dewi first. Both demotions wait for
     // it and must see that Dewi can no longer sign in.
-    let mut holder = lock_user(&h, dewi).await;
+    let mut holder = common::lock_user(&h.pool, dewi).await;
     sqlx::query!("DELETE FROM passkeys WHERE user_id = $1", dewi.0)
         .execute(&mut *holder)
         .await

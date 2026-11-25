@@ -154,3 +154,46 @@ pub async fn assert_needs_sudo(app: &Router, cookie: &str, csrf: &str, routes: &
         assert_eq!(body["code"], "sudo_required", "{method} {uri}: {body}");
     }
 }
+
+/// Wait until `count` connections to this test's database wait for a lock.
+#[allow(dead_code)]
+pub async fn wait_for_lock_waits(pool: &PgPool, count: i64) {
+    for _ in 0..500 {
+        let waiting = sqlx::query_scalar!(
+            r#"SELECT count(*) AS "count!" FROM pg_stat_activity
+               WHERE datname = current_database() AND wait_event_type = 'Lock'"#
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap();
+        if waiting >= count {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    panic!("fewer than {count} requests waited for a lock");
+}
+
+/// Wait until a connection to this test's database waits for a row lock.
+#[allow(dead_code)]
+pub async fn wait_for_a_lock_wait(pool: &PgPool) {
+    wait_for_lock_waits(pool, 1).await;
+}
+
+/// Open a transaction that holds `user`'s row `FOR NO KEY UPDATE`, the lock
+/// every write to a User takes, until the caller commits or drops it.
+#[allow(dead_code)]
+pub async fn lock_user(
+    pool: &PgPool,
+    user: pranata::ids::UserId,
+) -> sqlx::Transaction<'static, sqlx::Postgres> {
+    let mut holder = pool.begin().await.unwrap();
+    sqlx::query!(
+        "SELECT id FROM users WHERE id = $1 FOR NO KEY UPDATE",
+        user.0
+    )
+    .fetch_one(&mut *holder)
+    .await
+    .unwrap();
+    holder
+}
