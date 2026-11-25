@@ -19,11 +19,33 @@ use crate::{
 /// How long a new Access Link stays valid.
 pub const LIFETIME: Duration = Duration::hours(24);
 
-/// Create an Access Link for `user` and return its one-time token. Only the
-/// token's SHA-256 is stored.
+/// Revoke the unused Access Links of `user` and return how many were revoked.
+/// A User has at most one live link, and deactivation revokes the last one.
 ///
 /// # Errors
-/// Fails when the insert or the random source fails.
+/// Fails when the update fails.
+pub async fn revoke_unused(
+    conn: &mut PgConnection,
+    user: UserId,
+    now: OffsetDateTime,
+) -> anyhow::Result<u64> {
+    let result = sqlx::query!(
+        "UPDATE access_links SET revoked_at = $2
+         WHERE user_id = $1 AND used_at IS NULL AND revoked_at IS NULL",
+        user.0,
+        now,
+    )
+    .execute(conn)
+    .await
+    .context("revoking access links")?;
+    Ok(result.rows_affected())
+}
+
+/// Create an Access Link for `user` and return its one-time token. Only the
+/// token's SHA-256 is stored. The User's earlier unused links are revoked.
+///
+/// # Errors
+/// Fails when the update, the insert or the random source fails.
 pub async fn create(
     conn: &mut PgConnection,
     user: UserId,
@@ -31,6 +53,7 @@ pub async fn create(
     now: OffsetDateTime,
 ) -> anyhow::Result<String> {
     let token = random_token()?;
+    revoke_unused(&mut *conn, user, now).await?;
     sqlx::query!(
         "INSERT INTO access_links (token_hash, user_id, created_by, created_at, expires_at)
          VALUES ($1, $2, $3, $4, $5)",
@@ -50,6 +73,8 @@ struct Link {
     user_id: UserId,
     expires_at: OffsetDateTime,
     used: bool,
+    revoked: bool,
+    owner_active: bool,
 }
 
 fn check(link: Option<Link>, now: OffsetDateTime) -> Result<Link, ApiError> {
@@ -57,8 +82,14 @@ fn check(link: Option<Link>, now: OffsetDateTime) -> Result<Link, ApiError> {
     if link.used {
         return Err(ApiError::Gone("access_link_used"));
     }
+    if link.revoked {
+        return Err(ApiError::Gone("access_link_revoked"));
+    }
     if link.expires_at <= now {
         return Err(ApiError::Gone("access_link_expired"));
+    }
+    if !link.owner_active {
+        return Err(ApiError::Gone("access_link_revoked"));
     }
     Ok(link)
 }
@@ -68,7 +99,7 @@ fn check(link: Option<Link>, now: OffsetDateTime) -> Result<Link, ApiError> {
 ///
 /// # Errors
 /// 404 `access_link_not_found`, 410 `access_link_used` or
-/// `access_link_expired`, 422 `password_length`.
+/// `access_link_revoked` or `access_link_expired`, 422 `password_length`.
 pub async fn redeem(
     db: &PgPool,
     hasher: &HashLimiter,
@@ -81,8 +112,12 @@ pub async fn redeem(
     // Cheap checks first, so an invalid link never costs an argon2 run.
     let link = sqlx::query_as!(
         Link,
-        r#"SELECT user_id AS "user_id: UserId", expires_at, used_at IS NOT NULL AS "used!"
-           FROM access_links WHERE token_hash = $1"#,
+        r#"SELECT l.user_id AS "user_id: UserId", l.expires_at,
+                  l.used_at IS NOT NULL AS "used!",
+                  l.revoked_at IS NOT NULL AS "revoked!",
+                  u.is_active AS "owner_active!"
+           FROM access_links l JOIN users u ON u.id = l.user_id
+           WHERE l.token_hash = $1"#,
         token_hash,
     )
     .fetch_optional(db)
@@ -96,8 +131,12 @@ pub async fn redeem(
     // Lock the row and re-check: two requests with one link must not both win.
     let link = sqlx::query_as!(
         Link,
-        r#"SELECT user_id AS "user_id: UserId", expires_at, used_at IS NOT NULL AS "used!"
-           FROM access_links WHERE token_hash = $1 FOR UPDATE"#,
+        r#"SELECT l.user_id AS "user_id: UserId", l.expires_at,
+                  l.used_at IS NOT NULL AS "used!",
+                  l.revoked_at IS NOT NULL AS "revoked!",
+                  u.is_active AS "owner_active!"
+           FROM access_links l JOIN users u ON u.id = l.user_id
+           WHERE l.token_hash = $1 FOR UPDATE"#,
         token_hash,
     )
     .fetch_optional(&mut *tx)

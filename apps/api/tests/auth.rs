@@ -784,3 +784,67 @@ fn debug_output_redacts_secrets() {
     // Non-secret fields stay useful for debugging.
     assert!(dump.contains("budi"));
 }
+
+async fn new_link(h: &Harness, user: UserId) -> String {
+    auth::access_link::create(
+        &mut h.pool.acquire().await.unwrap(),
+        user,
+        None,
+        h.clock.now_for_test(),
+    )
+    .await
+    .unwrap()
+}
+
+#[sqlx::test]
+async fn concurrent_redemptions_succeed_once(pool: PgPool) {
+    let h = Harness::new(pool);
+    let id = h.seed_user("budi").await;
+    let token = new_link(&h, id).await;
+
+    let (first, second) = tokio::join!(
+        h.redeem(&token, "first new password"),
+        h.redeem(&token, "second new password"),
+    );
+    let mut statuses = [first.status.as_u16(), second.status.as_u16()];
+    statuses.sort_unstable();
+    assert_eq!(statuses, [204, 410]);
+
+    let updates = sqlx::query_scalar!(
+        r#"SELECT count(*) AS "count!" FROM audit_entries
+           WHERE action = 'update' AND summary = 'Set a password with an Access Link'"#
+    )
+    .fetch_one(&h.pool)
+    .await
+    .unwrap();
+    assert_eq!(updates, 1);
+}
+
+#[sqlx::test]
+async fn deactivated_user_cannot_redeem(pool: PgPool) {
+    let h = Harness::new(pool);
+    let id = h.seed_user("budi").await;
+    let token = new_link(&h, id).await;
+    sqlx::query!("UPDATE users SET is_active = false WHERE id = $1", id.0)
+        .execute(&h.pool)
+        .await
+        .unwrap();
+
+    let reply = h.redeem(&token, "a brand new password").await;
+    assert_eq!(reply.status, StatusCode::GONE);
+    assert_eq!(reply.body["code"], "access_link_revoked");
+}
+
+#[sqlx::test]
+async fn new_link_revokes_the_previous_one(pool: PgPool) {
+    let h = Harness::new(pool);
+    let id = h.seed_user("budi").await;
+    let first = new_link(&h, id).await;
+    let second = new_link(&h, id).await;
+
+    let old = h.redeem(&first, "a brand new password").await;
+    assert_eq!(old.status, StatusCode::GONE);
+    assert_eq!(old.body["code"], "access_link_revoked");
+    let new = h.redeem(&second, "a brand new password").await;
+    assert_eq!(new.status, StatusCode::NO_CONTENT);
+}

@@ -237,8 +237,8 @@ pub async fn get_me(session: AuthSession) -> impl IntoResponse {
 /// Set a password with an Access Link. The link works once.
 ///
 /// # Errors
-/// 404 `access_link_not_found`, 410 `access_link_used` or
-/// `access_link_expired`, 422 `password_length`.
+/// 404 `access_link_not_found`, 410 `access_link_used`,
+/// `access_link_revoked` or `access_link_expired`, 422 `password_length`.
 #[utoipa::path(
     post,
     path = "/auth/access-links/redeem",
@@ -248,7 +248,7 @@ pub async fn get_me(session: AuthSession) -> impl IntoResponse {
     responses(
         (status = 204, description = "Password set; the link is used up"),
         (status = 404, description = "Unknown link (code access_link_not_found)", body = Problem, content_type = "application/problem+json"),
-        (status = 410, description = "Link used or expired (codes access_link_used, access_link_expired)", body = Problem, content_type = "application/problem+json"),
+        (status = 410, description = "Link used or expired (codes access_link_used, access_link_revoked, access_link_expired)", body = Problem, content_type = "application/problem+json"),
         (status = 415, description = "Request is not marked as JSON (code json_required)", body = Problem, content_type = "application/problem+json"),
         (status = 422, description = "Password length rule broken (code password_length)", body = Problem, content_type = "application/problem+json"),
     )

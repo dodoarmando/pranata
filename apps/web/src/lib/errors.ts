@@ -12,6 +12,7 @@ const MESSAGES: Record<string, string> = {
 	json_required: UNREADABLE,
 	invalid_credentials: "Nama pengguna atau kata sandi salah.",
 	access_link_used: LINK_INVALID,
+	access_link_revoked: LINK_INVALID,
 	access_link_expired: LINK_INVALID,
 	access_link_not_found: LINK_INVALID,
 	password_length: "Kata sandi 10–128 karakter.",
