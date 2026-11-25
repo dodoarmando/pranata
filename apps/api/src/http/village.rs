@@ -89,9 +89,12 @@ pub async fn get_village_profile(
 pub async fn put_village_profile(
     State(state): State<AppState>,
     user: CurrentUser,
-    ApiJson(input): ApiJson<ProfileUpdate>,
+    body: Result<ApiJson<ProfileUpdate>, ApiError>,
 ) -> Result<Json<Profile>, ApiError> {
+    // The Permission comes before the body: a User without it never learns
+    // whether the request was well formed.
     user.require(Permission::VillageManage)?;
+    let ApiJson(input) = body?;
     let (saved, purge_job) = profile::update(&state.db, user.id, input).await?;
     purge_now(&state, purge_job).await;
     Ok(Json(saved))

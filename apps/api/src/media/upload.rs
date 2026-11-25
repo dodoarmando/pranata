@@ -2,7 +2,10 @@
 
 use axum::{
     Json,
-    extract::{DefaultBodyLimit, Multipart, Path, State, multipart::MultipartError},
+    extract::{
+        DefaultBodyLimit, Multipart, Path, State,
+        multipart::{MultipartError, MultipartRejection},
+    },
     http::StatusCode,
 };
 use bytes::Bytes;
@@ -182,9 +185,12 @@ async fn read_form(mut multipart: Multipart) -> Result<Form, ApiError> {
 pub async fn upload_media(
     State(state): State<AppState>,
     user: CurrentUser,
-    multipart: Multipart,
+    multipart: Result<Multipart, MultipartRejection>,
 ) -> Result<(StatusCode, Json<MediaAsset>), ApiError> {
+    // The Permission comes before the body: a User without it never learns
+    // whether the request was well formed.
     user.require_any(&MEDIA_PERMISSIONS)?;
+    let multipart = multipart.map_err(|_| invalid("file", "invalid_multipart"))?;
     let Form { file, name, kind } = read_form(multipart).await?;
 
     if file.len() > kind.max_bytes() {

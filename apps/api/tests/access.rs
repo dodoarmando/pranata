@@ -313,3 +313,46 @@ async fn permissions_follow_the_catalogue_order_and_edits_apply_at_once(pool: Pg
     let me = h.me(&cookie).await;
     assert_eq!(me.body["user"]["permissions"], json!([]));
 }
+
+#[sqlx::test]
+async fn permission_is_checked_before_the_request_body(pool: PgPool) {
+    let h = Harness::new(pool);
+    let writer = h.role("Penulis", &["content.write"]).await;
+    h.user("budi", writer).await;
+    let (cookie, csrf) = h.login("budi").await;
+
+    let put = |content_type: &str, body: String| {
+        Request::builder()
+            .method(Method::PUT)
+            .uri("/api/admin/village/profile")
+            .header(header::COOKIE, &cookie)
+            .header("x-csrf-token", &csrf)
+            .header(header::CONTENT_TYPE, content_type.to_owned())
+            .body(Body::from(body))
+            .unwrap()
+    };
+    for request in [
+        put("application/json", "{not json".to_owned()),
+        put("application/json", json!({"overview": null}).to_string()),
+        put("text/plain", "overview".to_owned()),
+    ] {
+        let (denied, _) = h.send(request).await;
+        assert_eq!(denied.status, StatusCode::FORBIDDEN);
+        assert_eq!(denied.body["code"], "permission_denied");
+    }
+
+    let watcher = h.role("Pengawas", &["audit.read"]).await;
+    h.user("siti", watcher).await;
+    let (cookie, csrf) = h.login("siti").await;
+    let upload = Request::builder()
+        .method(Method::POST)
+        .uri("/api/admin/media")
+        .header(header::COOKIE, &cookie)
+        .header("x-csrf-token", &csrf)
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from("{}"))
+        .unwrap();
+    let (denied, _) = h.send(upload).await;
+    assert_eq!(denied.status, StatusCode::FORBIDDEN);
+    assert_eq!(denied.body["code"], "permission_denied");
+}
