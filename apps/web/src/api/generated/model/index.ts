@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './accessLinkIssued';
+export * from './createdUser';
+export * from './createUserRequest';
 export * from './currentUser';
 export * from './fieldError';
 export * from './health';
@@ -24,5 +27,7 @@ export * from './redeemAccessLinkRequest';
 export * from './roleRef';
 export * from './sessionInfo';
 export * from './sudoRequest';
+export * from './updateUserRequest';
 export * from './uploadForm';
+export * from './userSummary';
 export * from './villageProfile';

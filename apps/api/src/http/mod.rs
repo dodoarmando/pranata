@@ -4,6 +4,7 @@ pub mod health;
 pub mod json;
 pub mod request_id;
 pub mod security_headers;
+pub mod users;
 pub mod village;
 
 use axum::{Router, middleware};
@@ -29,6 +30,7 @@ pub fn api_router(limiter: &client_ip::AuthLimiter) -> OpenApiRouter<AppState> {
         "/api",
         health::router()
             .merge(village::router())
+            .merge(users::router())
             .merge(auth::router())
             .merge(auth::unauthenticated_router().layer(client_ip::auth_limit_layer(limiter)))
             .merge(crate::media::router()),

@@ -48,6 +48,15 @@ const MESSAGES: Record<string, string> = {
 	csrf_mismatch: "Sesi tidak valid. Muat ulang halaman lalu coba lagi.",
 	sudo_required: "Konfirmasi kata sandi Anda untuk melanjutkan.",
 	permission_denied: "Anda tidak memiliki hak akses untuk tindakan ini.",
+	administrator_only: "Hanya Administrator yang dapat melakukan ini.",
+	own_role: "Anda tidak dapat mengubah peran Anda sendiri.",
+	permission_not_held:
+		"Anda hanya dapat memberikan hak akses yang Anda miliki.",
+	user_not_found: "Pengguna tidak ditemukan.",
+	role_not_found: "Peran tidak ditemukan.",
+	last_administrator: "Harus ada minimal satu Administrator aktif.",
+	cannot_deactivate_self: "Anda tidak dapat menonaktifkan akun sendiri.",
+	user_inactive: "Pengguna ini nonaktif. Aktifkan kembali terlebih dahulu.",
 	internal_error: FALLBACK,
 };
 
