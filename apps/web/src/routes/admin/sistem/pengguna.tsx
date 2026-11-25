@@ -27,6 +27,7 @@ import {
 	useIssueAccessLink,
 	useListUsers,
 	useReactivateUser,
+	useRemoveUserPasskeys,
 } from "@/api/generated/users/users";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -92,6 +93,7 @@ function UsersPage() {
 	const [form, setForm] = useState<UserFormTarget | null>(null);
 	const [link, setLink] = useState<IssuedLink | null>(null);
 	const [deactivating, setDeactivating] = useState<UserSummary | null>(null);
+	const [clearing, setClearing] = useState<UserSummary | null>(null);
 
 	const error = users.error ?? roles.error;
 	if (error) {
@@ -148,6 +150,7 @@ function UsersPage() {
 							onEdit={() => setForm({ kind: "edit", user })}
 							onLink={setLink}
 							onDeactivate={() => setDeactivating(user)}
+							onClearPasskeys={() => setClearing(user)}
 						/>
 					))}
 				</TableBody>
@@ -170,6 +173,7 @@ function UsersPage() {
 				user={deactivating}
 				onClose={() => setDeactivating(null)}
 			/>
+			<RemovePasskeysDialog user={clearing} onClose={() => setClearing(null)} />
 		</div>
 	);
 }
@@ -181,6 +185,7 @@ function UserRow({
 	onEdit,
 	onLink,
 	onDeactivate,
+	onClearPasskeys,
 }: Readonly<{
 	user: UserSummary;
 	isSelf: boolean;
@@ -188,6 +193,7 @@ function UserRow({
 	onEdit: () => void;
 	onLink: (link: IssuedLink) => void;
 	onDeactivate: () => void;
+	onClearPasskeys: () => void;
 }>) {
 	const queryClient = useQueryClient();
 	const sudo = useSudo();
@@ -263,6 +269,14 @@ function UserRow({
 									Buat tautan akses
 								</DropdownMenuItem>
 							) : null}
+							{user.passkey_count > 0 ? (
+								<DropdownMenuItem
+									variant="destructive"
+									onClick={onClearPasskeys}
+								>
+									Hapus semua passkey
+								</DropdownMenuItem>
+							) : null}
 							{user.is_active ? (
 								isSelf ? null : (
 									<DropdownMenuItem
@@ -332,6 +346,62 @@ function DeactivateDialog({
 								onClick={() => void confirm(user)}
 							>
 								Nonaktifkan
+							</Button>
+						</DialogFooter>
+					</>
+				) : null}
+			</DialogContent>
+		</Dialog>
+	);
+}
+
+function RemovePasskeysDialog({
+	user,
+	onClose,
+}: Readonly<{ user: UserSummary | null; onClose: () => void }>) {
+	const queryClient = useQueryClient();
+	const sudo = useSudo();
+	const removePasskeys = useRemoveUserPasskeys();
+
+	async function confirm(target: UserSummary) {
+		try {
+			await sudo(() => removePasskeys.mutateAsync({ id: target.id }));
+			toast.success("Passkey dihapus.");
+			onClose();
+			await queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
+		} catch (error) {
+			toast.error(errorMessage(error));
+		}
+	}
+
+	return (
+		<Dialog
+			open={user !== null}
+			onOpenChange={(open) => {
+				if (!open) onClose();
+			}}
+		>
+			<DialogContent>
+				{user ? (
+					<>
+						<DialogHeader>
+							<DialogTitle>Hapus semua passkey</DialogTitle>
+							<DialogDescription>
+								Hapus semua passkey milik {user.display_name}? Ia harus masuk
+								dengan kata sandi atau tautan akses baru.
+							</DialogDescription>
+						</DialogHeader>
+						<DialogFooter>
+							<Button type="button" variant="outline" onClick={onClose}>
+								Batal
+							</Button>
+							<Button
+								type="button"
+								variant="destructive"
+								disabled={removePasskeys.isPending}
+								onClick={() => void confirm(user)}
+							>
+								Hapus semua
 							</Button>
 						</DialogFooter>
 					</>

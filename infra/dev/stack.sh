@@ -135,7 +135,7 @@ up() {
     check_no_foreign
     down >/dev/null
     mkdir -p "$out_dir"
-    rm -f "$out_dir/access-link.txt" "$out_dir/access-link-users.txt"
+    rm -f "$out_dir/access-link.txt" "$out_dir/access-link-users.txt" "$out_dir/access-link-passkey.txt"
 
     podman pod create --name "$pod" --label "$owner_label" --cpus=2 --memory=2g \
         -p "127.0.0.1:$port:443" >/dev/null
@@ -161,6 +161,8 @@ up() {
         # A second Administrator for the Users spec, so that spec does not depend
         # on the profile spec having redeemed the first link.
         api_cli user create-admin akses --name "Admin Akses" >"$out_dir/access-link-users.txt"
+        # A third one for the Passkey spec, for the same reason.
+        api_cli user create-admin sandi --name "Admin Sandi" >"$out_dir/access-link-passkey.txt"
     fi
 
     podman run -d --pod "$pod" --label "$owner_label" --name "$pod-api" "${api_env[@]}" \

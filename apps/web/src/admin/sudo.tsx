@@ -1,15 +1,19 @@
+import { KeyRoundIcon } from "lucide-react";
 import {
 	createContext,
 	type FormEvent,
 	type ReactNode,
 	useCallback,
 	useContext,
+	useEffect,
 	useMemo,
 	useRef,
 	useState,
 } from "react";
 import { withSudo } from "@/admin/sudo-retry";
+import { ApiError } from "@/api/fetcher";
 import { useConfirmSudo } from "@/api/generated/auth/auth";
+import { useListPasskeys } from "@/api/generated/passkeys/passkeys";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -22,6 +26,7 @@ import {
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { messageFor } from "@/lib/errors";
+import { confirmSudoWithPasskey, passkeysSupported } from "@/lib/passkey";
 
 type RunWithSudo = <T>(run: () => Promise<T>) => Promise<T>;
 
@@ -40,7 +45,16 @@ export function SudoProvider({ children }: Readonly<{ children: ReactNode }>) {
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const settle = useRef<((confirmed: boolean) => void) | null>(null);
+	const [passkeyPending, setPasskeyPending] = useState(false);
 	const confirmSudo = useConfirmSudo();
+	// Learned when the dialog opens, rather than carried on every SessionInfo.
+	const [supported, setSupported] = useState(false);
+	useEffect(() => setSupported(passkeysSupported()), []);
+	const passkeys = useListPasskeys({ query: { enabled: open && supported } });
+	const hasPasskey = supported && (passkeys.data?.length ?? 0) > 0;
+	// Sudo Mode opens server-side as soon as a confirmation succeeds, so the
+	// dialog must not settle as cancelled while one is in flight.
+	const pending = confirmSudo.isPending || passkeyPending;
 
 	const finish = useCallback((confirmed: boolean) => {
 		settle.current?.(confirmed);
@@ -63,6 +77,20 @@ export function SudoProvider({ children }: Readonly<{ children: ReactNode }>) {
 	const run = useCallback<RunWithSudo>((fn) => withSudo(fn, ask), [ask]);
 	const value = useMemo(() => run, [run]);
 
+	async function confirmWithPasskey() {
+		setError(null);
+		setPasskeyPending(true);
+		try {
+			if (await confirmSudoWithPasskey()) finish(true);
+		} catch (e) {
+			setError(
+				messageFor(e instanceof ApiError ? e.messageCode : "passkey_failed"),
+			);
+		} finally {
+			setPasskeyPending(false);
+		}
+	}
+
 	function submit(event: FormEvent) {
 		event.preventDefault();
 		setError(null);
@@ -81,7 +109,7 @@ export function SudoProvider({ children }: Readonly<{ children: ReactNode }>) {
 			<Dialog
 				open={open}
 				onOpenChange={(next) => {
-					if (!next) finish(false);
+					if (!next && !pending) finish(false);
 				}}
 			>
 				<DialogContent>
@@ -110,17 +138,26 @@ export function SudoProvider({ children }: Readonly<{ children: ReactNode }>) {
 							<Button
 								type="button"
 								variant="outline"
+								disabled={pending}
 								onClick={() => finish(false)}
 							>
 								Batal
 							</Button>
-							<Button
-								type="submit"
-								disabled={confirmSudo.isPending || !password}
-							>
+							<Button type="submit" disabled={pending || !password}>
 								Konfirmasi
 							</Button>
 						</DialogFooter>
+						{hasPasskey ? (
+							<Button
+								type="button"
+								variant="outline"
+								disabled={pending}
+								onClick={() => void confirmWithPasskey()}
+							>
+								<KeyRoundIcon data-icon="inline-start" />
+								Gunakan passkey
+							</Button>
+						) : null}
 					</form>
 				</DialogContent>
 			</Dialog>
