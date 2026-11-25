@@ -243,6 +243,16 @@
 							}
 						}
 					},
+					"400": {
+						"description": "Body is not valid JSON (code invalid_json)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
 					"401": {
 						"description": "Not signed in (code unauthenticated)",
 						"content": {
@@ -265,6 +275,16 @@
 					},
 					"409": {
 						"description": "The profile changed since it was read (code stale_write)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"415": {
+						"description": "Request is not marked as JSON (code json_required)",
 						"content": {
 							"application/problem+json": {
 								"schema": {
@@ -331,6 +351,16 @@
 							}
 						}
 					},
+					"415": {
+						"description": "Request is not marked as JSON (code json_required)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
 					"422": {
 						"description": "Password length rule broken (code password_length)",
 						"content": {
@@ -367,6 +397,16 @@
 							"application/json": {
 								"schema": {
 									"$ref": "#/components/schemas/SessionInfo"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Body is not valid JSON (code invalid_json)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
 								}
 							}
 						}

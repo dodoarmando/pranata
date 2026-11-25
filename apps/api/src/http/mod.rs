@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod health;
+pub mod json;
 pub mod request_id;
 pub mod security_headers;
 pub mod village;

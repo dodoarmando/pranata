@@ -172,6 +172,44 @@ async fn login_sets_session_cookie_and_returns_csrf(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn malformed_json_is_a_problem_document(pool: PgPool) {
+    let h = Harness::new(pool);
+    let request = Request::builder()
+        .method(Method::POST)
+        .uri("/api/auth/login")
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(r#"{"username":"#))
+        .unwrap();
+    let response = h.app.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(
+        response.headers()[header::CONTENT_TYPE],
+        "application/problem+json"
+    );
+    let bytes = response.into_body().collect().await.unwrap().to_bytes();
+    let body: Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(body["code"], "invalid_json");
+}
+
+#[sqlx::test]
+async fn login_without_json_content_type_is_415(pool: PgPool) {
+    let h = Harness::new(pool);
+    let request = Request::builder()
+        .method(Method::POST)
+        .uri("/api/auth/login")
+        .header(header::CONTENT_TYPE, "text/plain")
+        .body(Body::from(
+            json!({"username": "a", "password": "b"}).to_string(),
+        ))
+        .unwrap();
+    let response = h.app.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
+    let bytes = response.into_body().collect().await.unwrap().to_bytes();
+    let body: Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(body["code"], "json_required");
+}
+
+#[sqlx::test]
 async fn me_without_a_session_is_unauthenticated(pool: PgPool) {
     let h = Harness::new(pool);
     let reply = h.send(Method::GET, "/api/auth/me", None, None, None).await;
