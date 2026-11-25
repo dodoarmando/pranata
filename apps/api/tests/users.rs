@@ -958,6 +958,29 @@ async fn invalid_requests_are_422_and_unknown_users_404(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn unknown_fields_are_rejected_when_creating_a_user(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let (_, session) = h.admin("admin").await;
+    let writer = h.role("Penulis", &["content.write"]).await;
+
+    let reply = h
+        .call(
+            Method::POST,
+            "/api/admin/users",
+            &session,
+            Some(json!({
+                "username": "siti",
+                "display_name": "Siti",
+                "role_id": writer.0,
+                "is_active": false,
+            })),
+        )
+        .await;
+    assert_problem(&reply, StatusCode::BAD_REQUEST, "invalid_json");
+    assert_eq!(h.user_changes().await, 0);
+}
+
+#[sqlx::test]
 async fn only_a_real_change_is_written(pool: PgPool) {
     let h = Harness::new(pool).await;
     let (_, session) = h.admin("admin").await;

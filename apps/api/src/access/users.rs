@@ -90,6 +90,7 @@ pub struct CreatedUser {
 
 /// What an Administrator fills in to add a User.
 #[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct CreateUserRequest {
     /// Lower-cased and trimmed; it can never change or be reused.
     pub username: String,

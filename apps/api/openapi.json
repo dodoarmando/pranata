@@ -2582,7 +2582,8 @@
 						"type": "string",
 						"description": "Lower-cased and trimmed; it can never change or be reused."
 					}
-				}
+				},
+				"additionalProperties": false
 			},
 			"CreatedUser": {
 				"type": "object",
@@ -3017,7 +3018,8 @@
 						},
 						"description": "A set: duplicates collapse."
 					}
-				}
+				},
+				"additionalProperties": false
 			},
 			"SessionInfo": {
 				"type": "object",

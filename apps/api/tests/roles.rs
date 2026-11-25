@@ -501,6 +501,15 @@ async fn invalid_role_requests(pool: PgPool) {
 
     let unknown = h.create(&session, "Peran", &["village.destroy"]).await;
     assert_problem(&unknown, StatusCode::BAD_REQUEST, "invalid_json");
+    let extra = h
+        .call(
+            Method::POST,
+            "/api/admin/roles",
+            &session,
+            Some(json!({"name": "Peran", "permissions": [], "is_administrator": true})),
+        )
+        .await;
+    assert_problem(&extra, StatusCode::BAD_REQUEST, "invalid_json");
 
     let nobody = RoleId(uuid::Uuid::new_v4());
     for reply in [
