@@ -384,18 +384,21 @@ test.describe("admin profile", () => {
 			const result = await analyzeAxe(page);
 			expect(result.violations, path).toEqual([]);
 		}
-		for (const path of ["/masuk", "/akses"]) {
-			const anonymous = await context.browser()?.newContext({
-				ignoreHTTPSErrors: true,
-				viewport: { width: 390, height: 844 },
-			});
-			const view = await anonymous?.newPage();
-			if (!view || !anonymous) throw new Error("no browser");
-			await view.goto(path);
-			await view.waitForLoadState("networkidle");
-			const result = await analyzeAxe(view);
-			expect(result.violations, path).toEqual([]);
-			await anonymous.close();
+		// 390 px is the phone layout, 1280 px shows the sign-in carousel.
+		for (const width of [390, 1280]) {
+			for (const path of ["/masuk", "/akses"]) {
+				const anonymous = await context.browser()?.newContext({
+					ignoreHTTPSErrors: true,
+					viewport: { width, height: 844 },
+				});
+				const view = await anonymous?.newPage();
+				if (!view || !anonymous) throw new Error("no browser");
+				await view.goto(path);
+				await view.waitForLoadState("networkidle");
+				const result = await analyzeAxe(view);
+				expect(result.violations, `${path} at ${width}px`).toEqual([]);
+				await anonymous.close();
+			}
 		}
 	});
 });
