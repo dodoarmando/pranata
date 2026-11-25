@@ -2,6 +2,7 @@
 //! and mirrored by a check constraint on `role_permissions`; a Role is a named
 //! set of them, and the Administrator Role holds every one by definition.
 
+pub mod roles;
 pub mod users;
 
 use std::str::FromStr;
@@ -189,17 +190,17 @@ enum Shortfall {
     Permission,
 }
 
-/// Whether `actor` may act on something holding `target_role`: an
-/// Administrator may act on anything; anyone else not on the Administrator
-/// Role, and only on a Role whose Permissions they all hold.
+/// Whether `actor` may act on something holding a Role: an Administrator may
+/// act on anything; anyone else not on the Administrator Role, and only on a
+/// Role whose Permissions they all hold.
 fn shortfall(
     actor: &CurrentUser,
-    target_role: &RoleRef,
+    target_is_administrator: bool,
     target_permissions: &[Permission],
 ) -> Option<Shortfall> {
     if actor.role.is_administrator {
         None
-    } else if target_role.is_administrator {
+    } else if target_is_administrator {
         Some(Shortfall::Administrator)
     } else if target_permissions
         .iter()
@@ -224,10 +225,22 @@ pub fn can_manage(
     target_role: &RoleRef,
     target_permissions: &[Permission],
 ) -> Result<(), ApiError> {
-    match shortfall(actor, target_role, target_permissions) {
+    match shortfall(actor, target_role.is_administrator, target_permissions) {
         None => Ok(()),
         Some(Shortfall::Administrator) => Err(ApiError::Forbidden("administrator_only")),
         Some(Shortfall::Permission) => Err(ApiError::Forbidden("permission_not_held")),
+    }
+}
+
+/// The escalation rules (D-33) for putting `permissions` into a Role (never
+/// the Administrator Role, which nobody edits).
+///
+/// # Errors
+/// 403 `permission_not_held` when a non-Administrator lacks one of them.
+pub fn can_grant(actor: &CurrentUser, permissions: &[Permission]) -> Result<(), ApiError> {
+    match shortfall(actor, false, permissions) {
+        None => Ok(()),
+        Some(_) => Err(ApiError::Forbidden("permission_not_held")),
     }
 }
 
@@ -245,7 +258,7 @@ pub fn can_manage_user(
     target_role: &RoleRef,
     target_permissions: &[Permission],
 ) -> Result<(), ApiError> {
-    match shortfall(actor, target_role, target_permissions) {
+    match shortfall(actor, target_role.is_administrator, target_permissions) {
         None => Ok(()),
         Some(Shortfall::Administrator) => Err(ApiError::Forbidden("administrator_only")),
         Some(Shortfall::Permission) => Err(ApiError::Forbidden("stronger_user")),
