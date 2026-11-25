@@ -12,5 +12,11 @@ import type { CurrentUser } from './currentUser';
  */
 export interface SessionInfo {
   csrf_token: string;
+  /**
+     * When Sudo Mode closes (RFC 3339); null when the window is closed or was
+     * never opened.
+     * @nullable
+     */
+  sudo_until?: string | null;
   user: CurrentUser;
 }

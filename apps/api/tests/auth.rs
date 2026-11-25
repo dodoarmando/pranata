@@ -814,6 +814,7 @@ fn debug_output_redacts_secrets() {
             permissions: vec![pranata::access::Permission::VillageManage],
         },
         csrf_token: "csrf-secret".into(),
+        sudo_until: None,
     };
 
     let dump = format!("{login:?} {redeem:?} {new_session:?} {new_user:?} {info:?}");

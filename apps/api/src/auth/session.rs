@@ -62,6 +62,8 @@ pub struct AuthSession {
     pub user: CurrentUser,
     pub csrf_token: String,
     pub(crate) token_hash: Vec<u8>,
+    /// When the session last confirmed the password (D-31); `None` when it never did.
+    pub reauthenticated_at: Option<OffsetDateTime>,
 }
 
 impl std::fmt::Debug for AuthSession {
@@ -70,6 +72,7 @@ impl std::fmt::Debug for AuthSession {
             .field("user", &self.user)
             .field("csrf_token", &"[redacted]")
             .field("token_hash", &"[redacted]")
+            .field("reauthenticated_at", &self.reauthenticated_at)
             .finish()
     }
 }
@@ -89,7 +92,8 @@ impl std::fmt::Debug for NewSession {
     }
 }
 
-/// Create a session for `user`.
+/// Create a session for `user`. Signing in counts as authenticating, so the
+/// Sudo window opens at `now`.
 ///
 /// # Errors
 /// Fails when the insert or the random source fails.
@@ -107,8 +111,8 @@ pub async fn create(
         SHORT_LIFETIME
     };
     sqlx::query!(
-        "INSERT INTO sessions (token_hash, user_id, csrf_token, created_at, last_seen_at, expires_at, remember)
-         VALUES ($1, $2, $3, $4, $4, $5, $6)",
+        "INSERT INTO sessions (token_hash, user_id, csrf_token, created_at, last_seen_at, expires_at, remember, reauthenticated_at)
+         VALUES ($1, $2, $3, $4, $4, $5, $6, $4)",
         hash_token(&token),
         user.0,
         csrf_token,
@@ -144,7 +148,7 @@ async fn find(
 ) -> anyhow::Result<Option<(AuthSession, bool)>> {
     let token_hash = hash_token(token);
     let Some(row) = sqlx::query!(
-        r#"SELECT s.csrf_token, s.remember, s.last_seen_at, s.expires_at,
+        r#"SELECT s.csrf_token, s.remember, s.reauthenticated_at, s.last_seen_at, s.expires_at,
                   u.id AS "user_id: UserId", u.username, u.display_name,
                   r.id AS "role_id: RoleId", r.name AS role_name, r.is_administrator,
                   COALESCE(array_agg(rp.permission) FILTER (WHERE rp.permission IS NOT NULL), '{}')
@@ -195,6 +199,7 @@ async fn find(
         },
         csrf_token: row.csrf_token,
         token_hash,
+        reauthenticated_at: row.reauthenticated_at,
     };
     Ok(Some((session, renewed)))
 }
@@ -325,6 +330,7 @@ mod tests {
             },
             csrf_token: "csrf-secret".into(),
             token_hash: vec![1, 2, 3, 4],
+            reauthenticated_at: None,
         };
         let dump = format!("{session:?}");
         assert!(!dump.contains("csrf-secret"));

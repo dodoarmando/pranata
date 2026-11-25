@@ -5,6 +5,7 @@ pub mod access_link;
 pub mod csrf;
 pub mod password;
 pub mod session;
+pub mod sudo;
 
 use anyhow::Context;
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};

@@ -5,6 +5,12 @@ use std::{
     sync::{Arc, Mutex, OnceLock},
 };
 
+use axum::{
+    Router,
+    body::Body,
+    http::{Method, Request, StatusCode, header},
+};
+use http_body_util::BodyExt;
 use pranata::{
     AppState, Config, HashLimiter, auth::session::SessionClock, cache_purge::Purger,
     media::LocalStorage,
@@ -12,6 +18,7 @@ use pranata::{
 use secrecy::SecretString;
 use sqlx::PgPool;
 use time::{Duration, OffsetDateTime};
+use tower::ServiceExt;
 
 /// A clock that only moves when a test says so.
 pub struct FixedClock(Mutex<OffsetDateTime>);
@@ -121,4 +128,27 @@ pub async fn administrator_role(pool: &PgPool) -> pranata::ids::RoleId {
     pranata::access::administrator_role(pool)
         .await
         .expect("the Administrator Role exists")
+}
+
+/// Assert that every route answers an empty JSON body with 403
+/// `sudo_required`. The session behind `cookie` must hold every Permission
+/// the routes check and must not be in Sudo Mode.
+#[allow(dead_code)]
+pub async fn assert_needs_sudo(app: &Router, cookie: &str, csrf: &str, routes: &[(Method, &str)]) {
+    for (method, uri) in routes {
+        let request = Request::builder()
+            .method(method.clone())
+            .uri(*uri)
+            .header(header::COOKIE, format!("pranata_session={cookie}"))
+            .header("x-csrf-token", csrf)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from("{}"))
+            .unwrap();
+        let response = app.clone().oneshot(request).await.unwrap();
+        let status = response.status();
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap_or_default();
+        assert_eq!(status, StatusCode::FORBIDDEN, "{method} {uri}: {body}");
+        assert_eq!(body["code"], "sudo_required", "{method} {uri}: {body}");
+    }
 }

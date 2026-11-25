@@ -23,5 +23,6 @@ export * from './ready';
 export * from './redeemAccessLinkRequest';
 export * from './roleRef';
 export * from './sessionInfo';
+export * from './sudoRequest';
 export * from './uploadForm';
 export * from './villageProfile';
