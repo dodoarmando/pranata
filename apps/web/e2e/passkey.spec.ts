@@ -1,21 +1,12 @@
-import AxeBuilder from "@axe-core/playwright";
-import { expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { analyzeAxe } from "./axe";
 import {
 	PASSKEY_ADMIN_PASSWORD,
 	PASSKEY_ADMIN_USERNAME,
 	passkeyAdminAccessLink,
 } from "./stack";
 
-const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];
-
 test.use({ viewport: { width: 1280, height: 800 } });
-
-// Nothing may be mid-animation when axe reads colours.
-async function settled(page: Page) {
-	await page.waitForFunction(() =>
-		document.getAnimations().every((a) => a.playState !== "running"),
-	);
-}
 
 test("/masuk hydrates without warnings and offers the Passkey button", async ({
 	page,
@@ -67,8 +58,7 @@ test("add a passkey, sign out, sign in with it", async ({ page, context }) => {
 	await expect(item).toContainText("Belum pernah dipakai");
 	await expect(page.getByRole("dialog")).toBeHidden();
 
-	await settled(page);
-	const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
+	const results = await analyzeAxe(page);
 	expect(results.violations, "/admin/akun").toEqual([]);
 
 	// Sign out and back in with the passkey, without typing a username.

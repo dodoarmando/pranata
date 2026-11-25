@@ -1,4 +1,3 @@
-import AxeBuilder from "@axe-core/playwright";
 import {
 	type APIRequestContext,
 	type Browser,
@@ -8,6 +7,7 @@ import {
 	request,
 	test,
 } from "@playwright/test";
+import { analyzeAxe } from "./axe";
 import {
 	ORIGIN,
 	USERS_ADMIN_PASSWORD,
@@ -15,7 +15,6 @@ import {
 	usersAdminAccessLink,
 } from "./stack";
 
-const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];
 const PASSWORD = "neng-password-123";
 const NO_ACCESS = "Anda tidak memiliki hak akses untuk halaman ini.";
 
@@ -247,9 +246,7 @@ test.describe("users and access links", () => {
 		await expect(adminPage.getByLabel("Nama peran")).toHaveValue(
 			"Kontributor Web",
 		);
-		const results = await new AxeBuilder({ page: adminPage })
-			.withTags(AXE_TAGS)
-			.analyze();
+		const results = await analyzeAxe(adminPage);
 		expect(results.violations, "/admin/sistem/peran").toEqual([]);
 	});
 
@@ -258,9 +255,7 @@ test.describe("users and access links", () => {
 		await expect(
 			adminPage.getByRole("row", { name: /Pengelola/ }),
 		).toBeVisible();
-		const screen = await new AxeBuilder({ page: adminPage })
-			.withTags(AXE_TAGS)
-			.analyze();
+		const screen = await analyzeAxe(adminPage);
 		expect(screen.violations, "/admin/sistem/pengguna").toEqual([]);
 
 		await adminPage
@@ -270,9 +265,7 @@ test.describe("users and access links", () => {
 			.getByRole("menuitem", { name: "Buat tautan akses" })
 			.click();
 		await readLinkDialog(adminPage);
-		const dialog = await new AxeBuilder({ page: adminPage })
-			.withTags(AXE_TAGS)
-			.analyze();
+		const dialog = await analyzeAxe(adminPage);
 		expect(dialog.violations, "access link dialog").toEqual([]);
 	});
 
@@ -301,9 +294,7 @@ test.describe("users and access links", () => {
 			edit.getByRole("columnheader", { name: "Sesudah" }),
 		).toBeVisible();
 
-		const results = await new AxeBuilder({ page: adminPage })
-			.withTags(AXE_TAGS)
-			.analyze();
+		const results = await analyzeAxe(adminPage);
 		expect(results.violations, "/admin/sistem/log-audit").toEqual([]);
 	});
 });
