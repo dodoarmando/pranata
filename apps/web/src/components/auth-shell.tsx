@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeftIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { LoginCarousel } from "@/components/login-carousel";
 
 // Static scene for the sign-in side panel. Real village photos can replace it
 // once the village has uploaded some.
@@ -37,18 +38,11 @@ export function AuthShell({
 }: Readonly<{ title: string; subtitle: string; children: ReactNode }>) {
 	return (
 		<div className="flex min-h-dvh">
-			<section aria-hidden="true" className="hidden flex-1 p-4 lg:flex">
-				<div className="relative flex flex-1 flex-col justify-end overflow-hidden rounded-xl p-6 text-white">
+			<section aria-label="Galeri" className="hidden flex-1 p-4 lg:flex">
+				<div className="relative flex flex-1 flex-col overflow-hidden rounded-xl p-6 text-white">
 					<Scene />
 					<div className="pointer-events-none absolute inset-0 bg-linear-to-b from-[#06281d80] via-transparent to-[#06281db3]" />
-					<div className="relative max-w-lg">
-						<h2 className="mb-3 text-3xl font-medium">
-							Sawah terasering dan gotong royong
-						</h2>
-						<p className="text-lg text-white/90">
-							Kelola profil dan berita desa dari satu tempat, juga dari ponsel.
-						</p>
-					</div>
+					<LoginCarousel />
 				</div>
 			</section>
 			<main
