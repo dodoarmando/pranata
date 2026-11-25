@@ -31,6 +31,11 @@ pub fn url(origin: &Url, token: &str) -> String {
 /// Revoke the unused Access Links of `user` and return how many were revoked.
 /// A User has at most one live link, and deactivation revokes the last one.
 ///
+/// A revoked link also expires now. Release 0.1.0 checks only `used_at` and
+/// `expires_at`, so after a rollback (D-50) it would otherwise redeem a
+/// revoked link. [`redeem`] checks revocation before expiry, so it still
+/// answers `access_link_revoked`.
+///
 /// # Errors
 /// Fails when the update fails.
 pub async fn revoke_unused(
@@ -39,7 +44,7 @@ pub async fn revoke_unused(
     now: OffsetDateTime,
 ) -> anyhow::Result<u64> {
     let result = sqlx::query!(
-        "UPDATE access_links SET revoked_at = $2
+        "UPDATE access_links SET revoked_at = $2, expires_at = LEAST(expires_at, $2)
          WHERE user_id = $1 AND used_at IS NULL AND revoked_at IS NULL",
         user.0,
         now,

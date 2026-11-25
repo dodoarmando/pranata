@@ -521,6 +521,9 @@ async fn media_routes_need_a_session_and_csrf(pool: PgPool) {
     let missing = h.get(&uuid::Uuid::new_v4().to_string()).await;
     assert_eq!(missing.status, StatusCode::NOT_FOUND);
     assert_eq!(missing.body["code"], "media_not_found");
+    let malformed = h.get("not-a-uuid").await;
+    assert_eq!(malformed.status, StatusCode::NOT_FOUND);
+    assert_eq!(malformed.body["code"], "media_not_found");
 }
 
 #[sqlx::test]

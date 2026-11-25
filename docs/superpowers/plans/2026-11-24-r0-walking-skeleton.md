@@ -708,3 +708,5 @@ The final whole-branch review of R0 deferred these items, and each later plan ad
 - A job that exhausts its retries on a transient error leaves the raw upload on disk; only a permanent rejection deletes it (final fix wave).
 - Caddy runs with host networking and the api and web containers publish on 127.0.0.1 only (ADR 0009, R1-A plan, Task 6); cover this in the install guide, the stranger install test and the multi-Installation deploy (R1-A plan).
 - Rolling back to 0.1.0 breaks only `pranata user create-admin`, because `users.role_id` is NOT NULL; the N/N-1 compatibility test must list this as its one accepted exception (R1-A plan, Task 3).
+- On a rollback to 0.1.0 every active User, whatever their Role, gets 0.1.0's full admin surface (village profile and media) (R1-A final review).
+- On a rollback to 0.1.0 Passkeys and the per-account sign-in throttle stop working (R1-A final review).

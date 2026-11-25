@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
 import { useSudo } from "@/admin/sudo";
+import { SECRET_RESULT } from "@/admin/users/secret-result";
 import { ApiError } from "@/api/fetcher";
 import type {
 	CreatedUser,
@@ -105,7 +106,7 @@ function UserForm({
 }>) {
 	const queryClient = useQueryClient();
 	const sudo = useSudo();
-	const createUser = useCreateUser();
+	const createUser = useCreateUser(SECRET_RESULT);
 	const updateUser = useUpdateUser();
 	const editing = target.kind === "edit" ? target.user : null;
 	const isSelf = editing?.id === me.id;
@@ -155,6 +156,8 @@ function UserForm({
 				);
 				onClose();
 				onCreated(created);
+				// The dialog now holds the URL; do not keep it in the cache.
+				createUser.reset();
 			}
 			await queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
 		} catch (error) {

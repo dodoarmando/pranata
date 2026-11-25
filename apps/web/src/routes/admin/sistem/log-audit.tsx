@@ -126,11 +126,7 @@ function EntryRow({
 				{row.actor?.display_name ?? "Sistem"}
 			</span>
 			<span className="w-44">
-				<Badge
-					variant={destructive ? "destructive" : "outline"}
-					// The stock destructive text is 4.1:1 on its tint; AA needs 4.5.
-					className={destructive ? "text-red-700 dark:text-red-400" : undefined}
-				>
+				<Badge variant={destructive ? "destructive" : "outline"}>
 					{actionLabel(row.action)}
 				</Badge>
 			</span>

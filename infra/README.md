@@ -274,6 +274,26 @@ says there were too many attempts. To get back in, do one of these:
   with `just create-admin <host> <username> "<Display Name>"` (see the section
   above), then use that account.
 
+## A taken-over account
+
+If someone else may be using a User's account, for example with a stolen
+password or Passkey, recover it on the Users screen (Pengguna) in this order:
+
+1. Issue the User a new Access Link (row menu, "Buat tautan akses"). This
+   revokes any earlier unused link.
+2. The person redeems it. That sets a new password and ends every session of
+   the account.
+3. Remove all of the User's Passkeys (row menu, "Hapus semua passkey"). This
+   also ends every session again, together with any Passkey registration still
+   in progress, so an intruder who signed in with a stolen Passkey after step 2
+   is signed out too.
+
+Removing the Passkeys first is not enough: whoever knows the old password can
+sign in again and register a new Passkey before the person resets it. If the
+person cannot redeem a link straight away, deactivate the account first
+("Nonaktifkan"; this ends its sessions and revokes its links), remove its
+Passkeys, and reactivate it and issue a link when the person is ready.
+
 ## Deploy a new version
 
 Releases are published as images by the release workflow (`docs/release.md`).

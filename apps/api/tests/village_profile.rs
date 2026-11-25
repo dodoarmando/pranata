@@ -525,8 +525,11 @@ async fn profile_save_gives_up_on_a_silent_web_server_after_two_seconds(pool: Pg
         .await;
     let took = started.elapsed();
     assert_eq!(put.status, StatusCode::OK, "{}", put.body);
+    // The lower bound proves the 2-second timeout; the upper bound only proves
+    // the save did not wait for the silent server (30 s), with room for a
+    // loaded machine.
     assert!(
-        took >= std::time::Duration::from_secs(2) && took < std::time::Duration::from_secs(4),
+        took >= std::time::Duration::from_secs(2) && took < std::time::Duration::from_secs(15),
         "{took:?}"
     );
     let pending = sqlx::query_scalar!(

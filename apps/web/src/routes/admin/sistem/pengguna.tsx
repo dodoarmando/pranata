@@ -10,6 +10,7 @@ import {
 	AccessLinkDialog,
 	type IssuedLink,
 } from "@/admin/users/access-link-dialog";
+import { SECRET_RESULT } from "@/admin/users/secret-result";
 import {
 	UserFormDialog,
 	type UserFormTarget,
@@ -197,13 +198,15 @@ function UserRow({
 }>) {
 	const queryClient = useQueryClient();
 	const sudo = useSudo();
-	const issue = useIssueAccessLink();
+	const issue = useIssueAccessLink(SECRET_RESULT);
 	const reactivate = useReactivateUser();
 
 	async function issueLink() {
 		try {
 			const issued = await sudo(() => issue.mutateAsync({ id: user.id }));
 			onLink({ displayName: user.display_name, url: issued.url });
+			// The dialog now holds the URL; do not keep it in the cache.
+			issue.reset();
 		} catch (error) {
 			toast.error(errorMessage(error));
 		}
@@ -243,7 +246,7 @@ function UserRow({
 				</Badge>
 			</TableCell>
 			<TableCell>
-				<Badge variant={user.is_active ? "outline" : "secondary"}>
+				<Badge variant={user.is_active ? "outline" : "destructive"}>
 					{user.is_active ? "Aktif" : "Nonaktif"}
 				</Badge>
 			</TableCell>

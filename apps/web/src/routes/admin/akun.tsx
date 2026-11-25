@@ -155,7 +155,7 @@ function AccountPage() {
 									</div>
 									<Button
 										type="button"
-										variant="outline"
+										variant="destructive"
 										size="sm"
 										aria-label={`Hapus passkey ${passkey.name}`}
 										disabled={deleting === passkey.id}

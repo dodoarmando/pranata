@@ -45,6 +45,7 @@ pub struct RoleDetail {
 
 /// What an editor fills in to create or edit a Role.
 #[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct RoleRequest {
     /// Trimmed; 1 to 50 characters, unique ignoring case.
     pub name: String,

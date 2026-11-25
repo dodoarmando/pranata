@@ -55,7 +55,9 @@
 	--muted-foreground: #737373;
 	--accent: #f0f0f0;
 	--accent-foreground: #171717;
-	--destructive: #dc2626;
+	/* Darker than shadcn's #dc2626, which is 4.13:1 on its own 10% tint; this
+	   keeps destructive text at AA (4.5:1) on the tint and its hover. */
+	--destructive: #b91c1c;
 	--border: #e5e5e5;
 	--input: #e5e5e5;
 	--ring: #a3a3a3;

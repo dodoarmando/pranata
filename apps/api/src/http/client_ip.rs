@@ -104,16 +104,21 @@ pub fn auth_limiter() -> AuthLimiter {
 /// used up its bucket.
 #[must_use]
 pub fn auth_limit_layer(limiter: &AuthLimiter) -> GovernorLayer<ClientIpKey, NoOpMiddleware, Body> {
-    GovernorLayer::new(limiter.clone()).error_handler(|error| -> Response<Body> {
-        match error {
-            GovernorError::TooManyRequests { wait_time, .. } => ApiError::TooManyRequests {
-                code: "too_many_requests",
-                retry_after: wait_time,
-            }
-            .into_response(),
-            other => ApiError::Internal(anyhow::anyhow!("rate limiter: {other}")).into_response(),
+    GovernorLayer::new(limiter.clone()).error_handler(limit_error)
+}
+
+/// The 429 for a used-up bucket. The limiter rounds its wait down to whole
+/// seconds, so it can report 0; `Retry-After: 0` would invite an immediate,
+/// refused retry.
+fn limit_error(error: GovernorError) -> Response<Body> {
+    match error {
+        GovernorError::TooManyRequests { wait_time, .. } => ApiError::TooManyRequests {
+            code: "too_many_requests",
+            retry_after: wait_time.max(1),
         }
-    })
+        .into_response(),
+        other => ApiError::Internal(anyhow::anyhow!("rate limiter: {other}")).into_response(),
+    }
 }
 
 #[cfg(test)]
@@ -129,6 +134,16 @@ mod tests {
             HeaderValue::from_str(forwarded_for).unwrap(),
         );
         headers
+    }
+
+    #[test]
+    fn a_429_never_says_retry_after_zero() {
+        let response = limit_error(GovernorError::TooManyRequests {
+            wait_time: 0,
+            headers: None,
+        });
+        assert_eq!(response.status(), axum::http::StatusCode::TOO_MANY_REQUESTS);
+        assert_eq!(response.headers()[axum::http::header::RETRY_AFTER], "1");
     }
 
     #[test]

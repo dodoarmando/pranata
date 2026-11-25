@@ -73,7 +73,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn scope_covers_unsafe_admin_and_logout_only() {
+    fn scope_covers_unsafe_admin_logout_sudo_and_passkey_requests() {
         let post = Method::POST;
         assert!(is_protected(&post, "/api/admin"));
         assert!(is_protected(&post, "/api/admin/pages/1"));

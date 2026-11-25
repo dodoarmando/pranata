@@ -935,6 +935,9 @@ async fn administrator_removes_a_users_passkeys(pool: PgPool) {
     let mut second = Authenticator::new();
     h.add_passkey(&budi_session, &mut first).await;
     h.add_passkey(&budi_session, &mut second).await;
+    // A registration the intruder started but has not finished yet.
+    let pending = h.start_registration(&budi_session).await;
+    assert_eq!(pending.status, StatusCode::OK, "{}", pending.body);
 
     let reply = h
         .call(
@@ -949,6 +952,19 @@ async fn administrator_removes_a_users_passkeys(pool: PgPool) {
         let reply = h.passkey_sign_in(key).await;
         assert_problem(&reply, StatusCode::UNAUTHORIZED, "passkey_failed");
     }
+    // Recovery ends every session and pending ceremony of the User.
+    assert_eq!(
+        h.me(&budi_session.cookie).await.status,
+        StatusCode::UNAUTHORIZED
+    );
+    let challenges = sqlx::query_scalar!(
+        r#"SELECT count(*) AS "count!" FROM webauthn_challenges WHERE user_id = $1"#,
+        budi.0
+    )
+    .fetch_one(&h.pool)
+    .await
+    .unwrap();
+    assert_eq!(challenges, 0);
     let entries = sqlx::query!(
         "SELECT actor, object_id, summary FROM audit_entries WHERE action = 'delete' AND object_type = 'passkey'"
     )
@@ -972,6 +988,7 @@ async fn administrator_removes_a_users_passkeys(pool: PgPool) {
         )
         .await;
     assert_problem(&reply, StatusCode::FORBIDDEN, "administrator_only");
+    let budi_session = h.login("budi").await;
     let reply = h
         .call(
             Method::DELETE,
@@ -993,6 +1010,38 @@ async fn administrator_removes_a_users_passkeys(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn removing_passkeys_signs_out_a_user_who_has_none(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let (admin, admin_session) = h.admin("admin").await;
+    let writer = h.role("Penulis", &["content.write"]).await;
+    let budi = h.user("budi", writer).await;
+    let budi_session = h.login("budi").await;
+
+    let reply = h
+        .call(
+            Method::DELETE,
+            &format!("/api/admin/users/{}/passkeys", budi.0),
+            &admin_session,
+            None,
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.body);
+    assert_eq!(
+        h.me(&budi_session.cookie).await.status,
+        StatusCode::UNAUTHORIZED
+    );
+    let entries = sqlx::query!(
+        "SELECT actor, object_id FROM audit_entries WHERE action = 'delete' AND object_type = 'passkey'"
+    )
+    .fetch_all(&h.pool)
+    .await
+    .unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].actor, Some(admin.0));
+    assert_eq!(entries[0].object_id, budi.0.to_string());
+}
+
+#[sqlx::test]
 async fn user_summary_counts_passkeys(pool: PgPool) {
     let h = Harness::new(pool).await;
     let (_, session) = h.admin("budi").await;
@@ -1005,24 +1054,6 @@ async fn user_summary_counts_passkeys(pool: PgPool) {
     assert_eq!(listed.status, StatusCode::OK, "{}", listed.body);
     assert_eq!(listed.body[0]["username"], "budi");
     assert_eq!(listed.body[0]["passkey_count"], 1);
-}
-
-/// Wait until `count` connections to this test's database wait for a lock.
-async fn wait_for_lock_waits(pool: &PgPool, count: i64) {
-    for _ in 0..500 {
-        let waiting = sqlx::query_scalar!(
-            r#"SELECT count(*) AS "count!" FROM pg_stat_activity
-               WHERE datname = current_database() AND wait_event_type = 'Lock'"#
-        )
-        .fetch_one(pool)
-        .await
-        .unwrap();
-        if waiting >= count {
-            return;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-    }
-    panic!("fewer than {count} requests waited for a lock");
 }
 
 /// Andi and Budi demote each other at the same time while `holder` keeps
@@ -1045,23 +1076,11 @@ async fn demote_each_other(
         h.call(Method::PATCH, &b_uri, a_session, Some(demote.clone())),
         h.call(Method::PATCH, &a_uri, b_session, Some(demote.clone())),
         async {
-            wait_for_lock_waits(&h.pool, 2).await;
+            common::wait_for_lock_waits(&h.pool, 2).await;
             holder.commit().await.unwrap();
         },
     );
     (first, second)
-}
-
-async fn lock_user(h: &Harness, user: UserId) -> sqlx::Transaction<'static, sqlx::Postgres> {
-    let mut holder = h.pool.begin().await.unwrap();
-    sqlx::query!(
-        "SELECT id FROM users WHERE id = $1 FOR NO KEY UPDATE",
-        user.0
-    )
-    .fetch_one(&mut *holder)
-    .await
-    .unwrap();
-    holder
 }
 
 #[sqlx::test]
@@ -1073,7 +1092,7 @@ async fn passkey_only_administrator_counts(pool: PgPool) {
     let mut key = Authenticator::new();
     h.add_passkey(&dewi_session, &mut key).await;
 
-    let holder = lock_user(&h, dewi).await;
+    let holder = common::lock_user(&h.pool, dewi).await;
     let (first, second) = demote_each_other(&h, &andi, &budi, holder).await;
     assert_eq!(first.status, StatusCode::OK, "{}", first.body);
     assert_eq!(second.status, StatusCode::OK, "{}", second.body);
@@ -1090,7 +1109,7 @@ async fn a_passkey_removed_during_a_demotion_no_longer_counts(pool: PgPool) {
 
     // Like every removal, this one locks Dewi first. Both demotions wait for
     // it and must see that Dewi can no longer sign in.
-    let mut holder = lock_user(&h, dewi).await;
+    let mut holder = common::lock_user(&h.pool, dewi).await;
     sqlx::query!("DELETE FROM passkeys WHERE user_id = $1", dewi.0)
         .execute(&mut *holder)
         .await

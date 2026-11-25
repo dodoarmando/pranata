@@ -275,6 +275,15 @@ async fn role_without_any_media_permission_cannot_upload(pool: PgPool) {
         .body(Body::empty())
         .unwrap();
     assert_eq!(h.send(read).await.0.status, StatusCode::FORBIDDEN);
+    // The Permission is checked before the id is parsed.
+    let malformed = Request::builder()
+        .uri("/api/admin/media/not-a-uuid")
+        .header(header::COOKIE, &cookie)
+        .body(Body::empty())
+        .unwrap();
+    let (denied, _) = h.send(malformed).await;
+    assert_eq!(denied.status, StatusCode::FORBIDDEN);
+    assert_eq!(denied.body["code"], "permission_denied");
 }
 
 #[sqlx::test]

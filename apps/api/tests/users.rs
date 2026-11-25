@@ -443,6 +443,29 @@ async fn self_service_limits(pool: PgPool) {
     assert_eq!(h.user_changes().await, 0);
 }
 
+/// Andi and Budi demote each other to `writer` at the same time while
+/// `holder` keeps an active Administrator's row locked; once both requests
+/// wait for it, `holder` commits. Holding the lock makes both requests read
+/// their sessions (as Administrators) before either demotion commits, so
+/// neither is refused with 403 `permission_denied`.
+async fn demote_each_other(
+    h: &Harness,
+    (a, a_session): (UserId, &Session),
+    (b, b_session): (UserId, &Session),
+    writer: RoleId,
+    holder: sqlx::Transaction<'static, sqlx::Postgres>,
+) -> (Reply, Reply) {
+    let (first, second, ()) = tokio::join!(
+        h.patch(a_session, b, json!({"role_id": writer.0})),
+        h.patch(b_session, a, json!({"role_id": writer.0})),
+        async {
+            common::wait_for_lock_waits(&h.pool, 2).await;
+            holder.commit().await.unwrap();
+        },
+    );
+    (first, second)
+}
+
 #[sqlx::test]
 async fn concurrent_demotions_keep_one_administrator(pool: PgPool) {
     let h = Harness::new(pool).await;
@@ -450,10 +473,9 @@ async fn concurrent_demotions_keep_one_administrator(pool: PgPool) {
     let (b, b_session) = h.admin("budi").await;
     let writer = h.role("Penulis", &["content.write"]).await;
 
-    let (first, second) = tokio::join!(
-        h.patch(&a_session, b, json!({"role_id": writer.0})),
-        h.patch(&b_session, a, json!({"role_id": writer.0})),
-    );
+    let holder = common::lock_user(&h.pool, a).await;
+    let (first, second) =
+        demote_each_other(&h, (a, &a_session), (b, &b_session), writer, holder).await;
     let mut statuses = [first.status, second.status];
     statuses.sort();
     assert_eq!(
@@ -538,6 +560,42 @@ async fn issuing_a_link_revokes_earlier_unused_links(pool: PgPool) {
     }
 }
 
+/// D-50: release 0.1.0 checks only `used_at` and `expires_at`, so after a
+/// rollback a revoked link must also have expired.
+#[sqlx::test]
+async fn revoked_links_have_expired(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let (_, session) = h.admin("admin").await;
+    let writer = h.role("Penulis", &["content.write"]).await;
+    let budi = h.user("budi", writer).await;
+
+    // Reissuing revokes the first link, deactivating revokes the second.
+    for _ in 0..2 {
+        let issued = h.post(&session, budi, "access-links").await;
+        assert_eq!(issued.status, StatusCode::CREATED, "{}", issued.body);
+    }
+    let deactivated = h.post(&session, budi, "deactivate").await;
+    assert_eq!(deactivated.status, StatusCode::OK, "{}", deactivated.body);
+
+    let links = sqlx::query!(
+        r#"SELECT revoked_at AS "revoked_at!", expires_at FROM access_links
+           WHERE user_id = $1 AND revoked_at IS NOT NULL"#,
+        budi.0
+    )
+    .fetch_all(&h.pool)
+    .await
+    .unwrap();
+    assert_eq!(links.len(), 2);
+    for link in links {
+        assert!(
+            link.expires_at <= link.revoked_at,
+            "expires {} after revocation {}",
+            link.expires_at,
+            link.revoked_at
+        );
+    }
+}
+
 #[sqlx::test]
 async fn inactive_users_get_no_access_link(pool: PgPool) {
     let h = Harness::new(pool).await;
@@ -587,11 +645,17 @@ async fn uncredentialed_administrator_does_not_count(pool: PgPool) {
     let created = h.create_user(&a_session, "dewi", h.admin_role).await;
     assert_eq!(created.status, StatusCode::CREATED, "{}", created.body);
     let dewi_token = token_of(&created.body["access_link"]["url"]);
-
-    let (first, second) = tokio::join!(
-        h.patch(&a_session, b, json!({"role_id": writer.0})),
-        h.patch(&b_session, a, json!({"role_id": writer.0})),
+    let dewi = UserId(
+        created.body["user"]["id"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap(),
     );
+
+    let holder = common::lock_user(&h.pool, dewi).await;
+    let (first, second) =
+        demote_each_other(&h, (a, &a_session), (b, &b_session), writer, holder).await;
     let mut statuses = [first.status, second.status];
     statuses.sort();
     assert_eq!(
@@ -614,10 +678,9 @@ async fn uncredentialed_administrator_does_not_count(pool: PgPool) {
     assert_eq!(h.active_administrators().await, 3);
 
     assert_eq!(h.redeem(&dewi_token).await.status, StatusCode::NO_CONTENT);
-    let (first, second) = tokio::join!(
-        h.patch(&a_session, b, json!({"role_id": writer.0})),
-        h.patch(&b_session, a, json!({"role_id": writer.0})),
-    );
+    let holder = common::lock_user(&h.pool, dewi).await;
+    let (first, second) =
+        demote_each_other(&h, (a, &a_session), (b, &b_session), writer, holder).await;
     assert_eq!(first.status, StatusCode::OK, "{}", first.body);
     assert_eq!(second.status, StatusCode::OK, "{}", second.body);
     assert_eq!(h.active_administrators().await, 1);
@@ -895,6 +958,29 @@ async fn invalid_requests_are_422_and_unknown_users_404(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn unknown_fields_are_rejected_when_creating_a_user(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let (_, session) = h.admin("admin").await;
+    let writer = h.role("Penulis", &["content.write"]).await;
+
+    let reply = h
+        .call(
+            Method::POST,
+            "/api/admin/users",
+            &session,
+            Some(json!({
+                "username": "siti",
+                "display_name": "Siti",
+                "role_id": writer.0,
+                "is_active": false,
+            })),
+        )
+        .await;
+    assert_problem(&reply, StatusCode::BAD_REQUEST, "invalid_json");
+    assert_eq!(h.user_changes().await, 0);
+}
+
+#[sqlx::test]
 async fn only_a_real_change_is_written(pool: PgPool) {
     let h = Harness::new(pool).await;
     let (_, session) = h.admin("admin").await;
@@ -918,24 +1004,6 @@ async fn only_a_real_change_is_written(pool: PgPool) {
     assert_eq!(moved.status, StatusCode::OK, "{}", moved.body);
     assert_eq!(moved.body["role"]["id"], json!(publisher.0));
     assert_eq!(h.user_changes().await, 1);
-}
-
-/// Wait until a connection to this test's database waits for a row lock.
-async fn wait_for_a_lock_wait(pool: &PgPool) {
-    for _ in 0..500 {
-        let waiting = sqlx::query_scalar!(
-            r#"SELECT count(*) AS "count!" FROM pg_stat_activity
-               WHERE datname = current_database() AND wait_event_type = 'Lock'"#
-        )
-        .fetch_one(pool)
-        .await
-        .unwrap();
-        if waiting > 0 {
-            return;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-    }
-    panic!("no request waited for the lock");
 }
 
 #[sqlx::test]
@@ -963,7 +1031,7 @@ async fn a_role_deleted_under_a_user_write_is_not_found(pool: PgPool) {
             }
         };
         let (reply, ()) = tokio::join!(request, async {
-            wait_for_a_lock_wait(&h.pool).await;
+            common::wait_for_a_lock_wait(&h.pool).await;
             deleting.commit().await.unwrap();
         });
         assert_problem(
