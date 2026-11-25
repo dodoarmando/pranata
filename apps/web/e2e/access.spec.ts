@@ -48,7 +48,7 @@ async function redeemAndSignIn(
 }
 
 // The Administrator's own API session, used only to prepare data the screens
-// under test need (the Roles screen comes later).
+// under test need.
 async function adminApi(): Promise<{
 	api: APIRequestContext;
 	post: (path: string, data: unknown) => Promise<unknown>;
@@ -111,12 +111,19 @@ test.describe("users and access links", () => {
 	test("administrator creates an editor role and a user, the user signs in", async ({
 		browser,
 	}) => {
-		const { api, post } = await adminApi();
-		await post("/api/admin/roles", {
-			name: "Kontributor Web",
-			permissions: ["content.write"],
-		});
-		await api.dispose();
+		await adminPage.goto("/admin/sistem/peran");
+		await expect(
+			adminPage.getByRole("heading", { name: "Peran", level: 2 }),
+		).toBeVisible();
+		await adminPage.getByRole("button", { name: "Tambah peran" }).click();
+		await adminPage.getByLabel("Nama peran").fill("Kontributor Web");
+		await adminPage.getByRole("checkbox", { name: /Menulis konten/ }).check();
+		await adminPage
+			.getByRole("button", { name: "Simpan", exact: true })
+			.click();
+		await expect(
+			adminPage.getByRole("button", { name: /Kontributor Web/ }),
+		).toContainText("0 pengguna · 1 hak akses");
 
 		await adminPage.goto("/admin/sistem/pengguna");
 		await expect(
@@ -170,6 +177,21 @@ test.describe("users and access links", () => {
 		await expect(nengPage).toHaveURL(/\/masuk/);
 	});
 
+	test("role in use cannot be deleted", async () => {
+		await adminPage.goto("/admin/sistem/peran");
+		await adminPage.getByRole("button", { name: /Kontributor Web/ }).click();
+		await adminPage.getByRole("button", { name: "Hapus", exact: true }).click();
+		await adminPage
+			.getByRole("dialog")
+			.getByRole("button", { name: "Hapus", exact: true })
+			.click();
+		await expect(
+			adminPage.getByText(
+				"Peran masih dipakai pengguna, jadi tidak dapat dihapus.",
+			),
+		).toBeVisible();
+	});
+
 	test("a user manager is not offered the Administrator role", async ({
 		browser,
 	}) => {
@@ -206,6 +228,18 @@ test.describe("users and access links", () => {
 			page.getByRole("option", { name: "Kontributor Web" }),
 		).toHaveCount(0);
 		await context.close();
+	});
+
+	test("the roles screen has no axe violations", async () => {
+		await adminPage.goto("/admin/sistem/peran");
+		await adminPage.getByRole("button", { name: /Kontributor Web/ }).click();
+		await expect(adminPage.getByLabel("Nama peran")).toHaveValue(
+			"Kontributor Web",
+		);
+		const results = await new AxeBuilder({ page: adminPage })
+			.withTags(AXE_TAGS)
+			.analyze();
+		expect(results.violations, "/admin/sistem/peran").toEqual([]);
 	});
 
 	test("the users screen and the access link dialog have no axe violations", async () => {
