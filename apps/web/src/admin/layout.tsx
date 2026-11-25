@@ -1,6 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ChevronsUpDownIcon, HouseIcon, LogOutIcon } from "lucide-react";
+import {
+	ChevronsUpDownIcon,
+	HouseIcon,
+	LogOutIcon,
+	ShieldCheckIcon,
+} from "lucide-react";
 import { type ReactNode, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { type VisibleGroup, visibleNav } from "@/admin/nav";
@@ -36,6 +41,7 @@ import { setCsrfToken } from "@/lib/csrf";
 import { messageFor } from "@/lib/errors";
 
 function pageTitle(groups: VisibleGroup[], pathname: string): string {
+	if (pathname === "/admin/akun") return "Keamanan akun";
 	for (const group of groups) {
 		for (const item of group.items) {
 			if (pathname.startsWith(item.to)) return item.label;
@@ -85,6 +91,10 @@ function UserMenu({ user }: Readonly<{ user: CurrentUser }>) {
 				<ChevronsUpDownIcon className="ml-auto size-4 text-muted-foreground" />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side="top" align="start" className="min-w-56">
+				<DropdownMenuItem render={<Link to="/admin/akun" />}>
+					<ShieldCheckIcon />
+					Keamanan akun
+				</DropdownMenuItem>
 				<DropdownMenuItem
 					disabled={logout.isPending}
 					onClick={() => logout.mutate()}

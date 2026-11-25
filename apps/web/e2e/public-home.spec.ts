@@ -1,6 +1,6 @@
 import https from "node:https";
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { analyzeAxe } from "./axe";
 import {
 	NOINIT_ORIGIN,
 	ORIGIN,
@@ -14,7 +14,6 @@ import {
 const PHONE = { width: 390, height: 844 };
 test.use({ viewport: PHONE });
 
-const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];
 // size-limit counts 1 KB as 1000 bytes; use the same unit for both gates.
 const JS_BUDGET_BYTES = 120_000;
 
@@ -75,7 +74,7 @@ test("makes no third-party requests", async ({ page }) => {
 
 test("has no axe violations", async ({ page }) => {
 	await page.goto(ORIGIN, { waitUntil: "networkidle" });
-	const result = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
+	const result = await analyzeAxe(page);
 	expect(result.violations).toEqual([]);
 });
 

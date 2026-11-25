@@ -34,6 +34,17 @@ export function usersAdminAccessLink(): string {
 	).trim();
 }
 
+// A third Administrator, for the Passkey spec.
+export const PASSKEY_ADMIN_USERNAME = "sandi";
+export const PASSKEY_ADMIN_PASSWORD = "sandi-password-123";
+
+export function passkeyAdminAccessLink(): string {
+	return readFileSync(
+		resolve(repoRoot, "target/e2e/access-link-passkey.txt"),
+		"utf8",
+	).trim();
+}
+
 export function stackScript(action: "up" | "down", noInit = false): void {
 	const args = [resolve(repoRoot, "infra/dev/stack.sh"), action];
 	if (noInit) args.push("--no-init");

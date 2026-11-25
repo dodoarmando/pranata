@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import AxeBuilder from "@axe-core/playwright";
 import {
 	type APIRequestContext,
 	type Browser,
@@ -11,6 +10,7 @@ import {
 	test,
 } from "@playwright/test";
 import exifr from "exifr";
+import { analyzeAxe } from "./axe";
 import {
 	ADMIN_PASSWORD,
 	ADMIN_USERNAME,
@@ -20,7 +20,6 @@ import {
 	VILLAGE_HEADING,
 } from "./stack";
 
-const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];
 const PHOTO = resolve(import.meta.dirname, "fixtures/gps-photo.jpg");
 const EXPIRED =
 	"Tautan ini sudah tidak berlaku. Minta tautan baru kepada Administrator.";
@@ -382,9 +381,7 @@ test.describe("admin profile", () => {
 			await expect(
 				page.getByRole("heading", { level: 2 }).first(),
 			).toBeVisible();
-			const result = await new AxeBuilder({ page })
-				.withTags(AXE_TAGS)
-				.analyze();
+			const result = await analyzeAxe(page);
 			expect(result.violations, path).toEqual([]);
 		}
 		for (const path of ["/masuk", "/akses"]) {
@@ -396,9 +393,7 @@ test.describe("admin profile", () => {
 			if (!view || !anonymous) throw new Error("no browser");
 			await view.goto(path);
 			await view.waitForLoadState("networkidle");
-			const result = await new AxeBuilder({ page: view })
-				.withTags(AXE_TAGS)
-				.analyze();
+			const result = await analyzeAxe(view);
 			expect(result.violations, path).toEqual([]);
 			await anonymous.close();
 		}
