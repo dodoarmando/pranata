@@ -8,7 +8,7 @@ use time::{Duration, OffsetDateTime};
 use super::{
     hash_token,
     password::{self, HashLimiter},
-    random_token,
+    random_token, throttle,
 };
 use crate::{
     ApiError,
@@ -160,6 +160,12 @@ pub async fn redeem(
     sqlx::query!("DELETE FROM sessions WHERE user_id = $1", link.user_id.0)
         .execute(&mut *tx)
         .await?;
+    // A new password unlocks the account, so an Administrator can unlock a
+    // User by issuing a link.
+    let username = sqlx::query_scalar!("SELECT username FROM users WHERE id = $1", link.user_id.0)
+        .fetch_one(&mut *tx)
+        .await?;
+    throttle::clear(&mut tx, &username).await?;
     audit::record(
         &mut tx,
         NewAuditEntry {

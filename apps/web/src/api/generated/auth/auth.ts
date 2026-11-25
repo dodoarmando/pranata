@@ -165,7 +165,7 @@ export const useSetPasswordWithAccessLink = <TError = ErrorType<Problem>,
 /**
  * # Errors
  * 401 `invalid_credentials`, identical for an unknown user and a wrong
- * password.
+ * password; 429 `too_many_attempts` after ten failures in 15 minutes.
  * @summary Sign in with a username and password.
  */
 export const login = async (loginRequest: LoginRequest, options?: Parameters<typeof apiFetch>[1]): Promise<SessionInfo> => {
@@ -220,7 +220,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     /**
  * # Errors
  * 401 `invalid_credentials`, identical for an unknown user and a wrong
- * password.
+ * password; 429 `too_many_attempts` after ten failures in 15 minutes.
  * @summary Sign in with a username and password.
  */
 export const useLogin = <TError = ErrorType<Problem>,
@@ -439,7 +439,7 @@ export const getConfirmSudoUrl = () => {
 /**
  * # Errors
  * 401 `invalid_credentials` for a wrong password; 403 `csrf_mismatch`
- * without the CSRF header.
+ * without the CSRF header; 429 `too_many_attempts` for a locked account.
  * @summary Confirm the password to open Sudo Mode for this session.
  */
 export const confirmSudo = async (sudoRequest: SudoRequest, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
@@ -494,7 +494,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     /**
  * # Errors
  * 401 `invalid_credentials` for a wrong password; 403 `csrf_mismatch`
- * without the CSRF header.
+ * without the CSRF header; 429 `too_many_attempts` for a locked account.
  * @summary Confirm the password to open Sudo Mode for this session.
  */
 export const useConfirmSudo = <TError = ErrorType<Problem>,

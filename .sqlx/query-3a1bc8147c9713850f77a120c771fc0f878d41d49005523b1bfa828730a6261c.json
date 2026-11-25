@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO users (username, display_name, password_hash, role_id)\n               VALUES ($1, 'Budi Santoso', $2, $3) RETURNING id AS \"id: pranata::ids::UserId\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: pranata::ids::UserId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3a1bc8147c9713850f77a120c771fc0f878d41d49005523b1bfa828730a6261c"
+}

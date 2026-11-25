@@ -16,6 +16,7 @@ use crate::{
         self, CurrentUser, access_link, password,
         session::{self, AuthSession},
         sudo::SUDO_WINDOW,
+        throttle,
     },
     error::Problem,
     http::json::ApiJson,
@@ -120,7 +121,7 @@ struct Account {
 ///
 /// # Errors
 /// 401 `invalid_credentials`, identical for an unknown user and a wrong
-/// password.
+/// password; 429 `too_many_attempts` after ten failures in 15 minutes.
 #[utoipa::path(
     post,
     path = "/auth/login",
@@ -131,6 +132,7 @@ struct Account {
         (status = 200, description = "Signed in; the session cookie is set", body = SessionInfo),
         (status = 400, description = "Body is not valid JSON (code invalid_json)", body = Problem, content_type = "application/problem+json"),
         (status = 401, description = "Wrong username or password (code invalid_credentials)", body = Problem, content_type = "application/problem+json"),
+        (status = 429, description = "Too many failed attempts for this account (code too_many_attempts); Retry-After gives the seconds to wait", body = Problem, content_type = "application/problem+json"),
     )
 )]
 pub async fn login(
@@ -140,6 +142,8 @@ pub async fn login(
 ) -> Result<impl IntoResponse, ApiError> {
     let invalid = ApiError::Unauthorized("invalid_credentials");
     let username = request.username.trim().to_lowercase();
+    // Before argon2: a locked account costs nothing to refuse.
+    throttle::check(&state.db, &username, state.clock.now()).await?;
     let account = sqlx::query_as!(
         Account,
         r#"SELECT id AS "id: UserId", username, display_name, password_hash, is_active
@@ -161,11 +165,13 @@ pub async fn login(
         .verify(verification_input(&request.password).to_owned(), hash)
         .await?;
     let Some(account) = account.filter(|_| verified) else {
+        throttle::record_failure(&state.db, &username, state.clock.now()).await?;
         return Err(invalid);
     };
 
     let now = state.clock.now();
     let mut tx = state.db.begin().await?;
+    throttle::clear(&mut tx, &account.username).await?;
     // Signing in again replaces the session this browser already holds.
     if let Some(old) = session::token_from_headers(&headers) {
         session::delete(&mut tx, &auth::hash_token(&old)).await?;
@@ -280,7 +286,7 @@ pub async fn get_me(State(state): State<AppState>, session: AuthSession) -> impl
 ///
 /// # Errors
 /// 401 `invalid_credentials` for a wrong password; 403 `csrf_mismatch`
-/// without the CSRF header.
+/// without the CSRF header; 429 `too_many_attempts` for a locked account.
 #[utoipa::path(
     post,
     path = "/auth/sudo",
@@ -295,6 +301,7 @@ pub async fn get_me(State(state): State<AppState>, session: AuthSession) -> impl
         (status = 401, description = "Not signed in (code unauthenticated) or wrong password (code invalid_credentials)", body = Problem, content_type = "application/problem+json"),
         (status = 403, description = "Missing or wrong CSRF token (code csrf_mismatch)", body = Problem, content_type = "application/problem+json"),
         (status = 415, description = "Request is not marked as JSON (code json_required)", body = Problem, content_type = "application/problem+json"),
+        (status = 429, description = "Too many failed attempts for this account (code too_many_attempts); Retry-After gives the seconds to wait", body = Problem, content_type = "application/problem+json"),
     )
 )]
 pub async fn confirm_sudo(
@@ -302,6 +309,8 @@ pub async fn confirm_sudo(
     session: AuthSession,
     ApiJson(request): ApiJson<SudoRequest>,
 ) -> Result<StatusCode, ApiError> {
+    // Sudo checks the same password, so it shares the account's failure count.
+    throttle::check(&state.db, &session.user.username, state.clock.now()).await?;
     let hash = sqlx::query_scalar!(
         "SELECT password_hash FROM users WHERE id = $1",
         session.user.id.0,
@@ -313,6 +322,7 @@ pub async fn confirm_sudo(
         .verify(verification_input(&request.password).to_owned(), hash)
         .await?;
     if !verified {
+        throttle::record_failure(&state.db, &session.user.username, state.clock.now()).await?;
         return Err(ApiError::Unauthorized("invalid_credentials"));
     }
 

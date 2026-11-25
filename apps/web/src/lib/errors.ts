@@ -6,11 +6,15 @@ const LINK_INVALID =
 const UNREADABLE =
 	"Permintaan tidak dapat dibaca. Muat ulang halaman lalu coba lagi.";
 
+const TOO_MANY =
+	"Terlalu banyak percobaan masuk. Coba lagi dalam beberapa menit.";
+
 // Indonesian copy for every problem+json `code` the API can return.
 const MESSAGES: Record<string, string> = {
 	invalid_json: UNREADABLE,
 	json_required: UNREADABLE,
 	invalid_credentials: "Nama pengguna atau kata sandi salah.",
+	too_many_attempts: TOO_MANY,
 	access_link_used: LINK_INVALID,
 	access_link_revoked: LINK_INVALID,
 	access_link_expired: LINK_INVALID,
