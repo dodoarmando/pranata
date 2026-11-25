@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE access_links SET revoked_at = $2, expires_at = LEAST(expires_at, $2)\n         WHERE user_id = $1 AND used_at IS NULL AND revoked_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "57a3d9a0f6c1d215b77bc6f6d1eb6ad5c0067552fee20ed4d0acab5391822a1f"
+}

@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT revoked_at AS \"revoked_at!\", expires_at FROM access_links\n           WHERE user_id = $1 AND revoked_at IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "revoked_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "access_links",
+            "name": "revoked_at"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "access_links",
+            "name": "expires_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "940d9b5eacd71479624bfec1c196bcc5a44532bfd31256afb660bd425e5bac10"
+}

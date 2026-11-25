@@ -560,6 +560,42 @@ async fn issuing_a_link_revokes_earlier_unused_links(pool: PgPool) {
     }
 }
 
+/// D-50: release 0.1.0 checks only `used_at` and `expires_at`, so after a
+/// rollback a revoked link must also have expired.
+#[sqlx::test]
+async fn revoked_links_have_expired(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let (_, session) = h.admin("admin").await;
+    let writer = h.role("Penulis", &["content.write"]).await;
+    let budi = h.user("budi", writer).await;
+
+    // Reissuing revokes the first link, deactivating revokes the second.
+    for _ in 0..2 {
+        let issued = h.post(&session, budi, "access-links").await;
+        assert_eq!(issued.status, StatusCode::CREATED, "{}", issued.body);
+    }
+    let deactivated = h.post(&session, budi, "deactivate").await;
+    assert_eq!(deactivated.status, StatusCode::OK, "{}", deactivated.body);
+
+    let links = sqlx::query!(
+        r#"SELECT revoked_at AS "revoked_at!", expires_at FROM access_links
+           WHERE user_id = $1 AND revoked_at IS NOT NULL"#,
+        budi.0
+    )
+    .fetch_all(&h.pool)
+    .await
+    .unwrap();
+    assert_eq!(links.len(), 2);
+    for link in links {
+        assert!(
+            link.expires_at <= link.revoked_at,
+            "expires {} after revocation {}",
+            link.expires_at,
+            link.revoked_at
+        );
+    }
+}
+
 #[sqlx::test]
 async fn inactive_users_get_no_access_link(pool: PgPool) {
     let h = Harness::new(pool).await;
