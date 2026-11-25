@@ -1,6 +1,7 @@
 //! CSRF protection for state-changing requests (D-30).
 //!
-//! Every non-safe request to `/api/admin/*` and to `/api/auth/logout` must send
+//! Every non-safe request to `/api/admin/*`, `/api/auth/logout`, `/api/auth/sudo`
+//! (and below) and `/api/auth/passkeys` (and below) must send
 //! the session's CSRF token in `x-csrf-token` (the web app gets it from sign-in
 //! and `GET /api/auth/me`). Otherwise the answer is 403 `csrf_mismatch`.
 //!
@@ -31,8 +32,16 @@ pub fn is_protected(method: &Method, path: &str) -> bool {
         *method,
         Method::GET | Method::HEAD | Method::OPTIONS | Method::TRACE
     );
-    let in_scope =
-        path == "/api/admin" || path.starts_with("/api/admin/") || path == "/api/auth/logout";
+    let under = |prefix: &str| {
+        path == prefix
+            || path
+                .strip_prefix(prefix)
+                .is_some_and(|rest| rest.starts_with('/'))
+    };
+    let in_scope = under("/api/admin")
+        || path == "/api/auth/logout"
+        || under("/api/auth/sudo")
+        || under("/api/auth/passkeys");
     in_scope && !safe
 }
 
@@ -70,11 +79,16 @@ mod tests {
         assert!(is_protected(&post, "/api/admin/pages/1"));
         assert!(is_protected(&Method::DELETE, "/api/admin/pages/1"));
         assert!(is_protected(&post, "/api/auth/logout"));
+        assert!(is_protected(&post, "/api/auth/sudo"));
+        assert!(is_protected(&post, "/api/auth/sudo/passkey/start"));
+        assert!(is_protected(&post, "/api/auth/passkeys/registration/start"));
 
         assert!(!is_protected(&Method::GET, "/api/admin/pages"));
         assert!(!is_protected(&Method::GET, "/api/auth/logout"));
         assert!(!is_protected(&post, "/api/auth/login"));
         assert!(!is_protected(&post, "/api/administrators"));
+        assert!(!is_protected(&post, "/api/auth/sudoku"));
+        assert!(!is_protected(&post, "/api/auth/passkeys-list"));
         assert!(!is_protected(&post, "/api/auth/access-links/x/password"));
     }
 }

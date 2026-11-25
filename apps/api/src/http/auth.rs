@@ -5,6 +5,7 @@ use axum::{
     response::{AppendHeaders, IntoResponse},
 };
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -14,6 +15,7 @@ use crate::{
     auth::{
         self, CurrentUser, access_link, password,
         session::{self, AuthSession},
+        sudo::SUDO_WINDOW,
     },
     error::Problem,
     http::json::ApiJson,
@@ -45,6 +47,24 @@ pub struct LoginRequest {
 pub struct SessionInfo {
     pub user: CurrentUser,
     pub csrf_token: String,
+    /// When Sudo Mode closes (RFC 3339); null when the window is closed or was
+    /// never opened.
+    #[serde(with = "time::serde::rfc3339::option")]
+    #[schema(value_type = Option<String>, format = DateTime)]
+    pub sudo_until: Option<OffsetDateTime>,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct SudoRequest {
+    pub password: String,
+}
+
+impl std::fmt::Debug for SudoRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SudoRequest")
+            .field("password", &"[redacted]")
+            .finish()
+    }
 }
 
 /// The Access Link token travels in the body, never in the URL, so request
@@ -79,6 +99,7 @@ impl std::fmt::Debug for SessionInfo {
         f.debug_struct("SessionInfo")
             .field("user", &self.user)
             .field("csrf_token", &"[redacted]")
+            .field("sudo_until", &self.sudo_until)
             .finish()
     }
 }
@@ -174,6 +195,7 @@ pub async fn login(
             permissions,
         },
         csrf_token: new.csrf_token,
+        sudo_until: Some(now + SUDO_WINDOW),
     };
     Ok((
         AppendHeaders([(
@@ -242,14 +264,81 @@ pub async fn logout(
         (status = 401, description = "Not signed in (code unauthenticated)", body = Problem, content_type = "application/problem+json"),
     )
 )]
-pub async fn get_me(session: AuthSession) -> impl IntoResponse {
+pub async fn get_me(State(state): State<AppState>, session: AuthSession) -> impl IntoResponse {
+    let sudo_until = session.sudo_until(state.clock.now());
     (
         no_store(),
         Json(SessionInfo {
             user: session.user,
             csrf_token: session.csrf_token,
+            sudo_until,
         }),
     )
+}
+
+/// Confirm the password to open Sudo Mode for this session.
+///
+/// # Errors
+/// 401 `invalid_credentials` for a wrong password; 403 `csrf_mismatch`
+/// without the CSRF header.
+#[utoipa::path(
+    post,
+    path = "/auth/sudo",
+    operation_id = "confirmSudo",
+    tag = "auth",
+    params(("x-csrf-token" = String, Header, description = "The CSRF token from sign-in")),
+    security(("session" = [])),
+    request_body = SudoRequest,
+    responses(
+        (status = 204, description = "Password confirmed; Sudo Mode is open for 10 minutes"),
+        (status = 400, description = "Body is not valid JSON (code invalid_json)", body = Problem, content_type = "application/problem+json"),
+        (status = 401, description = "Not signed in (code unauthenticated) or wrong password (code invalid_credentials)", body = Problem, content_type = "application/problem+json"),
+        (status = 403, description = "Missing or wrong CSRF token (code csrf_mismatch)", body = Problem, content_type = "application/problem+json"),
+        (status = 415, description = "Request is not marked as JSON (code json_required)", body = Problem, content_type = "application/problem+json"),
+    )
+)]
+pub async fn confirm_sudo(
+    State(state): State<AppState>,
+    session: AuthSession,
+    ApiJson(request): ApiJson<SudoRequest>,
+) -> Result<StatusCode, ApiError> {
+    let hash = sqlx::query_scalar!(
+        "SELECT password_hash FROM users WHERE id = $1",
+        session.user.id.0,
+    )
+    .fetch_one(&state.db)
+    .await?;
+    let verified = state
+        .hasher
+        .verify(verification_input(&request.password).to_owned(), hash)
+        .await?;
+    if !verified {
+        return Err(ApiError::Unauthorized("invalid_credentials"));
+    }
+
+    let now = state.clock.now();
+    let mut tx = state.db.begin().await?;
+    sqlx::query!(
+        "UPDATE sessions SET reauthenticated_at = $2 WHERE token_hash = $1",
+        session.token_hash,
+        now,
+    )
+    .execute(&mut *tx)
+    .await?;
+    audit::record(
+        &mut tx,
+        NewAuditEntry {
+            actor: Some(session.user.id),
+            action: AuditAction::Reauthenticate,
+            object_type: "user",
+            object_id: session.user.id.0.to_string(),
+            summary: format!("{} confirmed their password", session.user.username),
+            changes: Vec::new(),
+        },
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Set a password with an Access Link. The link works once.
@@ -291,6 +380,7 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(login))
         .routes(routes!(logout))
         .routes(routes!(get_me))
+        .routes(routes!(confirm_sudo))
         .routes(routes!(set_password_with_access_link))
 }
 

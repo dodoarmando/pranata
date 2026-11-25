@@ -23,6 +23,7 @@ pub enum AuditAction {
     Delete,
     SignIn,
     SignOut,
+    Reauthenticate,
 }
 
 impl AuditAction {
@@ -39,6 +40,7 @@ impl AuditAction {
             Self::Delete => "delete",
             Self::SignIn => "sign_in",
             Self::SignOut => "sign_out",
+            Self::Reauthenticate => "reauthenticate",
         }
     }
 }

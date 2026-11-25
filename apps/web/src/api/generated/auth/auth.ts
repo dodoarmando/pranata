@@ -28,7 +28,8 @@ import type {
   LoginRequest,
   Problem,
   RedeemAccessLinkRequest,
-  SessionInfo
+  SessionInfo,
+  SudoRequest
 } from '../model';
 
 import { apiFetch } from '../../fetcher';
@@ -427,3 +428,82 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Err
 
 
 
+export const getConfirmSudoUrl = () => {
+
+
+
+
+  return `/api/auth/sudo`
+}
+
+/**
+ * # Errors
+ * 401 `invalid_credentials` for a wrong password; 403 `csrf_mismatch`
+ * without the CSRF header.
+ * @summary Confirm the password to open Sudo Mode for this session.
+ */
+export const confirmSudo = async (sudoRequest: SudoRequest, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+
+  return apiFetch<void>(getConfirmSudoUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(sudoRequest)
+  }
+);}
+
+
+
+
+
+export const getConfirmSudoMutationKey = () => ['confirmSudo'] as const;
+
+export const getConfirmSudoMutationOptions = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmSudo>>, TError,ConfirmSudoMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmSudo>>, TError,ConfirmSudoMutationVariables, TContext> => {
+
+const mutationKey = getConfirmSudoMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmSudo>>, ConfirmSudoMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  confirmSudo(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmSudoMutationResult = NonNullable<Awaited<ReturnType<typeof confirmSudo>>>
+    export type ConfirmSudoMutationBody = BodyType<SudoRequest>
+    export type ConfirmSudoMutationError = ErrorType<Problem>
+    export type ConfirmSudoMutationVariables = {data: BodyType<SudoRequest>}
+
+    /**
+ * # Errors
+ * 401 `invalid_credentials` for a wrong password; 403 `csrf_mismatch`
+ * without the CSRF header.
+ * @summary Confirm the password to open Sudo Mode for this session.
+ */
+export const useConfirmSudo = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmSudo>>, TError,ConfirmSudoMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof confirmSudo>>,
+        TError,
+        ConfirmSudoMutationVariables,
+        TContext
+      > => {
+      return useMutation(getConfirmSudoMutationOptions(options), queryClient);
+    }

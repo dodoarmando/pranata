@@ -538,6 +538,85 @@
 				]
 			}
 		},
+		"/api/auth/sudo": {
+			"post": {
+				"tags": ["auth"],
+				"summary": "Confirm the password to open Sudo Mode for this session.",
+				"description": "# Errors\n401 `invalid_credentials` for a wrong password; 403 `csrf_mismatch`\nwithout the CSRF header.",
+				"operationId": "confirmSudo",
+				"parameters": [
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SudoRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"204": {
+						"description": "Password confirmed; Sudo Mode is open for 10 minutes"
+					},
+					"400": {
+						"description": "Body is not valid JSON (code invalid_json)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated) or wrong password (code invalid_credentials)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Missing or wrong CSRF token (code csrf_mismatch)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"415": {
+						"description": "Request is not marked as JSON (code json_required)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
 		"/api/healthz": {
 			"get": {
 				"tags": ["ops"],
@@ -893,8 +972,22 @@
 					"csrf_token": {
 						"type": "string"
 					},
+					"sudo_until": {
+						"type": ["string", "null"],
+						"format": "date-time",
+						"description": "When Sudo Mode closes (RFC 3339); null when the window is closed or was\nnever opened."
+					},
 					"user": {
 						"$ref": "#/components/schemas/CurrentUser"
+					}
+				}
+			},
+			"SudoRequest": {
+				"type": "object",
+				"required": ["password"],
+				"properties": {
+					"password": {
+						"type": "string"
 					}
 				}
 			},

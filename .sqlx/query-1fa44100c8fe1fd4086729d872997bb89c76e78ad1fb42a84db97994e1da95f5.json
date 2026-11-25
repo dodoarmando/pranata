@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT s.csrf_token, s.remember, s.last_seen_at, s.expires_at,\n                  u.id AS \"user_id: UserId\", u.username, u.display_name,\n                  r.id AS \"role_id: RoleId\", r.name AS role_name, r.is_administrator,\n                  COALESCE(array_agg(rp.permission) FILTER (WHERE rp.permission IS NOT NULL), '{}')\n                      AS \"permissions!: Vec<String>\"\n           FROM sessions s\n           JOIN users u ON u.id = s.user_id\n           JOIN roles r ON r.id = u.role_id\n           LEFT JOIN role_permissions rp ON rp.role_id = r.id\n           WHERE s.token_hash = $1 AND u.is_active\n           GROUP BY s.token_hash, u.id, r.id",
+  "query": "SELECT s.csrf_token, s.remember, s.reauthenticated_at, s.last_seen_at, s.expires_at,\n                  u.id AS \"user_id: UserId\", u.username, u.display_name,\n                  r.id AS \"role_id: RoleId\", r.name AS role_name, r.is_administrator,\n                  COALESCE(array_agg(rp.permission) FILTER (WHERE rp.permission IS NOT NULL), '{}')\n                      AS \"permissions!: Vec<String>\"\n           FROM sessions s\n           JOIN users u ON u.id = s.user_id\n           JOIN roles r ON r.id = u.role_id\n           LEFT JOIN role_permissions rp ON rp.role_id = r.id\n           WHERE s.token_hash = $1 AND u.is_active\n           GROUP BY s.token_hash, u.id, r.id",
   "describe": {
     "columns": [
       {
@@ -27,6 +27,17 @@
       },
       {
         "ordinal": 2,
+        "name": "reauthenticated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "sessions",
+            "name": "reauthenticated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
         "name": "last_seen_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -37,7 +48,7 @@
         }
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "expires_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -48,7 +59,7 @@
         }
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "user_id: UserId",
         "type_info": "Uuid",
         "origin": {
@@ -59,7 +70,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "username",
         "type_info": "Text",
         "origin": {
@@ -70,7 +81,7 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "display_name",
         "type_info": "Text",
         "origin": {
@@ -81,7 +92,7 @@
         }
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "role_id: RoleId",
         "type_info": "Uuid",
         "origin": {
@@ -92,7 +103,7 @@
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "role_name",
         "type_info": "Text",
         "origin": {
@@ -103,7 +114,7 @@
         }
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "is_administrator",
         "type_info": "Bool",
         "origin": {
@@ -114,7 +125,7 @@
         }
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "permissions!: Vec<String>",
         "type_info": "TextArray",
         "origin": "Expression"
@@ -128,6 +139,7 @@
     "nullable": [
       false,
       false,
+      true,
       false,
       false,
       false,
@@ -139,5 +151,5 @@
       null
     ]
   },
-  "hash": "e7ccdae55e69b1f6b190a32e9d804ae4f7c68ce01785ed25ab6cbe657462a2d3"
+  "hash": "1fa44100c8fe1fd4086729d872997bb89c76e78ad1fb42a84db97994e1da95f5"
 }
