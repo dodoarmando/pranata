@@ -34,6 +34,7 @@ const MESSAGES: Record<string, string> = {
 	required: "Isian ini wajib diisi.",
 	duplicate: "Isian ini hanya boleh dikirim satu kali.",
 	invalid: "Isian tidak valid. Periksa kembali.",
+	range_invalid: "Rentang tanggal tidak valid.",
 	database_unavailable: "Layanan sedang terganggu. Coba lagi sebentar lagi.",
 	invalid_multipart: "Unggahan tidak dapat dibaca. Coba lagi.",
 	media_not_found: "Foto tidak ditemukan.",

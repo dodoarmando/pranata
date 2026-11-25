@@ -13,7 +13,8 @@ import type { Permission } from "@/api/generated/model";
 export type AdminPath =
 	| "/admin/desa/profil"
 	| "/admin/sistem/pengguna"
-	| "/admin/sistem/peran";
+	| "/admin/sistem/peran"
+	| "/admin/sistem/log-audit";
 
 export interface NavItem {
 	label: string;
@@ -98,7 +99,11 @@ export const NAV: NavGroup[] = [
 				to: "/admin/sistem/peran",
 				permission: "role.manage",
 			},
-			{ label: "Log audit", to: null, permission: "audit.read" },
+			{
+				label: "Log audit",
+				to: "/admin/sistem/log-audit",
+				permission: "audit.read",
+			},
 		],
 	},
 ];

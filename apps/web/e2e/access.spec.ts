@@ -52,6 +52,7 @@ async function redeemAndSignIn(
 async function adminApi(): Promise<{
 	api: APIRequestContext;
 	post: (path: string, data: unknown) => Promise<unknown>;
+	put: (path: string, data: unknown) => Promise<unknown>;
 }> {
 	const api = await request.newContext({
 		baseURL: ORIGIN,
@@ -72,6 +73,11 @@ async function adminApi(): Promise<{
 		api,
 		post: async (path, data) => {
 			const response = await api.post(path, { headers, data });
+			expect(response.ok(), path).toBeTruthy();
+			return response.json();
+		},
+		put: async (path, data) => {
+			const response = await api.put(path, { headers, data });
 			expect(response.ok(), path).toBeTruthy();
 			return response.json();
 		},
@@ -195,7 +201,7 @@ test.describe("users and access links", () => {
 	test("a user manager is not offered the Administrator role", async ({
 		browser,
 	}) => {
-		const { api, post } = await adminApi();
+		const { api, post, put } = await adminApi();
 		await post("/api/admin/roles", {
 			name: "Pengelola Pengguna",
 			permissions: ["user.manage"],
@@ -205,6 +211,11 @@ test.describe("users and access links", () => {
 			name: string;
 		}[];
 		const role = roles.find((r) => r.name === "Pengelola Pengguna");
+		// An edit, so the audit log has an entry with before and after values.
+		await put(`/api/admin/roles/${role?.id}`, {
+			name: "Pengelola Pengguna",
+			permissions: ["user.manage", "audit.read"],
+		});
 		const created = (await post("/api/admin/users", {
 			display_name: "Pengelola",
 			username: "pengelola",
@@ -263,5 +274,36 @@ test.describe("users and access links", () => {
 			.withTags(AXE_TAGS)
 			.analyze();
 		expect(dialog.violations, "access link dialog").toEqual([]);
+	});
+
+	test("the audit log shows the deactivation and has no axe violations", async () => {
+		await adminPage.goto("/admin/sistem/log-audit");
+		await expect(
+			adminPage.getByRole("heading", { name: "Log audit", level: 2 }),
+		).toBeVisible();
+		const entry = adminPage
+			.getByRole("listitem")
+			.filter({ hasText: "Deactivated user neng" });
+		await expect(entry).toContainText("Menonaktifkan");
+		await expect(entry).toContainText("Pengguna · Deactivated user neng");
+
+		const edit = adminPage
+			.getByRole("listitem")
+			.filter({ hasText: "Edited role Pengelola Pengguna" });
+		await edit.locator("summary").click();
+		await expect(
+			edit.getByRole("columnheader", { name: "Kolom" }),
+		).toBeVisible();
+		await expect(
+			edit.getByRole("columnheader", { name: "Sebelum" }),
+		).toBeVisible();
+		await expect(
+			edit.getByRole("columnheader", { name: "Sesudah" }),
+		).toBeVisible();
+
+		const results = await new AxeBuilder({ page: adminPage })
+			.withTags(AXE_TAGS)
+			.analyze();
+		expect(results.violations, "/admin/sistem/log-audit").toEqual([]);
 	});
 });

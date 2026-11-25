@@ -1,3 +1,4 @@
+pub mod audit;
 pub mod auth;
 pub mod client_ip;
 pub mod health;
@@ -31,6 +32,7 @@ pub fn api_router(limiter: &client_ip::AuthLimiter) -> OpenApiRouter<AppState> {
         "/api",
         health::router()
             .merge(village::router())
+            .merge(audit::router())
             .merge(users::router())
             .merge(roles::router())
             .merge(auth::router())

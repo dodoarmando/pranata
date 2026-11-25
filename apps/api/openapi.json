@@ -10,6 +10,228 @@
 		"version": "0.1.0"
 	},
 	"paths": {
+		"/api/admin/audit": {
+			"get": {
+				"tags": ["audit"],
+				"summary": "Entries newest first, a page at a time.",
+				"description": "# Errors\n403 `permission_denied` without `audit.read`; 422 `validation_failed` for a\nmalformed filter, cursor or limit, or `from` after `to` (field `from`,\ncode `range_invalid`).",
+				"operationId": "listAuditEntries",
+				"parameters": [
+					{
+						"name": "actor",
+						"in": "query",
+						"description": "Only entries by this User.",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "action",
+						"in": "query",
+						"description": "Only this action, for example `update`.",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "object_type",
+						"in": "query",
+						"description": "Only this kind of object, for example `user`.",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "from",
+						"in": "query",
+						"description": "First day, `YYYY-MM-DD` in the Village's time zone.",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "to",
+						"in": "query",
+						"description": "Last day, inclusive, `YYYY-MM-DD` in the Village's time zone.",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "before",
+						"in": "query",
+						"description": "The `next` value of the previous page.",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"description": "Page size, 1 to 200; 50 when absent.",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "A page of entries and the cursor of the next page",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AuditPage"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "The Role lacks audit.read (code permission_denied)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Invalid filter (code validation_failed; field codes invalid, range_invalid)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
+		"/api/admin/audit.csv": {
+			"get": {
+				"tags": ["audit"],
+				"summary": "The log as a CSV file, newest first, at most 10 000 entries.",
+				"description": "# Errors\n403 `permission_denied` without `audit.read`; 422 `validation_failed` for a\nmalformed filter or `from` after `to`.",
+				"operationId": "exportAuditEntries",
+				"parameters": [
+					{
+						"name": "actor",
+						"in": "query",
+						"description": "Only entries by this User.",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "action",
+						"in": "query",
+						"description": "Only this action, for example `update`.",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "object_type",
+						"in": "query",
+						"description": "Only this kind of object, for example `user`.",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "from",
+						"in": "query",
+						"description": "First day, `YYYY-MM-DD` in the Village's time zone.",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "to",
+						"in": "query",
+						"description": "Last day, inclusive, `YYYY-MM-DD` in the Village's time zone.",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "A CSV file with the columns waktu, pengguna, tindakan, objek, id_objek, ringkasan, perubahan",
+						"content": {
+							"text/csv": {
+								"schema": {
+									"type": "string"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "The Role lacks audit.read (code permission_denied)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Invalid filter (code validation_failed; field codes invalid, range_invalid)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
 		"/api/admin/media": {
 			"post": {
 				"tags": ["media"],
@@ -1625,6 +1847,92 @@
 					}
 				}
 			},
+			"ActorRef": {
+				"type": "object",
+				"description": "The User who made a change.",
+				"required": ["id", "display_name", "username"],
+				"properties": {
+					"display_name": {
+						"type": "string"
+					},
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"username": {
+						"type": "string"
+					}
+				}
+			},
+			"AuditPage": {
+				"type": "object",
+				"description": "One page of the log.",
+				"required": ["entries"],
+				"properties": {
+					"entries": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/AuditRow"
+						}
+					},
+					"next": {
+						"type": ["string", "null"],
+						"description": "Pass as `before` to get the next page; `null` on the last page."
+					}
+				}
+			},
+			"AuditRow": {
+				"type": "object",
+				"description": "One entry of the log as the admin screen and the CSV show it.",
+				"required": [
+					"id",
+					"at",
+					"action",
+					"object_type",
+					"object_id",
+					"summary",
+					"changes"
+				],
+				"properties": {
+					"action": {
+						"type": "string"
+					},
+					"actor": {
+						"oneOf": [
+							{
+								"$ref": "#/components/schemas/ActorRef",
+								"description": "`null` for entries the system wrote itself."
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"at": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"changes": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/FieldChange"
+						}
+					},
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"object_id": {
+						"type": "string"
+					},
+					"object_type": {
+						"type": "string"
+					},
+					"summary": {
+						"type": "string"
+					}
+				}
+			},
 			"CreateUserRequest": {
 				"type": "object",
 				"description": "What an Administrator fills in to add a User.",
@@ -1679,6 +1987,18 @@
 						"$ref": "#/components/schemas/RoleRef"
 					},
 					"username": {
+						"type": "string"
+					}
+				}
+			},
+			"FieldChange": {
+				"type": "object",
+				"description": "One changed top-level field.",
+				"required": ["field", "before", "after"],
+				"properties": {
+					"after": {},
+					"before": {},
+					"field": {
 						"type": "string"
 					}
 				}
