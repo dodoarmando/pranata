@@ -550,6 +550,11 @@ pub async fn finish_sudo(
     let locked = lock_passkey(&mut tx, user.id, &credential.raw_id)
         .await?
         .ok_or_else(failed)?;
+    // Accepted limit: webauthn-rs checks the signature counter against the
+    // copy of the Passkey in `state`, taken when the ceremony started, not
+    // against the row locked above. A use in between is not seen as a
+    // cloned authenticator. A replay is still impossible: the challenge is
+    // single-use and was deleted by `take_challenge`.
     let result = webauthn
         .finish_passkey_authentication(credential, &state)
         .map_err(|error| refused(&error))?;
