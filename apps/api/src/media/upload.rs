@@ -19,6 +19,7 @@ use super::{
 };
 use crate::{
     ApiError, AppState, FieldError,
+    access::Permission,
     audit::{self, AuditAction, FieldChange, NewAuditEntry},
     auth::CurrentUser,
     error::Problem,
@@ -31,6 +32,10 @@ pub const MAX_IMAGE_BYTES: usize = 10 * 1024 * 1024;
 pub const MAX_DOCUMENT_BYTES: usize = 20 * 1024 * 1024;
 /// Room for the multipart framing around the largest file.
 const MULTIPART_OVERHEAD: usize = 1024 * 1024;
+
+/// Either Permission opens the media routes: the Village profile uses them for
+/// its photo, and content authors for their attachments.
+const MEDIA_PERMISSIONS: [Permission; 2] = [Permission::VillageManage, Permission::ContentWrite];
 
 /// The longest original file name kept.
 const MAX_NAME_CHARS: usize = 200;
@@ -168,7 +173,7 @@ async fn read_form(mut multipart: Multipart) -> Result<Form, ApiError> {
         (status = 201, description = "A new asset", body = MediaAsset),
         (status = 200, description = "The same file was uploaded before; the existing asset", body = MediaAsset),
         (status = 401, description = "Not signed in (code unauthenticated)", body = Problem, content_type = "application/problem+json"),
-        (status = 403, description = "Missing or wrong CSRF token (code csrf_mismatch)", body = Problem, content_type = "application/problem+json"),
+        (status = 403, description = "Missing or wrong CSRF token (code csrf_mismatch), or a Role without village.manage and content.write (code permission_denied)", body = Problem, content_type = "application/problem+json"),
         (status = 413, description = "Over 10 MB for an image or 20 MB for a document (code file_too_large)", body = Problem, content_type = "application/problem+json"),
         (status = 415, description = "Not JPEG, PNG or WebP for an image, or not PDF for a document (code unsupported_media_type)", body = Problem, content_type = "application/problem+json"),
         (status = 422, description = "Over 50 megapixels (code image_too_large), an unreadable image (code image_unreadable) or a bad form (code validation_failed)", body = Problem, content_type = "application/problem+json"),
@@ -179,6 +184,7 @@ pub async fn upload_media(
     user: CurrentUser,
     multipart: Multipart,
 ) -> Result<(StatusCode, Json<MediaAsset>), ApiError> {
+    user.require_any(&MEDIA_PERMISSIONS)?;
     let Form { file, name, kind } = read_form(multipart).await?;
 
     if file.len() > kind.max_bytes() {
@@ -352,14 +358,16 @@ fn created(field: &str, after: Value) -> FieldChange {
     responses(
         (status = 200, description = "The asset", body = MediaAsset),
         (status = 401, description = "Not signed in (code unauthenticated)", body = Problem, content_type = "application/problem+json"),
+        (status = 403, description = "The Role has neither village.manage nor content.write (code permission_denied)", body = Problem, content_type = "application/problem+json"),
         (status = 404, description = "No such asset (code media_not_found)", body = Problem, content_type = "application/problem+json"),
     )
 )]
 pub async fn get_media(
     State(state): State<AppState>,
-    _user: CurrentUser,
+    user: CurrentUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<MediaAsset>, ApiError> {
+    user.require_any(&MEDIA_PERMISSIONS)?;
     load(&state.db, id)
         .await?
         .map(Json)

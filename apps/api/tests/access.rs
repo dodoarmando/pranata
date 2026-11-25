@@ -197,6 +197,87 @@ async fn role_names_are_unique_ignoring_case(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn role_without_village_manage_cannot_edit_profile(pool: PgPool) {
+    let h = Harness::new(pool);
+    let role = h.role("Penulis", &["content.write"]).await;
+    h.user("budi", role).await;
+    let (cookie, csrf) = h.login("budi").await;
+
+    let put = Request::builder()
+        .method(Method::PUT)
+        .uri("/api/admin/village/profile")
+        .header(header::COOKIE, &cookie)
+        .header("x-csrf-token", &csrf)
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(
+            json!({"overview": null, "hero_asset_id": null, "updated_at": "2026-11-24T08:00:00Z"})
+                .to_string(),
+        ))
+        .unwrap();
+    let (denied, _) = h.send(put).await;
+    assert_eq!(denied.status, StatusCode::FORBIDDEN);
+    assert_eq!(denied.body["code"], "permission_denied");
+
+    let get = Request::builder()
+        .uri("/api/admin/village/profile")
+        .header(header::COOKIE, &cookie)
+        .body(Body::empty())
+        .unwrap();
+    assert_eq!(h.send(get).await.0.status, StatusCode::FORBIDDEN);
+
+    // `content.write` is enough for the media routes: they answer something else.
+    let boundary = "pranata-test-boundary";
+    let upload = Request::builder()
+        .method(Method::POST)
+        .uri("/api/admin/media")
+        .header(header::COOKIE, &cookie)
+        .header("x-csrf-token", &csrf)
+        .header(
+            header::CONTENT_TYPE,
+            format!("multipart/form-data; boundary={boundary}"),
+        )
+        .body(Body::from(format!("--{boundary}--\r\n")))
+        .unwrap();
+    assert_ne!(h.send(upload).await.0.status, StatusCode::FORBIDDEN);
+    let read = Request::builder()
+        .uri(format!("/api/admin/media/{}", uuid::Uuid::new_v4()))
+        .header(header::COOKIE, &cookie)
+        .body(Body::empty())
+        .unwrap();
+    assert_eq!(h.send(read).await.0.status, StatusCode::NOT_FOUND);
+}
+
+#[sqlx::test]
+async fn role_without_any_media_permission_cannot_upload(pool: PgPool) {
+    let h = Harness::new(pool);
+    let role = h.role("Pengawas", &["audit.read"]).await;
+    h.user("budi", role).await;
+    let (cookie, csrf) = h.login("budi").await;
+
+    let boundary = "pranata-test-boundary";
+    let upload = Request::builder()
+        .method(Method::POST)
+        .uri("/api/admin/media")
+        .header(header::COOKIE, &cookie)
+        .header("x-csrf-token", &csrf)
+        .header(
+            header::CONTENT_TYPE,
+            format!("multipart/form-data; boundary={boundary}"),
+        )
+        .body(Body::from(format!("--{boundary}--\r\n")))
+        .unwrap();
+    let (denied, _) = h.send(upload).await;
+    assert_eq!(denied.status, StatusCode::FORBIDDEN);
+    assert_eq!(denied.body["code"], "permission_denied");
+    let read = Request::builder()
+        .uri(format!("/api/admin/media/{}", uuid::Uuid::new_v4()))
+        .header(header::COOKIE, &cookie)
+        .body(Body::empty())
+        .unwrap();
+    assert_eq!(h.send(read).await.0.status, StatusCode::FORBIDDEN);
+}
+
+#[sqlx::test]
 async fn me_lists_role_and_permissions(pool: PgPool) {
     let h = Harness::new(pool);
     let role = administrator_role(&h.pool).await;

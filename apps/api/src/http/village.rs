@@ -5,6 +5,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
     ApiError, AppState,
+    access::Permission,
     auth::CurrentUser,
     error::Problem,
     http::json::ApiJson,
@@ -50,13 +51,15 @@ pub async fn get_public_village(
     responses(
         (status = 200, description = "The overview and hero photo", body = Profile),
         (status = 401, description = "Not signed in (code unauthenticated)", body = Problem, content_type = "application/problem+json"),
+        (status = 403, description = "The Role lacks village.manage (code permission_denied)", body = Problem, content_type = "application/problem+json"),
         (status = 404, description = "The Village is not initialised yet (code village_not_initialized)", body = Problem, content_type = "application/problem+json"),
     )
 )]
 pub async fn get_village_profile(
     State(state): State<AppState>,
-    _user: CurrentUser,
+    user: CurrentUser,
 ) -> Result<Json<Profile>, ApiError> {
+    user.require(Permission::VillageManage)?;
     profile::get(&state.db).await.map(Json)
 }
 
@@ -76,6 +79,7 @@ pub async fn get_village_profile(
         (status = 200, description = "The saved profile", body = Profile),
         (status = 400, description = "Body is not valid JSON (code invalid_json)", body = Problem, content_type = "application/problem+json"),
         (status = 401, description = "Not signed in (code unauthenticated)", body = Problem, content_type = "application/problem+json"),
+        (status = 403, description = "The Role lacks village.manage (code permission_denied)", body = Problem, content_type = "application/problem+json"),
         (status = 404, description = "The Village is not initialised yet (code village_not_initialized)", body = Problem, content_type = "application/problem+json"),
         (status = 409, description = "The profile changed since it was read (code stale_write)", body = Problem, content_type = "application/problem+json"),
         (status = 415, description = "Request is not marked as JSON (code json_required)", body = Problem, content_type = "application/problem+json"),
@@ -87,6 +91,7 @@ pub async fn put_village_profile(
     user: CurrentUser,
     ApiJson(input): ApiJson<ProfileUpdate>,
 ) -> Result<Json<Profile>, ApiError> {
+    user.require(Permission::VillageManage)?;
     let (saved, purge_job) = profile::update(&state.db, user.id, input).await?;
     purge_now(&state, purge_job).await;
     Ok(Json(saved))
