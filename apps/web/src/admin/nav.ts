@@ -10,7 +10,7 @@ import type { Permission } from "@/api/generated/model";
 
 // Routes that exist today. An item with `to: null` is planned (R1+) and is not
 // rendered, so the menu never links to a dead page.
-export type AdminPath = "/admin/desa/profil";
+export type AdminPath = "/admin/desa/profil" | "/admin/sistem/pengguna";
 
 export interface NavItem {
 	label: string;
@@ -85,7 +85,11 @@ export const NAV: NavGroup[] = [
 		label: "Sistem",
 		icon: ShieldIcon,
 		items: [
-			{ label: "Pengguna", to: null, permission: "user.manage" },
+			{
+				label: "Pengguna",
+				to: "/admin/sistem/pengguna",
+				permission: "user.manage",
+			},
 			{ label: "Peran", to: null, permission: "role.manage" },
 			{ label: "Log audit", to: null, permission: "audit.read" },
 		],
