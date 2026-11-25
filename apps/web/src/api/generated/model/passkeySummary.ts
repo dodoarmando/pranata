@@ -13,7 +13,7 @@ export interface PasskeySummary {
   created_at: string;
   id: string;
   /**
-     * The last sign-in with it; null when never used.
+     * The last sign-in or Sudo confirmation with it; null when never used.
      * @nullable
      */
   last_used_at?: string | null;

@@ -20,6 +20,8 @@ export * from './finishPasskeyRegistrationRequest';
 export * from './finishPasskeyRegistrationRequestCredential';
 export * from './finishPasskeySignInRequest';
 export * from './finishPasskeySignInRequestCredential';
+export * from './finishPasskeySudoRequest';
+export * from './finishPasskeySudoRequestCredential';
 export * from './health';
 export * from './listAuditEntriesParams';
 export * from './loginRequest';

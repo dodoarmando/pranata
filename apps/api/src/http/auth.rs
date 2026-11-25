@@ -16,7 +16,7 @@ use crate::{
     auth::{
         self, CurrentUser, Identified, access_link, password,
         session::{self, AuthSession},
-        sudo::SUDO_WINDOW,
+        sudo::{self, SUDO_WINDOW},
         throttle,
     },
     error::Problem,
@@ -364,25 +364,12 @@ pub async fn confirm_sudo(
         return Err(ApiError::Unauthorized("invalid_credentials"));
     }
 
-    let now = state.clock.now();
     let mut tx = state.db.begin().await?;
-    sqlx::query!(
-        "UPDATE sessions SET reauthenticated_at = $2 WHERE token_hash = $1",
-        session.token_hash,
-        now,
-    )
-    .execute(&mut *tx)
-    .await?;
-    audit::record(
+    sudo::reopen(
         &mut tx,
-        NewAuditEntry {
-            actor: Some(session.user.id),
-            action: AuditAction::Reauthenticate,
-            object_type: "user",
-            object_id: session.user.id.0.to_string(),
-            summary: format!("{} confirmed their password", session.user.username),
-            changes: Vec::new(),
-        },
+        &session,
+        state.clock.now(),
+        format!("{} confirmed their password", session.user.username),
     )
     .await?;
     tx.commit().await?;

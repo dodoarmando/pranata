@@ -16,7 +16,8 @@ export interface PasskeyChallenge {
   challenge_id: string;
   /**
      * `CredentialCreationOptions` (registration) or
-     * `CredentialRequestOptions` (sign-in), binary fields as base64url.
+     * `CredentialRequestOptions` (sign-in, Sudo Mode), binary fields as
+     * base64url.
      */
   options: PasskeyChallengeOptions;
 }

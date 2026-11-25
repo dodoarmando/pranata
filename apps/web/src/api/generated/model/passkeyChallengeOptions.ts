@@ -8,6 +8,7 @@
 
 /**
  * `CredentialCreationOptions` (registration) or
- * `CredentialRequestOptions` (sign-in), binary fields as base64url.
+ * `CredentialRequestOptions` (sign-in, Sudo Mode), binary fields as
+ * base64url.
  */
 export type PasskeyChallengeOptions = { [key: string]: unknown };

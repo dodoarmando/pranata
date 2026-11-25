@@ -2228,6 +2228,161 @@
 				]
 			}
 		},
+		"/api/auth/sudo/passkey/finish": {
+			"post": {
+				"tags": ["auth"],
+				"summary": "Finish confirming Sudo Mode with a Passkey: the window opens for 10\nminutes.",
+				"description": "# Errors\n401 `unauthenticated` or `passkey_failed`; 403 `csrf_mismatch`; 410\n`passkey_challenge_expired`.",
+				"operationId": "finishPasskeySudo",
+				"parameters": [
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/FinishPasskeySudoRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"204": {
+						"description": "Confirmed; Sudo Mode is open for 10 minutes"
+					},
+					"400": {
+						"description": "Body is not valid JSON (code invalid_json)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated), or not one of the User's Passkeys or a response that does not verify (code passkey_failed)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Missing or wrong CSRF token (code csrf_mismatch)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"410": {
+						"description": "The challenge is unknown, used or expired, or belongs to another ceremony or User (code passkey_challenge_expired)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"415": {
+						"description": "Request is not marked as JSON (code json_required)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
+		"/api/auth/sudo/passkey/start": {
+			"post": {
+				"tags": ["auth"],
+				"summary": "Start confirming Sudo Mode with one of the signed-in User's Passkeys.",
+				"description": "# Errors\n401 `unauthenticated`; 403 `csrf_mismatch`; 404 `passkey_not_found`.",
+				"operationId": "startPasskeySudo",
+				"parameters": [
+					{
+						"name": "x-csrf-token",
+						"in": "header",
+						"description": "The CSRF token from sign-in",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The challenge and the options for navigator.credentials.get() (not cached)",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PasskeyChallenge"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Missing or wrong CSRF token (code csrf_mismatch)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "The signed-in User has no Passkey (code passkey_not_found)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"session": []
+					}
+				]
+			}
+		},
 		"/api/healthz": {
 			"get": {
 				"tags": ["ops"],
@@ -2532,6 +2687,21 @@
 					}
 				}
 			},
+			"FinishPasskeySudoRequest": {
+				"type": "object",
+				"description": "The answer to a Sudo challenge.",
+				"required": ["challenge_id", "credential"],
+				"properties": {
+					"challenge_id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"credential": {
+						"type": "object",
+						"description": "The `PublicKeyCredential` from `navigator.credentials.get()`, as JSON\nwith binary fields in base64url."
+					}
+				}
+			},
 			"Health": {
 				"type": "object",
 				"required": ["status", "version"],
@@ -2642,7 +2812,7 @@
 					},
 					"options": {
 						"type": "object",
-						"description": "`CredentialCreationOptions` (registration) or\n`CredentialRequestOptions` (sign-in), binary fields as base64url."
+						"description": "`CredentialCreationOptions` (registration) or\n`CredentialRequestOptions` (sign-in, Sudo Mode), binary fields as\nbase64url."
 					}
 				}
 			},
@@ -2662,7 +2832,7 @@
 					"last_used_at": {
 						"type": ["string", "null"],
 						"format": "date-time",
-						"description": "The last sign-in with it; null when never used."
+						"description": "The last sign-in or Sudo confirmation with it; null when never used."
 					},
 					"name": {
 						"type": "string"

@@ -1,5 +1,5 @@
 //! Passkeys (D-30, D-32): WebAuthn credentials a User signs in with instead of
-//! a password.
+//! a password, and confirms Sudo Mode with (D-31).
 //!
 //! Every ceremony has two steps. The start stores webauthn-rs's state in
 //! `webauthn_challenges` (never on the client) for [`CHALLENGE_LIFETIME`] and
@@ -24,14 +24,14 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use webauthn_rs::prelude::{
     AuthenticationResult, CreationChallengeResponse, DiscoverableAuthentication, Passkey,
-    PasskeyRegistration, PublicKeyCredential, RegisterPublicKeyCredential, Webauthn,
-    WebauthnBuilder,
+    PasskeyAuthentication, PasskeyRegistration, PublicKeyCredential, RegisterPublicKeyCredential,
+    Webauthn, WebauthnBuilder,
 };
 use webauthn_rs_proto::{
     AuthenticatorSelectionCriteria, ResidentKeyRequirement, UserVerificationPolicy,
 };
 
-use super::{CurrentUser, Identified};
+use super::{CurrentUser, Identified, session::AuthSession, sudo};
 use crate::{
     ApiError, FieldError,
     access::users::guard_own_passkey_removal,
@@ -65,7 +65,7 @@ pub struct PasskeySummary {
     #[serde(with = "time::serde::rfc3339")]
     #[schema(value_type = String, format = DateTime)]
     pub created_at: OffsetDateTime,
-    /// The last sign-in with it; null when never used.
+    /// The last sign-in or Sudo confirmation with it; null when never used.
     #[serde(with = "time::serde::rfc3339::option")]
     #[schema(value_type = Option<String>, format = DateTime)]
     pub last_used_at: Option<OffsetDateTime>,
@@ -78,7 +78,8 @@ pub struct PasskeyChallenge {
     /// Valid for five minutes, for one finish.
     pub challenge_id: Uuid,
     /// `CredentialCreationOptions` (registration) or
-    /// `CredentialRequestOptions` (sign-in), binary fields as base64url.
+    /// `CredentialRequestOptions` (sign-in, Sudo Mode), binary fields as
+    /// base64url.
     #[schema(value_type = Object)]
     pub options: serde_json::Value,
 }
@@ -87,6 +88,7 @@ pub struct PasskeyChallenge {
 enum Ceremony {
     Register,
     SignIn,
+    Sudo,
 }
 
 impl Ceremony {
@@ -94,6 +96,7 @@ impl Ceremony {
         match self {
             Self::Register => "register",
             Self::SignIn => "sign_in",
+            Self::Sudo => "sudo",
         }
     }
 }
@@ -258,6 +261,19 @@ async fn record_use(
     .await
     .context("recording a passkey use")?;
     Ok(())
+}
+
+async fn stored_passkeys(db: &PgPool, user: UserId) -> anyhow::Result<Vec<Passkey>> {
+    sqlx::query_scalar!(
+        "SELECT passkey FROM passkeys WHERE user_id = $1 ORDER BY created_at, id",
+        user.0,
+    )
+    .fetch_all(db)
+    .await
+    .context("loading passkeys")?
+    .into_iter()
+    .map(|passkey| serde_json::from_value(passkey).context("reading a stored passkey"))
+    .collect()
 }
 
 /// The signed-in User's Passkeys, oldest first.
@@ -486,6 +502,67 @@ pub async fn verify_sign_in(
         .map_err(|error| refused(&error))?;
     record_use(conn, locked, &result, now).await?;
     Ok(user)
+}
+
+/// Start confirming Sudo Mode with one of `user`'s Passkeys.
+///
+/// # Errors
+/// 404 `passkey_not_found` when the User has none.
+pub async fn start_sudo(
+    db: &PgPool,
+    webauthn: &Webauthn,
+    user: &CurrentUser,
+    now: OffsetDateTime,
+) -> Result<PasskeyChallenge, ApiError> {
+    let passkeys = stored_passkeys(db, user.id).await?;
+    if passkeys.is_empty() {
+        return Err(not_found());
+    }
+    let (options, state) = webauthn
+        .start_passkey_authentication(&passkeys)
+        .map_err(internal("starting a passkey confirmation"))?;
+    store_challenge(db, Ceremony::Sudo, Some(user.id), &state, &options, now).await
+}
+
+/// Finish a Sudo confirmation the session's User started: reopen the Sudo
+/// window of this session.
+///
+/// # Errors
+/// 410 `passkey_challenge_expired`; 401 `passkey_failed` for a credential that
+/// is not one of the User's Passkeys (any more) or does not verify.
+pub async fn finish_sudo(
+    db: &PgPool,
+    webauthn: &Webauthn,
+    session: &AuthSession,
+    challenge_id: Uuid,
+    credential: &PublicKeyCredential,
+    now: OffsetDateTime,
+) -> Result<(), ApiError> {
+    let user = &session.user;
+    let state: PasskeyAuthentication =
+        take_challenge(db, challenge_id, Ceremony::Sudo, Some(user.id), now).await?;
+    let mut tx = db.begin().await?;
+    lock_active_user(&mut tx, user.id)
+        .await?
+        .ok_or_else(failed)?;
+    // The state lists the Passkeys the User had at the start; one deleted
+    // since must not count.
+    let locked = lock_passkey(&mut tx, user.id, &credential.raw_id)
+        .await?
+        .ok_or_else(failed)?;
+    let result = webauthn
+        .finish_passkey_authentication(credential, &state)
+        .map_err(|error| refused(&error))?;
+    record_use(&mut tx, locked, &result, now).await?;
+    sudo::reopen(
+        &mut tx,
+        session,
+        now,
+        format!("{} confirmed their identity with a passkey", user.username),
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(())
 }
 
 #[cfg(test)]

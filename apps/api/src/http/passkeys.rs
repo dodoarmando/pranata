@@ -1,8 +1,9 @@
-//! Passkey routes (D-30, D-32): register, list and delete your own Passkeys,
-//! and sign in with one without a username. The ceremonies live in
-//! [`crate::auth::passkey`].
+//! Passkey routes (D-30, D-31, D-32): register, list and delete your own
+//! Passkeys, sign in with one without a username, and confirm Sudo Mode with
+//! one. The ceremonies live in [`crate::auth::passkey`].
 //!
-//! Everything under `/api/auth/passkeys` needs the CSRF header ([`crate::auth::csrf`]). The sign-in routes are mounted with the
+//! Everything under `/api/auth/passkeys` and `/api/auth/sudo` needs the CSRF
+//! header ([`crate::auth::csrf`]). The sign-in routes are mounted with the
 //! other unauthenticated POSTs in [`super::auth::unauthenticated_router`],
 //! behind the per-IP limit.
 
@@ -56,6 +57,16 @@ pub struct FinishPasskeySignInRequest {
     /// Keep the session for 30 days instead of until the browser closes.
     #[serde(default)]
     pub remember: bool,
+}
+
+/// The answer to a Sudo challenge.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct FinishPasskeySudoRequest {
+    pub challenge_id: Uuid,
+    /// The `PublicKeyCredential` from `navigator.credentials.get()`, as JSON
+    /// with binary fields in base64url.
+    #[schema(value_type = Object)]
+    pub credential: PublicKeyCredential,
 }
 
 /// The signed-in User's Passkeys, oldest first.
@@ -249,6 +260,73 @@ pub async fn finish_passkey_sign_in(
     Ok(signed_in)
 }
 
+/// Start confirming Sudo Mode with one of the signed-in User's Passkeys.
+///
+/// # Errors
+/// 401 `unauthenticated`; 403 `csrf_mismatch`; 404 `passkey_not_found`.
+#[utoipa::path(
+    post,
+    path = "/auth/sudo/passkey/start",
+    operation_id = "startPasskeySudo",
+    tag = "auth",
+    params(("x-csrf-token" = String, Header, description = "The CSRF token from sign-in")),
+    security(("session" = [])),
+    responses(
+        (status = 200, description = "The challenge and the options for navigator.credentials.get() (not cached)", body = PasskeyChallenge),
+        (status = 401, description = "Not signed in (code unauthenticated)", body = Problem, content_type = "application/problem+json"),
+        (status = 403, description = "Missing or wrong CSRF token (code csrf_mismatch)", body = Problem, content_type = "application/problem+json"),
+        (status = 404, description = "The signed-in User has no Passkey (code passkey_not_found)", body = Problem, content_type = "application/problem+json"),
+    )
+)]
+pub async fn start_passkey_sudo(
+    State(state): State<AppState>,
+    user: CurrentUser,
+) -> Result<impl IntoResponse, ApiError> {
+    let challenge =
+        passkey::start_sudo(&state.db, &state.webauthn, &user, state.clock.now()).await?;
+    Ok((no_store(), Json(challenge)))
+}
+
+/// Finish confirming Sudo Mode with a Passkey: the window opens for 10
+/// minutes.
+///
+/// # Errors
+/// 401 `unauthenticated` or `passkey_failed`; 403 `csrf_mismatch`; 410
+/// `passkey_challenge_expired`.
+#[utoipa::path(
+    post,
+    path = "/auth/sudo/passkey/finish",
+    operation_id = "finishPasskeySudo",
+    tag = "auth",
+    params(("x-csrf-token" = String, Header, description = "The CSRF token from sign-in")),
+    security(("session" = [])),
+    request_body = FinishPasskeySudoRequest,
+    responses(
+        (status = 204, description = "Confirmed; Sudo Mode is open for 10 minutes"),
+        (status = 400, description = "Body is not valid JSON (code invalid_json)", body = Problem, content_type = "application/problem+json"),
+        (status = 401, description = "Not signed in (code unauthenticated), or not one of the User's Passkeys or a response that does not verify (code passkey_failed)", body = Problem, content_type = "application/problem+json"),
+        (status = 403, description = "Missing or wrong CSRF token (code csrf_mismatch)", body = Problem, content_type = "application/problem+json"),
+        (status = 410, description = "The challenge is unknown, used or expired, or belongs to another ceremony or User (code passkey_challenge_expired)", body = Problem, content_type = "application/problem+json"),
+        (status = 415, description = "Request is not marked as JSON (code json_required)", body = Problem, content_type = "application/problem+json"),
+    )
+)]
+pub async fn finish_passkey_sudo(
+    State(state): State<AppState>,
+    session: AuthSession,
+    ApiJson(request): ApiJson<FinishPasskeySudoRequest>,
+) -> Result<StatusCode, ApiError> {
+    passkey::finish_sudo(
+        &state.db,
+        &state.webauthn,
+        &session,
+        request.challenge_id,
+        &request.credential,
+        state.clock.now(),
+    )
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// Routes that need a session. Passkey sign-in is in
 /// [`super::auth::unauthenticated_router`].
 pub fn router() -> OpenApiRouter<AppState> {
@@ -257,4 +335,6 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(start_passkey_registration))
         .routes(routes!(finish_passkey_registration))
         .routes(routes!(delete_passkey))
+        .routes(routes!(start_passkey_sudo))
+        .routes(routes!(finish_passkey_sudo))
 }

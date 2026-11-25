@@ -391,6 +391,21 @@ impl Harness {
             .await
     }
 
+    async fn passkey_sudo(&self, session: &Session, key: &mut Authenticator) -> Reply {
+        let start = self
+            .call(Method::POST, "/api/auth/sudo/passkey/start", session, None)
+            .await;
+        assert_eq!(start.status, StatusCode::OK, "{}", start.body);
+        let credential = key.get(&start.body["options"]);
+        self.call(
+            Method::POST,
+            "/api/auth/sudo/passkey/finish",
+            session,
+            Some(json!({"challenge_id": start.body["challenge_id"], "credential": credential})),
+        )
+        .await
+    }
+
     async fn challenge_ids(&self) -> Vec<uuid::Uuid> {
         sqlx::query_scalar!("SELECT id FROM webauthn_challenges ORDER BY id")
             .fetch_all(&self.pool)
@@ -408,6 +423,18 @@ impl Harness {
         .fetch_one(&self.pool)
         .await
         .unwrap()
+    }
+
+    async fn create_user(&self, session: &Session, username: &str) -> Reply {
+        self.call(
+            Method::POST,
+            "/api/admin/users",
+            session,
+            Some(
+                json!({"username": username, "display_name": "Siti", "role_id": self.admin_role.0}),
+            ),
+        )
+        .await
     }
 }
 
@@ -743,6 +770,105 @@ async fn passkey_sign_in_ignores_password_throttle(pool: PgPool) {
 
     let reply = h.passkey_sign_in(&mut key).await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.body);
+}
+
+#[sqlx::test]
+async fn passkey_reopens_sudo(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let (budi, session) = h.admin("budi").await;
+    let mut key = Authenticator::new();
+    let passkey = h.add_passkey(&session, &mut key).await;
+    h.clock.advance(Duration::minutes(11));
+
+    let refused = h.create_user(&session, "siti").await;
+    assert_problem(&refused, StatusCode::FORBIDDEN, "sudo_required");
+
+    let reply = h.passkey_sudo(&session, &mut key).await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.body);
+    let created = h.create_user(&session, "siti").await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.body);
+    let me = h.me(&session.cookie).await;
+    assert_eq!(
+        instant(&me.body["sudo_until"]),
+        h.clock.now_for_test() + Duration::minutes(10)
+    );
+
+    let entry =
+        sqlx::query!("SELECT actor, object_id FROM audit_entries WHERE action = 'reauthenticate'")
+            .fetch_one(&h.pool)
+            .await
+            .unwrap();
+    assert_eq!(entry.actor, Some(budi.0));
+    assert_eq!(entry.object_id, budi.0.to_string());
+    let used = sqlx::query_scalar!(
+        "SELECT last_used_at FROM passkeys WHERE id = $1",
+        passkey.parse::<uuid::Uuid>().unwrap()
+    )
+    .fetch_one(&h.pool)
+    .await
+    .unwrap();
+    assert_eq!(used, Some(h.clock.now_for_test()));
+}
+
+#[sqlx::test]
+async fn sudo_accepts_only_the_signed_in_users_passkeys(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let (_, andi) = h.admin("andi").await;
+    let (_, budi) = h.admin("budi").await;
+    let mut andi_key = Authenticator::new();
+    let mut budi_key = Authenticator::new();
+    h.add_passkey(&andi, &mut andi_key).await;
+    h.add_passkey(&budi, &mut budi_key).await;
+    h.clock.advance(Duration::minutes(11));
+
+    // Budi answers Andi's Sudo challenge with Budi's passkey.
+    let start = h
+        .call(Method::POST, "/api/auth/sudo/passkey/start", &andi, None)
+        .await;
+    assert_eq!(start.status, StatusCode::OK, "{}", start.body);
+    let mut options = start.body["options"].clone();
+    options["publicKey"]["allowCredentials"] = json!([]);
+    let credential = budi_key.get(&options);
+    let reply = h
+        .call(
+            Method::POST,
+            "/api/auth/sudo/passkey/finish",
+            &andi,
+            Some(json!({"challenge_id": start.body["challenge_id"], "credential": credential})),
+        )
+        .await;
+    assert_problem(&reply, StatusCode::UNAUTHORIZED, "passkey_failed");
+    assert_eq!(h.me(&andi.cookie).await.body["sudo_until"], Value::Null);
+
+    // A Sudo challenge is not a sign-in challenge.
+    let start = h
+        .call(Method::POST, "/api/auth/sudo/passkey/start", &budi, None)
+        .await;
+    let credential = budi_key.get(&start.body["options"]);
+    let reply = h
+        .finish_sign_in(&start.body["challenge_id"], &credential)
+        .await;
+    assert_problem(&reply, StatusCode::GONE, "passkey_challenge_expired");
+}
+
+#[sqlx::test]
+async fn sudo_with_a_passkey_needs_one(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let (_, session) = h.admin("budi").await;
+    let start = h
+        .call(Method::POST, "/api/auth/sudo/passkey/start", &session, None)
+        .await;
+    assert_problem(&start, StatusCode::NOT_FOUND, "passkey_not_found");
+    let unprotected = h
+        .request(
+            Method::POST,
+            "/api/auth/sudo/passkey/start",
+            Some(&session),
+            false,
+            None,
+        )
+        .await;
+    assert_problem(&unprotected, StatusCode::FORBIDDEN, "csrf_mismatch");
 }
 
 #[sqlx::test]
