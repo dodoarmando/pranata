@@ -33,6 +33,16 @@ if ! diff <(sed -n '/encode zstd gzip/,$p' infra/dev/Caddyfile) <(sed -n '/encod
     exit 1
 fi
 
+# Without trusted proxies Caddy overwrites a client's X-Forwarded-For with the
+# real address, which the api trusts for its per-address limit (D-34, ADR 0009).
+echo "check-infra: no trusted_proxies in the Caddyfiles"
+for caddyfile in "$work/Caddyfile" infra/dev/Caddyfile; do
+    if grep -En '^[^#]*trusted_proxies' "$caddyfile" >&2; then
+        echo "check-infra: $caddyfile sets trusted_proxies; the api would trust a client-chosen address" >&2
+        exit 1
+    fi
+done
+
 echo "check-infra: Quadlet dry-run"
 mkdir -p "$work/units"
 for unit in pranata.network pranata-postgres.container pranata-api.container pranata-web.container pranata-caddy.container; do

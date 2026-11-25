@@ -24,10 +24,13 @@ use crate::ApiError;
 /// The address the request came from: the last parseable entry of
 /// `X-Forwarded-For`, else the peer address.
 ///
-/// Trusting the header is safe because only Caddy can reach the API: on an
-/// Installation the API listens on the pod network only, and in development
-/// on 127.0.0.1. Caddy replaces the header with the real client address, so
-/// its last entry is the one nobody else wrote.
+/// Trusting the header is safe because nothing from outside reaches the API
+/// past Caddy: on an Installation the API is published on 127.0.0.1 only, for
+/// Caddy on the host network (ADR 0009), and in development it listens on
+/// 127.0.0.1. Caddy sets no trusted proxies, so it replaces the header with
+/// the real client address, and its last entry is the one nobody else wrote.
+/// A local user on the VPS could reach the API directly and choose the
+/// header; an Installation's VPS runs nothing else, so that is accepted.
 #[must_use]
 pub fn client_ip(headers: &HeaderMap, peer: Option<SocketAddr>) -> Option<IpAddr> {
     headers

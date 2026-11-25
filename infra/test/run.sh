@@ -71,7 +71,10 @@ rm -f "$work/images.tar"
 podman save --multi-image-archive -o "$work/images.tar" \
     "localhost/pranata-api:$version" "localhost/pranata-web:$version"
 
-podman run -d --name "$name" --label "$label" --privileged --systemd=always "$image" >/dev/null
+# 443 is published to this host so a request can come from outside the test
+# container, as a client's does; 8098 serves peer-echo.py (see below).
+podman run -d --name "$name" --label "$label" --privileged --systemd=always \
+    -p 127.0.0.1::443 -p 127.0.0.1::8098 "$image" >/dev/null
 for _ in $(seq 1 60); do
     state="$(podman exec "$name" systemctl is-system-running 2>/dev/null || true)"
     case "$state" in running | degraded) break ;; esac
@@ -114,6 +117,8 @@ echo "infra-test: garage $(podman exec "$s3_name" /garage --version | head -n 1)
 # Stand-in for Healthchecks.io: logs the path of every ping it gets.
 podman cp infra/test/ping-server.py "$name:/tmp/ping-server.py"
 podman exec -d "$name" python3 /tmp/ping-server.py /tmp/pings.log
+podman cp infra/test/peer-echo.py "$name:/tmp/peer-echo.py"
+podman exec -d "$name" python3 /tmp/peer-echo.py
 
 cat >"$work/inventory.yml" <<YAML
 all:
@@ -149,6 +154,8 @@ YAML
 
 play() { ansible-playbook -i "$work/inventory.yml" "$@"; }
 in_container() { podman exec "$name" "$@"; }
+# Runs a shell snippet as the Pranata user with its systemd user manager's bus.
+as_pranata() { in_container su -s /bin/sh pranata -c "export XDG_RUNTIME_DIR=/run/user/65536; $1"; }
 
 echo "infra-test: provision"
 play infra/provision.yml --skip-tags firewall,ssh | tee "$work/provision.log"
@@ -206,9 +213,43 @@ echo "$headers" | sed 's/^/  /'
 echo "$headers" | grep -qi '^cache-control: public, max-age=31536000, immutable' ||
     { echo "infra-test: /media/ lacks the immutable Cache-Control" >&2; exit 1; }
 
+echo "infra-test: the api logs the address a request came from (D-34)"
+# A failed sign-in from this host, through the published 443. peer-echo.py,
+# behind the same kind of forward, tells which address such a request reaches
+# the test container from; Caddy must hand that address to the api, not the
+# address of a forwarder of its own.
+https_port="$(podman port "$name" 443/tcp | head -n 1 | sed 's/.*://')"
+peer="$(curl -fsS --max-time 5 "http://127.0.0.1:$(podman port "$name" 8098/tcp | head -n 1 | sed 's/.*://')/")"
+request_id="infra-test-client-ip-$(openssl rand -hex 8)"
+status="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 \
+    --connect-to "localhost:443:127.0.0.1:$https_port" \
+    -H "X-Request-Id: $request_id" -H 'Content-Type: application/json' \
+    --data '{"username":"infra-test","password":"not the password"}' \
+    https://localhost/api/auth/login)"
+[ "$status" = "401" ] || { echo "infra-test: the wrong-password sign-in answered $status, want 401" >&2; exit 1; }
+logged=""
+for _ in $(seq 1 10); do
+    logged="$(as_pranata 'podman logs pranata-api 2>&1' | python3 -I -c '
+import json, sys
+request_id = sys.argv[1]
+for line in sys.stdin:
+    try:
+        entry = json.loads(line)
+    except ValueError:
+        continue
+    for span in [entry.get("span") or {}, *entry.get("spans", [])]:
+        if span.get("request_id") == request_id and "client_ip" in span:
+            print(span["client_ip"])
+            sys.exit()
+' "$request_id")"
+    [ -n "$logged" ] && break
+    sleep 1
+done
+echo "  the request came from $peer; the api logged client_ip $logged"
+[ "$logged" = "$peer" ] ||
+    { echo "infra-test: the api logged client_ip '$logged' for a request from $peer" >&2; exit 1; }
+
 echo "infra-test: backups, restore check and pings"
-# Runs a shell snippet as the Pranata user with its systemd user manager's bus.
-as_pranata() { in_container su -s /bin/sh pranata -c "export XDG_RUNTIME_DIR=/run/user/65536; $1"; }
 # Runs a command in a transient user unit that loads the env files the way the
 # real units do (EnvironmentFile=), so the test never sources them with a shell.
 with_env() {

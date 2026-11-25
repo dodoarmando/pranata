@@ -9,6 +9,8 @@ Image={{ pranata_image_registry }}/pranata-web:{{ pranata_release }}
 ContainerName=pranata-web
 Network=pranata.network
 NetworkAlias=web
+# For Caddy, on the host network (ADR 0009); loopback only.
+PublishPort=127.0.0.1:3000:3000
 EnvironmentFile=%h/.config/pranata/web.env
 ReadOnly=true
 NoNewPrivileges=true
