@@ -256,6 +256,21 @@ a new Access Link in the same way. Username rules are the same as above. If the
 username already exists, the command fails with the reason; pick another
 username. There is no screen for issuing a link to an existing user yet.
 
+## A locked account
+
+Ten wrong passwords for one username within 15 minutes lock that account for
+the rest of the window, even for the right password. The sign-in screen then
+says there were too many attempts. To get back in, do one of these:
+
+- Sign in with a Passkey, if the User has one. A Passkey sign-in does not
+  depend on the password count.
+- Ask another Administrator for an Access Link. Redeeming it sets a new
+  password and clears the count.
+- Wait 15 minutes from the oldest failed attempt.
+- If no Administrator can sign in, create a new Administrator on the server
+  with `just create-admin <host> <username> "<Display Name>"` (see the section
+  above), then use that account.
+
 ## Deploy a new version
 
 Releases are published as images by the release workflow (`docs/release.md`).

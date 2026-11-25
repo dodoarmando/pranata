@@ -6,6 +6,7 @@ pub mod csrf;
 pub mod password;
 pub mod session;
 pub mod sudo;
+pub mod throttle;
 
 use anyhow::Context;
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};

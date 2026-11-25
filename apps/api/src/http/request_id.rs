@@ -5,6 +5,8 @@ use tower_http::{
 };
 use tracing::{Level, info_span};
 
+use super::client_ip::{client_ip, peer_of};
+
 pub const HEADER: &str = "x-request-id";
 
 /// Give every request an ID (keeping a caller-supplied one), put it on the
@@ -23,9 +25,12 @@ pub fn layer(router: Router) -> Router {
                         .get(HEADER)
                         .and_then(|v| v.to_str().ok())
                         .unwrap_or_default();
+                    let client_ip = client_ip(request.headers(), peer_of(request))
+                        .map_or_else(String::new, |ip| ip.to_string());
                     info_span!(
                         "request",
                         %request_id,
+                        %client_ip,
                         method = %request.method(),
                         path = %request.uri().path(),
                     )

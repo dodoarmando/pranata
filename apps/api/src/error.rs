@@ -50,6 +50,12 @@ pub enum ApiError {
     Unprocessable(&'static str),
     #[error("unavailable: {0}")]
     Unavailable(&'static str),
+    #[error("too many requests: {code}")]
+    TooManyRequests {
+        code: &'static str,
+        /// Seconds until the caller may try again (the `Retry-After` header).
+        retry_after: u64,
+    },
     #[error("validation failed")]
     Validation(Vec<FieldError>),
     #[error(transparent)]
@@ -79,6 +85,9 @@ impl ApiError {
             Self::Unavailable(code) => {
                 (StatusCode::SERVICE_UNAVAILABLE, "Service Unavailable", code)
             }
+            Self::TooManyRequests { code, .. } => {
+                (StatusCode::TOO_MANY_REQUESTS, "Too Many Requests", code)
+            }
             Self::Validation(_) => (
                 StatusCode::UNPROCESSABLE_ENTITY,
                 "Unprocessable Entity",
@@ -105,6 +114,10 @@ impl IntoResponse for ApiError {
         if let Self::Internal(error) = &self {
             tracing::error!(error = ?error, "internal error");
         }
+        let retry_after = match &self {
+            Self::TooManyRequests { retry_after, .. } => Some(*retry_after),
+            _ => None,
+        };
         let errors = match self {
             Self::Validation(errors) => Some(errors),
             _ => None,
@@ -121,6 +134,11 @@ impl IntoResponse for ApiError {
             header::CONTENT_TYPE,
             header::HeaderValue::from_static("application/problem+json"),
         );
+        if let Some(seconds) = retry_after {
+            response
+                .headers_mut()
+                .insert(header::RETRY_AFTER, header::HeaderValue::from(seconds));
+        }
         response
     }
 }
@@ -163,6 +181,16 @@ mod tests {
         assert!(body.get("errors").is_none());
     }
 
+    #[test]
+    fn too_many_requests_sets_retry_after() {
+        let response = ApiError::TooManyRequests {
+            code: "too_many_attempts",
+            retry_after: 900,
+        }
+        .into_response();
+        assert_eq!(response.headers()[header::RETRY_AFTER], "900");
+    }
+
     #[tokio::test]
     async fn statuses_follow_variants() {
         for (error, expected) in [
@@ -174,6 +202,13 @@ mod tests {
             (ApiError::Unsupported("unsupported_media_type"), 415),
             (ApiError::TooLarge("file_too_large"), 413),
             (ApiError::Unprocessable("image_too_large"), 422),
+            (
+                ApiError::TooManyRequests {
+                    code: "too_many_attempts",
+                    retry_after: 60,
+                },
+                429,
+            ),
         ] {
             assert_eq!(render(error).await.0.as_u16(), expected);
         }
