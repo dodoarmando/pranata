@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT u.password_hash IS NOT NULL AS \"has_password!\",\n                  count(p.id) AS \"passkeys!\",\n                  count(p.id) FILTER (WHERE $2::uuid IS NULL OR p.id = $2) AS \"deleting!\"\n           FROM users u LEFT JOIN passkeys p ON p.user_id = u.id\n           WHERE u.id = $1\n           GROUP BY u.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "has_password!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "passkeys!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "deleting!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "a7b59a7b2283849703cac917fa266a9738a323d5de551822018233e017b7763f"
+}

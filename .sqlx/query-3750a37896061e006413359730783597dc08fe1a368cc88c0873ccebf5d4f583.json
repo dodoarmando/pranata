@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO passkeys (user_id, credential_id, name, passkey, created_at)\n         VALUES ($1, $2, 'Lain', '{}', now())",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3750a37896061e006413359730783597dc08fe1a368cc88c0873ccebf5d4f583"
+}

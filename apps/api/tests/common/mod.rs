@@ -112,6 +112,7 @@ fn test_state_with(pool: PgPool, clock: Arc<dyn SessionClock>, web_internal_url:
         listen: "127.0.0.1:0".parse().expect("valid addr"),
     };
     let purger = Purger::new(&config).expect("purger");
+    let webauthn = pranata::auth::passkey::relying_party(&config.public_origin).expect("webauthn");
     AppState {
         db: pool,
         config: Arc::new(config),
@@ -119,6 +120,7 @@ fn test_state_with(pool: PgPool, clock: Arc<dyn SessionClock>, web_internal_url:
         clock,
         hasher: HashLimiter::new(2).expect("dummy hash"),
         storage: Arc::new(LocalStorage::new(media_dir)),
+        webauthn: Arc::new(webauthn),
     }
 }
 

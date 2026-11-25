@@ -1,5 +1,6 @@
 //! User administration (D-21, D-32, D-33): list, create, edit, deactivate and
-//! reactivate Users, and issue Access Links. Users are never deleted.
+//! reactivate Users, issue Access Links and remove Passkeys. Users are never
+//! deleted.
 //!
 //! Every write checks, in this order: the escalation rules
 //! ([`super::can_manage`] for the Role handed out, [`super::can_manage_user`]
@@ -8,10 +9,11 @@
 //!
 //! Lock order. A transaction here that locks several rows takes them in this
 //! order: the active Administrators (by id), then the target User, then the
-//! target's sessions and Access Links. `access_link::redeem` also locks the
-//! User before the link, so none of these transactions deadlock with each
-//! other. Locks on `users` rows are `FOR NO KEY UPDATE`, not `FOR UPDATE`:
-//! inserting a row that references a User (an Access Link, a session, an Audit
+//! target's sessions, Access Links and Passkeys. `access_link::redeem` and
+//! [`crate::auth::passkey`] also lock the User before the link or the
+//! Passkey, so none of these transactions deadlock with each other. Locks on
+//! `users` rows are `FOR NO KEY UPDATE`, not `FOR UPDATE`: inserting a row
+//! that references a User (an Access Link, a session, a Passkey, an Audit
 //! Entry naming the actor) takes a key-share lock on that User, which
 //! `FOR UPDATE` would block. An Administrator issuing a link while another
 //! deactivates someone could then deadlock on each other's rows.
@@ -28,7 +30,7 @@ use crate::{
     ApiError, FieldError,
     audit::{self, AuditAction, NewAuditEntry},
     auth::{self, CurrentUser, access_link},
-    ids::{RoleId, UserId},
+    ids::{PasskeyId, RoleId, UserId},
 };
 
 /// A User as the Users screen lists them.
@@ -129,6 +131,7 @@ struct SummaryRow {
     display_name: String,
     is_active: bool,
     has_password: bool,
+    passkey_count: i64,
     created_at: OffsetDateTime,
     role_id: RoleId,
     role_name: String,
@@ -148,8 +151,7 @@ impl From<SummaryRow> for UserSummary {
             },
             is_active: row.is_active,
             has_password: row.has_password,
-            // Task 13 counts the rows of the passkeys table.
-            passkey_count: 0,
+            passkey_count: row.passkey_count,
             created_at: row.created_at,
         }
     }
@@ -163,7 +165,9 @@ async fn summaries(
     let rows = sqlx::query_as!(
         SummaryRow,
         r#"SELECT u.id AS "id: UserId", u.username, u.display_name, u.is_active,
-                  u.password_hash IS NOT NULL AS "has_password!", u.created_at,
+                  u.password_hash IS NOT NULL AS "has_password!",
+                  (SELECT count(*) FROM passkeys p WHERE p.user_id = u.id) AS "passkey_count!",
+                  u.created_at,
                   r.id AS "role_id: RoleId", r.name AS role_name, r.is_administrator
            FROM users u JOIN roles r ON r.id = u.role_id
            WHERE $1::uuid IS NULL OR u.id = $1
@@ -241,21 +245,37 @@ struct LockedAdministrator {
 /// take the locks in the same order, so they wait instead of deadlocking. A
 /// request that waited sees the rows as the other one left them: someone it
 /// demoted or deactivated is no longer in the list.
+///
+/// A password or a Passkey is a credential. Whether they have one is read by
+/// a second statement: a statement that waited for a row lock re-reads the
+/// locked row, but a subquery on `passkeys` would still see the table as it
+/// was before the wait. Every write that adds or removes a Passkey locks its
+/// User first, so once the locks are held the answer stays true.
 async fn lock_active_administrators(
     conn: &mut PgConnection,
 ) -> anyhow::Result<Vec<LockedAdministrator>> {
-    // Task 13: a Passkey is a credential too.
+    let ids = sqlx::query_scalar!(
+        "SELECT id FROM users
+         WHERE is_active AND role_id = (SELECT id FROM roles WHERE is_administrator)
+         ORDER BY id
+         FOR NO KEY UPDATE",
+    )
+    .fetch_all(&mut *conn)
+    .await
+    .context("locking the active administrators")?;
     sqlx::query_as!(
         LockedAdministrator,
-        r#"SELECT id AS "id: UserId", password_hash IS NOT NULL AS "has_credential!"
-           FROM users
-           WHERE is_active AND role_id = (SELECT id FROM roles WHERE is_administrator)
-           ORDER BY id
-           FOR NO KEY UPDATE"#,
+        r#"SELECT u.id AS "id: UserId",
+                  (u.password_hash IS NOT NULL
+                   OR EXISTS (SELECT 1 FROM passkeys p WHERE p.user_id = u.id)) AS "has_credential!"
+           FROM users u
+           WHERE u.id = ANY($1)
+           ORDER BY u.id"#,
+        &ids,
     )
     .fetch_all(conn)
     .await
-    .context("locking the active administrators")
+    .context("reading the credentials of the active administrators")
 }
 
 /// How many of the locked Administrators other than `target` can sign in. An
@@ -276,6 +296,56 @@ fn keep_an_administrator(locked: &[LockedAdministrator], target: UserId) -> Resu
     } else {
         Ok(())
     }
+}
+
+/// D-33 for deleting Passkeys of `target`: one (`deleting`) or, with `None`,
+/// all of them. Refuse when that leaves an active Administrator with no
+/// credential at all while no other active Administrator can sign in. The
+/// caller holds the locks of [`lock_active_administrators`] and the target.
+async fn keep_a_credential(
+    conn: &mut PgConnection,
+    administrators: &[LockedAdministrator],
+    target: &Target,
+    deleting: Option<PasskeyId>,
+) -> Result<(), ApiError> {
+    if !(target.is_active && target.role.is_administrator) {
+        return Ok(());
+    }
+    let row = sqlx::query!(
+        r#"SELECT u.password_hash IS NOT NULL AS "has_password!",
+                  count(p.id) AS "passkeys!",
+                  count(p.id) FILTER (WHERE $2::uuid IS NULL OR p.id = $2) AS "deleting!"
+           FROM users u LEFT JOIN passkeys p ON p.user_id = u.id
+           WHERE u.id = $1
+           GROUP BY u.id"#,
+        target.id.0,
+        deleting.map(|id| id.0),
+    )
+    .fetch_one(conn)
+    .await?;
+    if !row.has_password && row.deleting > 0 && row.deleting == row.passkeys {
+        keep_an_administrator(administrators, target.id)
+    } else {
+        Ok(())
+    }
+}
+
+/// Before the signed-in User deletes their own Passkey `passkey`: take the
+/// locks in order (the active Administrators, then the User) and apply the
+/// last-Administrator rule.
+///
+/// # Errors
+/// 401 `unauthenticated` when the User is gone; 409 `last_administrator`.
+pub(crate) async fn guard_own_passkey_removal(
+    conn: &mut PgConnection,
+    user: UserId,
+    passkey: PasskeyId,
+) -> Result<(), ApiError> {
+    let administrators = lock_active_administrators(conn).await?;
+    let target = lock_target(conn, user)
+        .await?
+        .ok_or(ApiError::Unauthorized("unauthenticated"))?;
+    keep_a_credential(conn, &administrators, &target, Some(passkey)).await
 }
 
 fn not_found() -> ApiError {
@@ -593,6 +663,39 @@ pub async fn issue_access_link(
         token,
         expires_at: now + access_link::LIFETIME,
     })
+}
+
+/// Remove every Passkey of a User, as recovery after an account takeover.
+///
+/// # Errors
+/// 403 `administrator_only` or `stronger_user`; 404 `user_not_found`; 409
+/// `last_administrator`.
+pub async fn remove_passkeys(db: &PgPool, actor: &CurrentUser, id: UserId) -> Result<(), ApiError> {
+    let mut tx = db.begin().await?;
+    let administrators = lock_active_administrators(&mut tx).await?;
+    let target = lock_target(&mut tx, id).await?.ok_or_else(not_found)?;
+    target.check_actor(actor)?;
+    keep_a_credential(&mut tx, &administrators, &target, None).await?;
+    let removed = sqlx::query!("DELETE FROM passkeys WHERE user_id = $1", id.0)
+        .execute(&mut *tx)
+        .await?
+        .rows_affected();
+    if removed > 0 {
+        audit::record(
+            &mut tx,
+            NewAuditEntry {
+                actor: Some(actor.id),
+                action: AuditAction::Delete,
+                object_type: "passkey",
+                object_id: id.0.to_string(),
+                summary: format!("Removed all passkeys of {}", target.username),
+                changes: Vec::new(),
+            },
+        )
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(())
 }
 
 #[cfg(test)]

@@ -523,6 +523,87 @@ export const useDeactivateUser = <TError = ErrorType<Problem>,
       > => {
       return useMutation(getDeactivateUserMutationOptions(options), queryClient);
     }
+    export const getRemoveUserPasskeysUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/users/${id}/passkeys`
+}
+
+/**
+ * # Errors
+ * 403 `permission_denied`, `sudo_required`, `administrator_only` or
+ * `stronger_user`; 404 `user_not_found`; 409 `last_administrator`.
+ * @summary Remove every Passkey of a User, after an account takeover for example:
+a Passkey an attacker registered must not outlive a new Access Link.
+ */
+export const removeUserPasskeys = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+
+  return apiFetch<void>(getRemoveUserPasskeysUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveUserPasskeysMutationKey = () => ['removeUserPasskeys'] as const;
+
+export const getRemoveUserPasskeysMutationOptions = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeUserPasskeys>>, TError,RemoveUserPasskeysMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeUserPasskeys>>, TError,RemoveUserPasskeysMutationVariables, TContext> => {
+
+const mutationKey = getRemoveUserPasskeysMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeUserPasskeys>>, RemoveUserPasskeysMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  removeUserPasskeys(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveUserPasskeysMutationResult = NonNullable<Awaited<ReturnType<typeof removeUserPasskeys>>>
+
+    export type RemoveUserPasskeysMutationError = ErrorType<Problem>
+    export type RemoveUserPasskeysMutationVariables = {id: string}
+
+    /**
+ * # Errors
+ * 403 `permission_denied`, `sudo_required`, `administrator_only` or
+ * `stronger_user`; 404 `user_not_found`; 409 `last_administrator`.
+ * @summary Remove every Passkey of a User, after an account takeover for example:
+a Passkey an attacker registered must not outlive a new Access Link.
+ */
+export const useRemoveUserPasskeys = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeUserPasskeys>>, TError,RemoveUserPasskeysMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof removeUserPasskeys>>,
+        TError,
+        RemoveUserPasskeysMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRemoveUserPasskeysMutationOptions(options), queryClient);
+    }
     export const getReactivateUserUrl = (id: string,) => {
 
 

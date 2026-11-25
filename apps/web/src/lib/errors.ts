@@ -64,6 +64,10 @@ const MESSAGES: Record<string, string> = {
 	last_administrator: "Harus ada minimal satu Administrator aktif.",
 	cannot_deactivate_self: "Anda tidak dapat menonaktifkan akun sendiri.",
 	user_inactive: "Pengguna ini nonaktif. Aktifkan kembali terlebih dahulu.",
+	passkey_failed: "Passkey tidak dapat diverifikasi. Coba lagi.",
+	passkey_challenge_expired: "Waktu verifikasi habis. Coba lagi.",
+	passkey_not_found: "Passkey tidak ditemukan.",
+	passkey_exists: "Passkey ini sudah terdaftar.",
 	internal_error: FALLBACK,
 };
 

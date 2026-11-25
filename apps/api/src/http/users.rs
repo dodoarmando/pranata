@@ -251,6 +251,41 @@ pub async fn issue_access_link(
     ))
 }
 
+/// Remove every Passkey of a User, after an account takeover for example:
+/// a Passkey an attacker registered must not outlive a new Access Link.
+///
+/// # Errors
+/// 403 `permission_denied`, `sudo_required`, `administrator_only` or
+/// `stronger_user`; 404 `user_not_found`; 409 `last_administrator`.
+#[utoipa::path(
+    delete,
+    path = "/admin/users/{id}/passkeys",
+    operation_id = "removeUserPasskeys",
+    tag = "users",
+    params(
+        ("id" = Uuid, Path, description = "User id"),
+        ("x-csrf-token" = String, Header, description = "The CSRF token from sign-in"),
+    ),
+    security(("session" = [])),
+    responses(
+        (status = 204, description = "The User has no Passkeys any more"),
+        (status = 401, description = "Not signed in (code unauthenticated)", body = Problem, content_type = "application/problem+json"),
+        (status = 403, description = "The Role lacks user.manage (code permission_denied), Sudo Mode is closed (code sudo_required), or the User is out of reach (codes administrator_only, stronger_user)", body = Problem, content_type = "application/problem+json"),
+        (status = 404, description = "No such User (code user_not_found)", body = Problem, content_type = "application/problem+json"),
+        (status = 409, description = "The Passkeys are the only way left for the last Administrator who can sign in (code last_administrator)", body = Problem, content_type = "application/problem+json"),
+    )
+)]
+pub async fn remove_user_passkeys(
+    State(state): State<AppState>,
+    session: AuthSession,
+    id: Result<Path<Uuid>, PathRejection>,
+) -> Result<StatusCode, ApiError> {
+    require_write(&state, &session)?;
+    let id = user_id(id)?;
+    users::remove_passkeys(&state.db, &session.user, id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(list_users, create_user))
@@ -258,4 +293,5 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(deactivate_user))
         .routes(routes!(reactivate_user))
         .routes(routes!(issue_access_link))
+        .routes(routes!(remove_user_passkeys))
 }

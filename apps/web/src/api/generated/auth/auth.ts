@@ -25,7 +25,9 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  FinishPasskeySignInRequest,
   LoginRequest,
+  PasskeyChallenge,
   Problem,
   RedeemAccessLinkRequest,
   SessionInfo,
@@ -428,7 +430,163 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Err
 
 
 
-export const getConfirmSudoUrl = () => {
+export const getFinishPasskeySignInUrl = () => {
+
+
+
+
+  return `/api/auth/passkey-login/finish`
+}
+
+/**
+ * # Errors
+ * 401 `passkey_failed`; 410 `passkey_challenge_expired`; 429
+ * `too_many_requests`.
+ * @summary Finish a sign-in with a Passkey. Like `login`, it sets the session cookie.
+ */
+export const finishPasskeySignIn = async (finishPasskeySignInRequest: FinishPasskeySignInRequest, options?: Parameters<typeof apiFetch>[1]): Promise<SessionInfo> => {
+
+  return apiFetch<SessionInfo>(getFinishPasskeySignInUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(finishPasskeySignInRequest)
+  }
+);}
+
+
+
+
+
+export const getFinishPasskeySignInMutationKey = () => ['finishPasskeySignIn'] as const;
+
+export const getFinishPasskeySignInMutationOptions = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof finishPasskeySignIn>>, TError,FinishPasskeySignInMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof finishPasskeySignIn>>, TError,FinishPasskeySignInMutationVariables, TContext> => {
+
+const mutationKey = getFinishPasskeySignInMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof finishPasskeySignIn>>, FinishPasskeySignInMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  finishPasskeySignIn(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type FinishPasskeySignInMutationResult = NonNullable<Awaited<ReturnType<typeof finishPasskeySignIn>>>
+    export type FinishPasskeySignInMutationBody = BodyType<FinishPasskeySignInRequest>
+    export type FinishPasskeySignInMutationError = ErrorType<Problem>
+    export type FinishPasskeySignInMutationVariables = {data: BodyType<FinishPasskeySignInRequest>}
+
+    /**
+ * # Errors
+ * 401 `passkey_failed`; 410 `passkey_challenge_expired`; 429
+ * `too_many_requests`.
+ * @summary Finish a sign-in with a Passkey. Like `login`, it sets the session cookie.
+ */
+export const useFinishPasskeySignIn = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof finishPasskeySignIn>>, TError,FinishPasskeySignInMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof finishPasskeySignIn>>,
+        TError,
+        FinishPasskeySignInMutationVariables,
+        TContext
+      > => {
+      return useMutation(getFinishPasskeySignInMutationOptions(options), queryClient);
+    }
+    export const getStartPasskeySignInUrl = () => {
+
+
+
+
+  return `/api/auth/passkey-login/start`
+}
+
+/**
+ * # Errors
+ * 429 `too_many_requests`.
+ * @summary Start a sign-in with a Passkey, without a username.
+ */
+export const startPasskeySignIn = async ( options?: Parameters<typeof apiFetch>[1]): Promise<PasskeyChallenge> => {
+
+  return apiFetch<PasskeyChallenge>(getStartPasskeySignInUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getStartPasskeySignInMutationKey = () => ['startPasskeySignIn'] as const;
+
+export const getStartPasskeySignInMutationOptions = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startPasskeySignIn>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startPasskeySignIn>>, TError,void, TContext> => {
+
+const mutationKey = getStartPasskeySignInMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startPasskeySignIn>>, void> = () => {
+
+
+          return  startPasskeySignIn(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartPasskeySignInMutationResult = NonNullable<Awaited<ReturnType<typeof startPasskeySignIn>>>
+
+    export type StartPasskeySignInMutationError = ErrorType<Problem>
+
+
+    /**
+ * # Errors
+ * 429 `too_many_requests`.
+ * @summary Start a sign-in with a Passkey, without a username.
+ */
+export const useStartPasskeySignIn = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startPasskeySignIn>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof startPasskeySignIn>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getStartPasskeySignInMutationOptions(options), queryClient);
+    }
+    export const getConfirmSudoUrl = () => {
 
 
 

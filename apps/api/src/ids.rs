@@ -20,3 +20,9 @@ pub struct AuditEntryId(pub Uuid);
 #[serde(transparent)]
 #[sqlx(transparent)]
 pub struct RoleId(pub Uuid);
+
+/// Identifier of a passkey.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
+#[serde(transparent)]
+#[sqlx(transparent)]
+pub struct PasskeyId(pub Uuid);
