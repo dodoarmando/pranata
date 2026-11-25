@@ -893,3 +893,29 @@ async fn invalid_requests_are_422_and_unknown_users_404(pool: PgPool) {
         assert_problem(&reply, StatusCode::NOT_FOUND, "user_not_found");
     }
 }
+
+#[sqlx::test]
+async fn only_a_real_change_is_written(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let (_, session) = h.admin("admin").await;
+    let writer = h.role("Penulis", &["content.write"]).await;
+    let publisher = h.role("Penerbit", &["content.publish"]).await;
+    let budi = h.user("budi", writer).await;
+
+    let same = h
+        .patch(
+            &session,
+            budi,
+            json!({"display_name": "budi", "role_id": writer.0}),
+        )
+        .await;
+    assert_eq!(same.status, StatusCode::OK, "{}", same.body);
+    assert_eq!(h.user_changes().await, 0);
+
+    let moved = h
+        .patch(&session, budi, json!({"role_id": publisher.0}))
+        .await;
+    assert_eq!(moved.status, StatusCode::OK, "{}", moved.body);
+    assert_eq!(moved.body["role"]["id"], json!(publisher.0));
+    assert_eq!(h.user_changes().await, 1);
+}

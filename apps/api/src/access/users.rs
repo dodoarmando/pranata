@@ -411,17 +411,20 @@ pub async fn update(
     }
 
     let display_name = display_name.unwrap_or(&target.display_name);
-    let changes = audit::diff(
-        &Audited {
-            display_name: &target.display_name,
-            role: &target.role.name,
-        },
-        &Audited {
-            display_name,
-            role: &role.name,
-        },
-    );
-    if !changes.is_empty() {
+    // Decide on the id, not the name: the two Role names were read by
+    // different statements, and a rename in between could make a real change
+    // look like none. The names only describe the change in the Audit Entry.
+    if display_name != target.display_name || role.id != target.role.id {
+        let changes = audit::diff(
+            &Audited {
+                display_name: &target.display_name,
+                role: &target.role.name,
+            },
+            &Audited {
+                display_name,
+                role: &role.name,
+            },
+        );
         sqlx::query!(
             "UPDATE users SET display_name = $2, role_id = $3 WHERE id = $1",
             id.0,
