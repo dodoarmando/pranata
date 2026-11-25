@@ -22,6 +22,7 @@ describe("visibleNav", () => {
 		expect(groups[1]?.items).toEqual([
 			{ label: "Pengguna", to: "/admin/sistem/pengguna" },
 			{ label: "Peran", to: "/admin/sistem/peran" },
+			{ label: "Log audit", to: "/admin/sistem/log-audit" },
 		]);
 	});
 
