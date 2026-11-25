@@ -935,6 +935,9 @@ async fn administrator_removes_a_users_passkeys(pool: PgPool) {
     let mut second = Authenticator::new();
     h.add_passkey(&budi_session, &mut first).await;
     h.add_passkey(&budi_session, &mut second).await;
+    // A registration the intruder started but has not finished yet.
+    let pending = h.start_registration(&budi_session).await;
+    assert_eq!(pending.status, StatusCode::OK, "{}", pending.body);
 
     let reply = h
         .call(
@@ -949,6 +952,19 @@ async fn administrator_removes_a_users_passkeys(pool: PgPool) {
         let reply = h.passkey_sign_in(key).await;
         assert_problem(&reply, StatusCode::UNAUTHORIZED, "passkey_failed");
     }
+    // Recovery ends every session and pending ceremony of the User.
+    assert_eq!(
+        h.me(&budi_session.cookie).await.status,
+        StatusCode::UNAUTHORIZED
+    );
+    let challenges = sqlx::query_scalar!(
+        r#"SELECT count(*) AS "count!" FROM webauthn_challenges WHERE user_id = $1"#,
+        budi.0
+    )
+    .fetch_one(&h.pool)
+    .await
+    .unwrap();
+    assert_eq!(challenges, 0);
     let entries = sqlx::query!(
         "SELECT actor, object_id, summary FROM audit_entries WHERE action = 'delete' AND object_type = 'passkey'"
     )
@@ -972,6 +988,7 @@ async fn administrator_removes_a_users_passkeys(pool: PgPool) {
         )
         .await;
     assert_problem(&reply, StatusCode::FORBIDDEN, "administrator_only");
+    let budi_session = h.login("budi").await;
     let reply = h
         .call(
             Method::DELETE,
@@ -990,6 +1007,38 @@ async fn administrator_removes_a_users_passkeys(pool: PgPool) {
         )
         .await;
     assert_problem(&reply, StatusCode::NOT_FOUND, "user_not_found");
+}
+
+#[sqlx::test]
+async fn removing_passkeys_signs_out_a_user_who_has_none(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let (admin, admin_session) = h.admin("admin").await;
+    let writer = h.role("Penulis", &["content.write"]).await;
+    let budi = h.user("budi", writer).await;
+    let budi_session = h.login("budi").await;
+
+    let reply = h
+        .call(
+            Method::DELETE,
+            &format!("/api/admin/users/{}/passkeys", budi.0),
+            &admin_session,
+            None,
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.body);
+    assert_eq!(
+        h.me(&budi_session.cookie).await.status,
+        StatusCode::UNAUTHORIZED
+    );
+    let entries = sqlx::query!(
+        "SELECT actor, object_id FROM audit_entries WHERE action = 'delete' AND object_type = 'passkey'"
+    )
+    .fetch_all(&h.pool)
+    .await
+    .unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].actor, Some(admin.0));
+    assert_eq!(entries[0].object_id, budi.0.to_string());
 }
 
 #[sqlx::test]

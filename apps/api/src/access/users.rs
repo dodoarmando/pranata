@@ -666,6 +666,10 @@ pub async fn issue_access_link(
 }
 
 /// Remove every Passkey of a User, as recovery after an account takeover.
+/// The User's sessions and pending Passkey ceremonies end with them, so an
+/// intruder who signed in with a stolen Passkey is signed out and cannot
+/// finish a registration they started. The Audit Entry is written even when
+/// the User had no Passkey, since their sessions still ended.
 ///
 /// # Errors
 /// 403 `administrator_only` or `stronger_user`; 404 `user_not_found`; 409
@@ -676,24 +680,28 @@ pub async fn remove_passkeys(db: &PgPool, actor: &CurrentUser, id: UserId) -> Re
     let target = lock_target(&mut tx, id).await?.ok_or_else(not_found)?;
     target.check_actor(actor)?;
     keep_a_credential(&mut tx, &administrators, &target, None).await?;
-    let removed = sqlx::query!("DELETE FROM passkeys WHERE user_id = $1", id.0)
+    // Lock order: the User (above), then their sessions, then their Passkeys.
+    sqlx::query!("DELETE FROM sessions WHERE user_id = $1", id.0)
         .execute(&mut *tx)
-        .await?
-        .rows_affected();
-    if removed > 0 {
-        audit::record(
-            &mut tx,
-            NewAuditEntry {
-                actor: Some(actor.id),
-                action: AuditAction::Delete,
-                object_type: "passkey",
-                object_id: id.0.to_string(),
-                summary: format!("Removed all passkeys of {}", target.username),
-                changes: Vec::new(),
-            },
-        )
         .await?;
-    }
+    sqlx::query!("DELETE FROM webauthn_challenges WHERE user_id = $1", id.0)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query!("DELETE FROM passkeys WHERE user_id = $1", id.0)
+        .execute(&mut *tx)
+        .await?;
+    audit::record(
+        &mut tx,
+        NewAuditEntry {
+            actor: Some(actor.id),
+            action: AuditAction::Delete,
+            object_type: "passkey",
+            object_id: id.0.to_string(),
+            summary: format!("Removed all passkeys of {}", target.username),
+            changes: Vec::new(),
+        },
+    )
+    .await?;
     tx.commit().await?;
     Ok(())
 }
