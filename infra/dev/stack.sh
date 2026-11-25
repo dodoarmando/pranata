@@ -138,7 +138,6 @@ up() {
     rm -f "$out_dir/access-link.txt"
 
     podman pod create --name "$pod" --label "$owner_label" --cpus=2 --memory=2g \
-        --add-host api:127.0.0.1 --add-host web:127.0.0.1 \
         -p "127.0.0.1:$port:443" >/dev/null
 
     # The api runs as uid 65532 and must be able to write the media directory.

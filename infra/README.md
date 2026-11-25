@@ -211,6 +211,9 @@ takes several minutes. It:
 - opens only SSH, 80 and 443 inbound;
 - creates the unprivileged `pranata` user, which runs everything in rootless
   Podman under systemd (Postgres, the API, the web server and Caddy);
+- runs Caddy on the host network, so that it sees each visitor's own address,
+  and publishes the API and the web server for it on `127.0.0.1:8080` and
+  `127.0.0.1:3000` only (ADR 0009, see [Security notes](#security-notes));
 - starts the services and waits until they answer;
 - on the first run only, initialises the Village with `pranata_village_code` and
   creates the first Administrator;
@@ -664,6 +667,14 @@ running version.
 - **Minimal exposure.** Only SSH, 80 and 443 accept connections, SSH accepts keys
   only, root cannot log in, and the application runs as an unprivileged user in
   rootless containers. Security updates install automatically.
+- **Local users can reach the API past Caddy.** Caddy runs on the host network
+  so that it sees each visitor's real address, which the per-address sign-in
+  limit needs; the API and the web server therefore listen on
+  `127.0.0.1:8080` and `127.0.0.1:3000` (ADR 0009). Nothing outside the VPS
+  can reach those ports, but any local user on the VPS can, and can claim any
+  client address in `X-Forwarded-For`. This is acceptable because the VPS runs
+  nothing but Pranata: do not give other people accounts on it, and keep ports
+  80, 443, 3000 and 8080 free for Pranata.
 
 ## Maintainer notes
 

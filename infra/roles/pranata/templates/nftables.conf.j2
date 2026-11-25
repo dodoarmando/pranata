@@ -1,5 +1,7 @@
 #!/usr/sbin/nft -f
 # Managed by Ansible. Allows SSH, HTTP and HTTPS; everything else inbound is dropped.
+# The api and web publish on 127.0.0.1 only (ADR 0009), which `iif lo` admits
+# for local traffic and nothing from outside can reach.
 flush ruleset
 
 table inet filter {

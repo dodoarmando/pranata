@@ -62,6 +62,6 @@ pranata_db_superuser_password: "{{ (pranata_db_owner_password ~ pranata_purge_to
 # The SSH port the firewall keeps open; follows the inventory's ansible_port.
 pranata_ssh_port: "{{ ansible_port | default(22) }}"
 
-# Ports published by Caddy on the host.
+# Ports Caddy binds on the host (it runs on the host network, ADR 0009).
 pranata_http_port: 80
 pranata_https_port: 443

@@ -9,6 +9,8 @@ Image={{ pranata_image_registry }}/pranata-api:{{ pranata_release }}
 ContainerName=pranata-api
 Network=pranata.network
 NetworkAlias=api
+# For Caddy, on the host network (ADR 0009); loopback only.
+PublishPort=127.0.0.1:8080:8080
 EnvironmentFile=%h/.config/pranata/api.env
 Volume={{ pranata_media_dir }}:/media
 # The image has no curl or shell, so the binary checks itself (exec form). Healthy means the

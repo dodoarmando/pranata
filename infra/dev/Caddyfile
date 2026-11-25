@@ -1,6 +1,7 @@
-# Edge routing for the end-to-end stack. Task 16's Caddyfile.j2 must keep the
-# same routes. Inside the pod, `api` and `web` resolve to 127.0.0.1 (stack.sh
-# adds the hosts); on a real Installation they are the compose service names.
+# Edge routing for the end-to-end stack. infra/roles/pranata/templates/Caddyfile.j2
+# must keep the same routes (infra/check.sh compares them). Inside the pod the
+# api and web listen on 127.0.0.1; on an Installation they publish there for
+# Caddy, which runs on the host network (ADR 0009).
 {
 	admin off
 	auto_https disable_redirects
@@ -23,7 +24,7 @@ https://localhost {
 	}
 
 	handle /api/* {
-		reverse_proxy api:8080
+		reverse_proxy 127.0.0.1:8080
 	}
 
 	# Variants are content-addressed, so they never change under their URL.
@@ -39,6 +40,6 @@ https://localhost {
 	}
 
 	handle {
-		reverse_proxy web:3000
+		reverse_proxy 127.0.0.1:3000
 	}
 }

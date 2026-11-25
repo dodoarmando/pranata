@@ -1,6 +1,11 @@
 # Managed by Ansible. The routes match infra/dev/Caddyfile.
+# Caddy runs on the host network and the api and web publish on 127.0.0.1
+# (ADR 0009). No trusted proxies: Caddy then replaces any X-Forwarded-For a
+# client sends with the client's address, which the api relies on (D-34).
 {
 	admin off
+	http_port {{ pranata_http_port }}
+	https_port {{ pranata_https_port }}
 	# Only 443/tcp is opened in the firewall, so do not advertise HTTP/3.
 	servers {
 		protocols h1 h2
@@ -22,7 +27,7 @@
 	}
 
 	handle /api/* {
-		reverse_proxy api:8080
+		reverse_proxy 127.0.0.1:8080
 	}
 
 	# Variants are content-addressed, so they never change under their URL.
@@ -38,6 +43,6 @@
 	}
 
 	handle {
-		reverse_proxy web:3000
+		reverse_proxy 127.0.0.1:3000
 	}
 }
