@@ -1,5 +1,5 @@
 //! Authentication: passwords, server-side sessions, CSRF and Access Links
-//! (D-30, D-32). In R0 every User has full access; roles arrive with plan R1-A.
+//! (D-30, D-32). What a User may do comes from their Role (D-33, `crate::access`).
 
 pub mod access_link;
 pub mod csrf;
@@ -16,8 +16,9 @@ use utoipa::ToSchema;
 
 use crate::{
     ApiError, FieldError,
+    access::{Permission, RoleRef},
     audit::{self, AuditAction, NewAuditEntry},
-    ids::UserId,
+    ids::{RoleId, UserId},
 };
 
 /// The signed-in User, as an axum extractor. A missing or expired session
@@ -28,6 +29,38 @@ pub struct CurrentUser {
     pub id: UserId,
     pub username: String,
     pub display_name: String,
+    pub role: RoleRef,
+    /// What the Role grants, in catalogue order.
+    pub permissions: Vec<Permission>,
+}
+
+impl CurrentUser {
+    /// Check one Permission.
+    ///
+    /// # Errors
+    /// 403 `permission_denied` when the User's Role does not grant it.
+    pub fn require(&self, permission: Permission) -> Result<(), ApiError> {
+        if self.permissions.contains(&permission) {
+            Ok(())
+        } else {
+            Err(ApiError::Forbidden("permission_denied"))
+        }
+    }
+
+    /// Check that the User holds at least one of `permissions`.
+    ///
+    /// # Errors
+    /// 403 `permission_denied` when the User's Role grants none of them.
+    pub fn require_any(&self, permissions: &[Permission]) -> Result<(), ApiError> {
+        if permissions
+            .iter()
+            .any(|permission| self.permissions.contains(permission))
+        {
+            Ok(())
+        } else {
+            Err(ApiError::Forbidden("permission_denied"))
+        }
+    }
 }
 
 /// A freshly created User and the Access Link that lets them set a password.
@@ -81,9 +114,9 @@ fn normalise_username(raw: &str) -> Result<String, ApiError> {
     }
 }
 
-/// Create a User without a password plus a 24 hour Access Link for them, and
-/// record the creation in the audit log, all in one transaction. This is what
-/// `pranata user create-admin` runs.
+/// Create a User with `role` and no password, plus a 24 hour Access Link for
+/// them, and record the creation in the audit log, all in one transaction.
+/// This is what `pranata user create-admin` runs (with the Administrator Role).
 ///
 /// # Errors
 /// `Validation` for a malformed username or blank name, `Conflict`
@@ -92,6 +125,8 @@ pub async fn create_user_with_access_link(
     db: &PgPool,
     username: &str,
     display_name: &str,
+    role: RoleId,
+    created_by: Option<UserId>,
     now: OffsetDateTime,
 ) -> Result<NewUser, ApiError> {
     let username = normalise_username(username)?;
@@ -105,11 +140,12 @@ pub async fn create_user_with_access_link(
 
     let mut tx = db.begin().await?;
     let id = sqlx::query_scalar!(
-        r#"INSERT INTO users (username, display_name) VALUES ($1, $2)
+        r#"INSERT INTO users (username, display_name, role_id) VALUES ($1, $2, $3)
            ON CONFLICT (username) DO NOTHING
            RETURNING id AS "id: UserId""#,
         username,
         display_name,
+        role.0,
     )
     .fetch_optional(&mut *tx)
     .await?
@@ -118,7 +154,7 @@ pub async fn create_user_with_access_link(
     audit::record(
         &mut tx,
         NewAuditEntry {
-            actor: None,
+            actor: created_by,
             action: AuditAction::Create,
             object_type: "user",
             object_id: id.0.to_string(),

@@ -40,11 +40,13 @@ impl Harness {
 
     async fn seed_user(&self, username: &str) -> UserId {
         let hash = auth::password::hash_password(PASSWORD).unwrap();
+        let role = common::administrator_role(&self.pool).await;
         sqlx::query_scalar!(
-            r#"INSERT INTO users (username, display_name, password_hash)
-               VALUES ($1, 'Budi Santoso', $2) RETURNING id AS "id: UserId""#,
+            r#"INSERT INTO users (username, display_name, password_hash, role_id)
+               VALUES ($1, 'Budi Santoso', $2, $3) RETURNING id AS "id: UserId""#,
             username,
-            hash
+            hash,
+            role.0
         )
         .fetch_one(&self.pool)
         .await
@@ -239,10 +241,14 @@ async fn wrong_password_and_unknown_user_look_identical(pool: PgPool) {
 #[sqlx::test]
 async fn account_without_password_or_inactive_cannot_sign_in(pool: PgPool) {
     let h = Harness::new(pool);
-    sqlx::query!("INSERT INTO users (username, display_name) VALUES ('baru', 'Baru')")
-        .execute(&h.pool)
-        .await
-        .unwrap();
+    let role = common::administrator_role(&h.pool).await;
+    sqlx::query!(
+        "INSERT INTO users (username, display_name, role_id) VALUES ('baru', 'Baru', $1)",
+        role.0
+    )
+    .execute(&h.pool)
+    .await
+    .unwrap();
     let id = h.seed_user("budi").await;
     sqlx::query!("UPDATE users SET is_active = false WHERE id = $1", id.0)
         .execute(&h.pool)
@@ -446,10 +452,16 @@ async fn sign_in_writes_audit_entry(pool: PgPool) {
 #[sqlx::test]
 async fn access_link_sets_password_once(pool: PgPool) {
     let h = Harness::new(pool);
-    let created =
-        auth::create_user_with_access_link(&h.pool, "Siti", "Siti Aminah", h.clock.now_for_test())
-            .await
-            .unwrap();
+    let created = auth::create_user_with_access_link(
+        &h.pool,
+        "Siti",
+        "Siti Aminah",
+        common::administrator_role(&h.pool).await,
+        None,
+        h.clock.now_for_test(),
+    )
+    .await
+    .unwrap();
     let link_token = created.access_link_token.clone();
 
     // No password yet: sign-in is refused.
@@ -518,10 +530,16 @@ async fn using_an_access_link_signs_out_existing_sessions(pool: PgPool) {
 #[sqlx::test]
 async fn expired_access_link_is_410(pool: PgPool) {
     let h = Harness::new(pool);
-    let created =
-        auth::create_user_with_access_link(&h.pool, "siti", "Siti", h.clock.now_for_test())
-            .await
-            .unwrap();
+    let created = auth::create_user_with_access_link(
+        &h.pool,
+        "siti",
+        "Siti",
+        common::administrator_role(&h.pool).await,
+        None,
+        h.clock.now_for_test(),
+    )
+    .await
+    .unwrap();
     let link_token = created.access_link_token.clone();
 
     h.clock.advance(Duration::hours(24));
@@ -537,10 +555,16 @@ async fn expired_access_link_is_410(pool: PgPool) {
 #[sqlx::test]
 async fn access_link_works_just_before_it_expires(pool: PgPool) {
     let h = Harness::new(pool);
-    let created =
-        auth::create_user_with_access_link(&h.pool, "siti", "Siti", h.clock.now_for_test())
-            .await
-            .unwrap();
+    let created = auth::create_user_with_access_link(
+        &h.pool,
+        "siti",
+        "Siti",
+        common::administrator_role(&h.pool).await,
+        None,
+        h.clock.now_for_test(),
+    )
+    .await
+    .unwrap();
     let link_token = created.access_link_token.clone();
 
     h.clock.advance(Duration::hours(23) + Duration::minutes(59));
@@ -551,10 +575,16 @@ async fn access_link_works_just_before_it_expires(pool: PgPool) {
 #[sqlx::test]
 async fn short_password_rejected(pool: PgPool) {
     let h = Harness::new(pool);
-    let created =
-        auth::create_user_with_access_link(&h.pool, "siti", "Siti", h.clock.now_for_test())
-            .await
-            .unwrap();
+    let created = auth::create_user_with_access_link(
+        &h.pool,
+        "siti",
+        "Siti",
+        common::administrator_role(&h.pool).await,
+        None,
+        h.clock.now_for_test(),
+    )
+    .await
+    .unwrap();
     let link_token = created.access_link_token.clone();
 
     let reply = h.redeem(&link_token, "too short").await;
@@ -574,7 +604,8 @@ async fn short_password_rejected(pool: PgPool) {
 async fn create_user_normalises_and_rejects_bad_or_duplicate_usernames(pool: PgPool) {
     let h = Harness::new(pool);
     let now = h.clock.now_for_test();
-    let created = auth::create_user_with_access_link(&h.pool, " Siti.A ", "Siti", now)
+    let role = common::administrator_role(&h.pool).await;
+    let created = auth::create_user_with_access_link(&h.pool, " Siti.A ", "Siti", role, None, now)
         .await
         .unwrap();
     let username = sqlx::query_scalar!("SELECT username FROM users WHERE id = $1", created.id.0)
@@ -583,12 +614,13 @@ async fn create_user_normalises_and_rejects_bad_or_duplicate_usernames(pool: PgP
         .unwrap();
     assert_eq!(username, "siti.a");
 
-    let duplicate = auth::create_user_with_access_link(&h.pool, "SITI.A", "Other", now).await;
+    let duplicate =
+        auth::create_user_with_access_link(&h.pool, "SITI.A", "Other", role, None, now).await;
     assert!(matches!(
         duplicate,
         Err(pranata::ApiError::Conflict("username_taken"))
     ));
-    let invalid = auth::create_user_with_access_link(&h.pool, "x", "Other", now).await;
+    let invalid = auth::create_user_with_access_link(&h.pool, "x", "Other", role, None, now).await;
     assert!(matches!(invalid, Err(pranata::ApiError::Validation(_))));
 
     let audit = sqlx::query!("SELECT actor, action, object_id FROM audit_entries")
@@ -666,10 +698,16 @@ fn capture_logs() -> LogBuffer {
 async fn redeeming_an_access_link_logs_no_token_or_password(pool: PgPool) {
     let h = Harness::new(pool);
     let logs = capture_logs();
-    let created =
-        auth::create_user_with_access_link(&h.pool, "siti", "Siti", h.clock.now_for_test())
-            .await
-            .unwrap();
+    let created = auth::create_user_with_access_link(
+        &h.pool,
+        "siti",
+        "Siti",
+        common::administrator_role(&h.pool).await,
+        None,
+        h.clock.now_for_test(),
+    )
+    .await
+    .unwrap();
     let token = created.access_link_token;
     let secret = "a very secret password";
 
@@ -768,6 +806,12 @@ fn debug_output_redacts_secrets() {
             id: UserId(uuid::Uuid::nil()),
             username: "budi".into(),
             display_name: "Budi".into(),
+            role: pranata::access::RoleRef {
+                id: pranata::ids::RoleId(uuid::Uuid::nil()),
+                name: "Administrator".into(),
+                is_administrator: true,
+            },
+            permissions: vec![pranata::access::Permission::VillageManage],
         },
         csrf_token: "csrf-secret".into(),
     };

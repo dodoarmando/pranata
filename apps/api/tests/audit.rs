@@ -1,3 +1,5 @@
+mod common;
+
 use pranata::audit::{AuditAction, FieldChange, NewAuditEntry, diff, record};
 use pranata::ids::UserId;
 use serde_json::{Value, json};
@@ -45,9 +47,11 @@ async fn record_inserts_entry(pool: PgPool) {
 #[sqlx::test]
 async fn record_with_actor_stores_it(pool: PgPool) {
     // `audit_entries.actor` is a foreign key to `users`, so the actor must exist.
+    let role = common::administrator_role(&pool).await;
     let actor = sqlx::query_scalar!(
-        r#"INSERT INTO users (username, display_name) VALUES ('petugas', 'Petugas')
-           RETURNING id AS "id: UserId""#
+        r#"INSERT INTO users (username, display_name, role_id) VALUES ('petugas', 'Petugas', $1)
+           RETURNING id AS "id: UserId""#,
+        role.0
     )
     .fetch_one(&pool)
     .await

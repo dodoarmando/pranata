@@ -69,7 +69,7 @@
 						}
 					},
 					"403": {
-						"description": "Missing or wrong CSRF token (code csrf_mismatch)",
+						"description": "Missing or wrong CSRF token (code csrf_mismatch), or a Role without village.manage and content.write (code permission_denied)",
 						"content": {
 							"application/problem+json": {
 								"schema": {
@@ -155,6 +155,16 @@
 							}
 						}
 					},
+					"403": {
+						"description": "The Role has neither village.manage nor content.write (code permission_denied)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
 					"404": {
 						"description": "No such asset (code media_not_found)",
 						"content": {
@@ -192,6 +202,16 @@
 					},
 					"401": {
 						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "The Role lacks village.manage (code permission_denied)",
 						"content": {
 							"application/problem+json": {
 								"schema": {
@@ -255,6 +275,16 @@
 					},
 					"401": {
 						"description": "Not signed in (code unauthenticated)",
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "The Role lacks village.manage (code permission_denied)",
 						"content": {
 							"application/problem+json": {
 								"schema": {
@@ -593,7 +623,7 @@
 			"CurrentUser": {
 				"type": "object",
 				"description": "The signed-in User, as an axum extractor. A missing or expired session\nanswers 401 `unauthenticated`.",
-				"required": ["id", "username", "display_name"],
+				"required": ["id", "username", "display_name", "role", "permissions"],
 				"properties": {
 					"display_name": {
 						"type": "string"
@@ -601,6 +631,16 @@
 					"id": {
 						"type": "string",
 						"format": "uuid"
+					},
+					"permissions": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/Permission"
+						},
+						"description": "What the Role grants, in catalogue order."
+					},
+					"role": {
+						"$ref": "#/components/schemas/RoleRef"
 					},
 					"username": {
 						"type": "string"
@@ -718,6 +758,19 @@
 					}
 				}
 			},
+			"Permission": {
+				"type": "string",
+				"description": "One thing a User may be allowed to do.",
+				"enum": [
+					"village.manage",
+					"content.write",
+					"content.publish",
+					"budget.manage",
+					"audit.read",
+					"user.manage",
+					"role.manage"
+				]
+			},
 			"Problem": {
 				"type": "object",
 				"description": "`RFC 9457` problem document returned for every error.",
@@ -811,6 +864,23 @@
 						"type": "string"
 					},
 					"token": {
+						"type": "string"
+					}
+				}
+			},
+			"RoleRef": {
+				"type": "object",
+				"description": "The Role a User holds, as shown to clients.",
+				"required": ["id", "name", "is_administrator"],
+				"properties": {
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"is_administrator": {
+						"type": "boolean"
+					},
+					"name": {
 						"type": "string"
 					}
 				}

@@ -114,3 +114,11 @@ fn test_state_with(pool: PgPool, clock: Arc<dyn SessionClock>, web_internal_url:
         storage: Arc::new(LocalStorage::new(media_dir)),
     }
 }
+
+/// The built-in Administrator Role, created by the migrations.
+#[allow(dead_code)]
+pub async fn administrator_role(pool: &PgPool) -> pranata::ids::RoleId {
+    pranata::access::administrator_role(pool)
+        .await
+        .expect("the Administrator Role exists")
+}

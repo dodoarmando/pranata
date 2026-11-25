@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO users (username, display_name) VALUES ($1, $2)\n           ON CONFLICT (username) DO NOTHING\n           RETURNING id AS \"id: UserId\"",
+  "query": "INSERT INTO users (username, display_name, password_hash, role_id)\n               VALUES ($1, 'Budi Santoso', $2, $3) RETURNING id AS \"id: UserId\"",
   "describe": {
     "columns": [
       {
@@ -18,12 +18,13 @@
     "parameters": {
       "Left": [
         "Text",
-        "Text"
+        "Text",
+        "Uuid"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "190cb4d02514603d096a11519b36bb1c988d5ecf1ee97d7f3ce662cecfaf1048"
+  "hash": "33b60a416e1d45b6ab727cabbe5963f4c0909ad8f67d1ff8b7ff36dc56813d98"
 }

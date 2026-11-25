@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO roles (name) VALUES ('administrator')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "07720b2967ce684c9cac839cdf5f97a129eac4d95d1f7630d297db54a8f232da"
+}

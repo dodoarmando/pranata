@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
-    ApiError, AppState,
+    ApiError, AppState, access,
     audit::{self, AuditAction, NewAuditEntry},
     auth::{
         self, CurrentUser, access_link, password,
@@ -150,6 +150,7 @@ pub async fn login(
         session::delete(&mut tx, &auth::hash_token(&old)).await?;
     }
     let new = session::create(&mut tx, account.id, request.remember, now).await?;
+    let (role, permissions) = access::load_for_user(&mut tx, account.id).await?;
     audit::record(
         &mut tx,
         NewAuditEntry {
@@ -169,6 +170,8 @@ pub async fn login(
             id: account.id,
             username: account.username,
             display_name: account.display_name,
+            role,
+            permissions,
         },
         csrf_token: new.csrf_token,
     };

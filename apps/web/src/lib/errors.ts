@@ -41,6 +41,7 @@ const MESSAGES: Record<string, string> = {
 	not_found: "Data tidak ditemukan.",
 	unauthenticated: "Sesi berakhir. Silakan masuk kembali.",
 	csrf_mismatch: "Sesi tidak valid. Muat ulang halaman lalu coba lagi.",
+	permission_denied: "Anda tidak memiliki hak akses untuk tindakan ini.",
 	internal_error: FALLBACK,
 };
 
