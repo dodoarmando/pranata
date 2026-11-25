@@ -919,3 +919,59 @@ async fn only_a_real_change_is_written(pool: PgPool) {
     assert_eq!(moved.body["role"]["id"], json!(publisher.0));
     assert_eq!(h.user_changes().await, 1);
 }
+
+/// Wait until a connection to this test's database waits for a row lock.
+async fn wait_for_a_lock_wait(pool: &PgPool) {
+    for _ in 0..500 {
+        let waiting = sqlx::query_scalar!(
+            r#"SELECT count(*) AS "count!" FROM pg_stat_activity
+               WHERE datname = current_database() AND wait_event_type = 'Lock'"#
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap();
+        if waiting > 0 {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    panic!("no request waited for the lock");
+}
+
+#[sqlx::test]
+async fn a_role_deleted_under_a_user_write_is_not_found(pool: PgPool) {
+    let h = Harness::new(pool).await;
+    let (_, session) = h.admin("admin").await;
+    let writer = h.role("Penulis", &["content.write"]).await;
+    let budi = h.user("budi", writer).await;
+    let expected = json!([{"field": "role_id", "code": "role_not_found"}]);
+
+    // The request reads the Role, then its write waits on the deleting
+    // transaction's row lock and fails on the foreign key once it commits.
+    for write in ["create", "update"] {
+        let doomed = h.role(&format!("Sementara {write}"), &[]).await;
+        let mut deleting = h.pool.begin().await.unwrap();
+        sqlx::query!("DELETE FROM roles WHERE id = $1", doomed.0)
+            .execute(&mut *deleting)
+            .await
+            .unwrap();
+        let request = async {
+            if write == "create" {
+                h.create_user(&session, "siti", doomed).await
+            } else {
+                h.patch(&session, budi, json!({"role_id": doomed.0})).await
+            }
+        };
+        let (reply, ()) = tokio::join!(request, async {
+            wait_for_a_lock_wait(&h.pool).await;
+            deleting.commit().await.unwrap();
+        });
+        assert_problem(
+            &reply,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "validation_failed",
+        );
+        assert_eq!(reply.body["errors"], expected, "{write}");
+    }
+    assert_eq!(h.user_changes().await, 0);
+}

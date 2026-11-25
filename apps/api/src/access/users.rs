@@ -282,6 +282,29 @@ fn not_found() -> ApiError {
     ApiError::NotFound("user_not_found")
 }
 
+fn role_not_found() -> FieldError {
+    FieldError {
+        field: "role_id".to_owned(),
+        code: "role_not_found".to_owned(),
+    }
+}
+
+/// A write that names a Role deleted after the Role was read fails on the
+/// foreign key of `users.role_id`: answer as if the Role never existed.
+fn role_vanished(error: ApiError) -> ApiError {
+    let vanished = matches!(&error, ApiError::Internal(error) if error
+    .downcast_ref::<sqlx::Error>()
+    .and_then(sqlx::Error::as_database_error)
+    .is_some_and(|error| {
+        error.is_foreign_key_violation() && error.constraint() == Some("users_role_id_fkey")
+    }));
+    if vanished {
+        ApiError::Validation(vec![role_not_found()])
+    } else {
+        error
+    }
+}
+
 /// Create a User with no password and their first Access Link.
 ///
 /// # Errors
@@ -313,10 +336,7 @@ pub async fn create(
         });
     }
     if role.is_none() {
-        errors.push(FieldError {
-            field: "role_id".to_owned(),
-            code: "role_not_found".to_owned(),
-        });
+        errors.push(role_not_found());
     }
     if !errors.is_empty() {
         return Err(ApiError::Validation(errors));
@@ -330,7 +350,8 @@ pub async fn create(
         Some(actor.id),
         now,
     )
-    .await?;
+    .await
+    .map_err(role_vanished)?;
     let user = summary(&mut *db.acquire().await?, created.id).await?;
     let link = IssuedLink {
         token: created.access_link_token,
@@ -392,10 +413,7 @@ pub async fn update(
         });
     }
     if matches!(new_role, Some(None)) {
-        errors.push(FieldError {
-            field: "role_id".to_owned(),
-            code: "role_not_found".to_owned(),
-        });
+        errors.push(role_not_found());
     }
     if !errors.is_empty() {
         return Err(ApiError::Validation(errors));
@@ -432,7 +450,8 @@ pub async fn update(
             role.id.0,
         )
         .execute(&mut *tx)
-        .await?;
+        .await
+        .map_err(|error| role_vanished(error.into()))?;
         audit::record(
             &mut tx,
             NewAuditEntry {
