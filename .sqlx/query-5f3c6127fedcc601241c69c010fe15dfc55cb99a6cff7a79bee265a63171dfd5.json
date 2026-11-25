@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT l.user_id AS \"user_id: UserId\", l.expires_at,\n                  l.used_at IS NOT NULL AS \"used!\",\n                  l.revoked_at IS NOT NULL AS \"revoked!\",\n                  u.is_active AS \"owner_active!\"\n           FROM access_links l JOIN users u ON u.id = l.user_id\n           WHERE l.token_hash = $1 FOR UPDATE",
+  "query": "SELECT l.user_id AS \"user_id: UserId\", l.expires_at,\n                  l.used_at IS NOT NULL AS \"used!\",\n                  l.revoked_at IS NOT NULL AS \"revoked!\",\n                  u.is_active AS \"owner_active!\"\n           FROM access_links l JOIN users u ON u.id = l.user_id\n           WHERE l.token_hash = $1 FOR UPDATE OF l",
   "describe": {
     "columns": [
       {
@@ -62,5 +62,5 @@
       false
     ]
   },
-  "hash": "e825fb3c904d9ad579d339abd404cb5b72614a56be029423b70581bd08f440bf"
+  "hash": "5f3c6127fedcc601241c69c010fe15dfc55cb99a6cff7a79bee265a63171dfd5"
 }

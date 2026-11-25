@@ -122,13 +122,24 @@ pub async fn redeem(
     )
     .fetch_optional(db)
     .await?;
-    check(link, now)?;
+    let owner = check(link, now)?.user_id;
     password::validate_length(new_password)?;
 
     let hash = hasher.hash(new_password.to_owned()).await?;
 
     let mut tx = db.begin().await?;
-    // Lock the row and re-check: two requests with one link must not both win.
+    // Lock order: the User row before their Access Link rows, as every
+    // transaction that touches both must, so a redemption racing a
+    // deactivation or a new link waits instead of deadlocking. `NO KEY
+    // UPDATE` leaves inserts that reference the User (sessions, Audit
+    // Entries) unblocked.
+    sqlx::query!(
+        "SELECT id FROM users WHERE id = $1 FOR NO KEY UPDATE",
+        owner.0
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    // Lock the link and re-check: two requests with one link must not both win.
     let link = sqlx::query_as!(
         Link,
         r#"SELECT l.user_id AS "user_id: UserId", l.expires_at,
@@ -136,7 +147,7 @@ pub async fn redeem(
                   l.revoked_at IS NOT NULL AS "revoked!",
                   u.is_active AS "owner_active!"
            FROM access_links l JOIN users u ON u.id = l.user_id
-           WHERE l.token_hash = $1 FOR UPDATE"#,
+           WHERE l.token_hash = $1 FOR UPDATE OF l"#,
         token_hash,
     )
     .fetch_optional(&mut *tx)
