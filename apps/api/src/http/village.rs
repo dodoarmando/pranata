@@ -7,6 +7,7 @@ use crate::{
     ApiError, AppState,
     auth::CurrentUser,
     error::Problem,
+    http::json::ApiJson,
     village::{
         self,
         profile::{self, Profile, ProfileUpdate},
@@ -73,16 +74,18 @@ pub async fn get_village_profile(
     request_body = ProfileUpdate,
     responses(
         (status = 200, description = "The saved profile", body = Profile),
+        (status = 400, description = "Body is not valid JSON (code invalid_json)", body = Problem, content_type = "application/problem+json"),
         (status = 401, description = "Not signed in (code unauthenticated)", body = Problem, content_type = "application/problem+json"),
         (status = 404, description = "The Village is not initialised yet (code village_not_initialized)", body = Problem, content_type = "application/problem+json"),
         (status = 409, description = "The profile changed since it was read (code stale_write)", body = Problem, content_type = "application/problem+json"),
+        (status = 415, description = "Request is not marked as JSON (code json_required)", body = Problem, content_type = "application/problem+json"),
         (status = 422, description = "Invalid overview (code validation_failed, with field errors) or a hero that is not a ready image (code hero_not_ready)", body = Problem, content_type = "application/problem+json"),
     )
 )]
 pub async fn put_village_profile(
     State(state): State<AppState>,
     user: CurrentUser,
-    Json(input): Json<ProfileUpdate>,
+    ApiJson(input): ApiJson<ProfileUpdate>,
 ) -> Result<Json<Profile>, ApiError> {
     let (saved, purge_job) = profile::update(&state.db, user.id, input).await?;
     purge_now(&state, purge_job).await;

@@ -30,6 +30,8 @@ pub struct Problem {
 /// problem `code`, in `snake_case`.
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
+    #[error("bad request: {0}")]
+    BadRequest(&'static str),
     #[error("not found: {0}")]
     NotFound(&'static str),
     #[error("unauthorized: {0}")]
@@ -57,6 +59,7 @@ pub enum ApiError {
 impl ApiError {
     fn parts(&self) -> (StatusCode, &'static str, &'static str) {
         match self {
+            Self::BadRequest(code) => (StatusCode::BAD_REQUEST, "Bad Request", code),
             Self::NotFound(code) => (StatusCode::NOT_FOUND, "Not Found", code),
             Self::Unauthorized(code) => (StatusCode::UNAUTHORIZED, "Unauthorized", code),
             Self::Forbidden(code) => (StatusCode::FORBIDDEN, "Forbidden", code),
@@ -163,6 +166,7 @@ mod tests {
     #[tokio::test]
     async fn statuses_follow_variants() {
         for (error, expected) in [
+            (ApiError::BadRequest("invalid_json"), 400),
             (ApiError::Unauthorized("unauthenticated"), 401),
             (ApiError::Forbidden("csrf_mismatch"), 403),
             (ApiError::Conflict("access_link_used"), 409),

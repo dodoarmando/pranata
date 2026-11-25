@@ -3,8 +3,13 @@ const FALLBACK = "Terjadi kesalahan. Coba lagi.";
 const LINK_INVALID =
 	"Tautan ini sudah tidak berlaku. Minta tautan baru kepada Administrator.";
 
+const UNREADABLE =
+	"Permintaan tidak dapat dibaca. Muat ulang halaman lalu coba lagi.";
+
 // Indonesian copy for every problem+json `code` the API can return.
 const MESSAGES: Record<string, string> = {
+	invalid_json: UNREADABLE,
+	json_required: UNREADABLE,
 	invalid_credentials: "Nama pengguna atau kata sandi salah.",
 	access_link_used: LINK_INVALID,
 	access_link_expired: LINK_INVALID,

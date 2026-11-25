@@ -16,6 +16,7 @@ use crate::{
         session::{self, AuthSession},
     },
     error::Problem,
+    http::json::ApiJson,
     ids::UserId,
 };
 
@@ -99,12 +100,13 @@ struct Account {
     request_body = LoginRequest,
     responses(
         (status = 200, description = "Signed in; the session cookie is set", body = SessionInfo),
+        (status = 400, description = "Body is not valid JSON (code invalid_json)", body = Problem, content_type = "application/problem+json"),
         (status = 401, description = "Wrong username or password (code invalid_credentials)", body = Problem, content_type = "application/problem+json"),
     )
 )]
 pub async fn login(
     State(state): State<AppState>,
-    Json(request): Json<LoginRequest>,
+    ApiJson(request): ApiJson<LoginRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     let invalid = ApiError::Unauthorized("invalid_credentials");
     let username = request.username.trim().to_lowercase();
@@ -247,12 +249,13 @@ pub async fn get_me(session: AuthSession) -> impl IntoResponse {
         (status = 204, description = "Password set; the link is used up"),
         (status = 404, description = "Unknown link (code access_link_not_found)", body = Problem, content_type = "application/problem+json"),
         (status = 410, description = "Link used or expired (codes access_link_used, access_link_expired)", body = Problem, content_type = "application/problem+json"),
+        (status = 415, description = "Request is not marked as JSON (code json_required)", body = Problem, content_type = "application/problem+json"),
         (status = 422, description = "Password length rule broken (code password_length)", body = Problem, content_type = "application/problem+json"),
     )
 )]
 pub async fn set_password_with_access_link(
     State(state): State<AppState>,
-    Json(request): Json<RedeemAccessLinkRequest>,
+    ApiJson(request): ApiJson<RedeemAccessLinkRequest>,
 ) -> Result<StatusCode, ApiError> {
     access_link::redeem(
         &state.db,
